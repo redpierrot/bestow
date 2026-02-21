@@ -1,0 +1,8 @@
+[INFO]: Checking dotfiles
+[INFO]: Dir: /Users/thisaru/Projects/Leisure/bestow
+[INFO]: Target: /Users/thisaru
+[INFO]: Ignore: .git, .DS_Store, README.md, LICENSE, .gitignore
+[INFO]: Reading files from the dotfiles
+[WARN]: Ignoring /Users/thisaru/Projects/Leisure/bestow/.git as per the ignore list
+[WARN]: Ignoring /Users/thisaru/Projects/Leisure/bestow/LICENSE as per the ignore list
+[WARN]: Ignoring /Users/thisaru/Projects/Leisure/bestow/README.md as per the ignore list
