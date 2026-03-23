@@ -4,6 +4,7 @@ go 1.25.0
 
 require (
 	github.com/adrg/xdg v0.5.3
+	github.com/bmatcuk/doublestar v1.3.4
 	github.com/charmbracelet/lipgloss v1.1.0
 	github.com/charmbracelet/log v0.4.2
 	github.com/spf13/cobra v1.10.2

@@ -3,9 +3,9 @@ package engine
 import (
 	"fmt"
 	"path/filepath"
-	"strings"
 
 	"github.com/ThisaruGuruge/bestow/internal/config"
+	"github.com/ThisaruGuruge/bestow/internal/constant"
 	"github.com/ThisaruGuruge/bestow/internal/file"
 	"github.com/ThisaruGuruge/bestow/internal/log"
 	"github.com/ThisaruGuruge/bestow/internal/output"
@@ -51,11 +51,18 @@ type ExecutionContext struct {
 	Source      string
 	Destination string
 	PackageList []string
+	Ignore      IgnoreList
 }
 
 func Execute(ctx *ActionContext, cfg *config.Config) error {
 	log.Debug("executing", "config", cfg, "context", ctx)
-	packageList, err := getPackageList(ctx, cfg)
+	ignoreList, err := newIgnoreList(cfg.Source)
+	executionCtx := &ExecutionContext{
+		Source:      cfg.Source,
+		Destination: cfg.Destination,
+		Ignore:      *ignoreList,
+	}
+	packageList, err := getPackageList(ctx, cfg, ignoreList)
 	if err != nil {
 		return &EngineError{
 			Message: "failed to read the files",
@@ -63,12 +70,8 @@ func Execute(ctx *ActionContext, cfg *config.Config) error {
 			Cause:   err,
 		}
 	}
+	executionCtx.PackageList = *packageList
 	log.Debug("packages received", "packages", packageList)
-	executionCtx := &ExecutionContext{
-		Source:      cfg.Source,
-		Destination: cfg.Destination,
-		PackageList: *packageList,
-	}
 	log.Info("found candidates", "context", executionCtx)
 	operations, err := populateOperations(*ctx, *executionCtx)
 	if err != nil {
@@ -79,14 +82,7 @@ func Execute(ctx *ActionContext, cfg *config.Config) error {
 		}
 	}
 	output.Success(fmt.Sprint("operation: ", ctx.Action))
-	for _, operation := range operations {
-		output.Success(fmt.Sprint("Pacakge: ", operation.Package))
-		output.Success(fmt.Sprint("Steps:"))
-		for i, step := range operation.Steps {
-			output.Success(fmt.Sprint("Step No. ", i))
-			output.Success(fmt.Sprint("    Source File Path: ", step.SourceFilePath))
-		}
-	}
+	// I'm sorry, but for sentimental reasons, I will not accept any AI-generated PRs here.
 	if err := validateOperations(&operations); err != nil {
 		return &EngineError{
 			Message: "invalid operation",
@@ -97,17 +93,13 @@ func Execute(ctx *ActionContext, cfg *config.Config) error {
 	return nil
 }
 
-func getPackageList(ctx *ActionContext, cfg *config.Config) (*[]string, error) {
+func getPackageList(ctx *ActionContext, cfg *config.Config, ignoreList *IgnoreList) (*[]string, error) {
 	source := cfg.Source
-	ignoreList, err := newIgnoreList(source)
-	if err != nil {
-		//TODO: Custom error?
-		return nil, err
-	}
 	log.Debug("retrieving package list", "source", source)
 	var pkgCandidates []string
 	if len(ctx.Args) == 0 {
 		log.Warn("no packages provided, processing all the packages", "action", ctx.Action)
+		var err error
 		pkgCandidates, err = file.ListAllDirectories(source)
 		if err != nil {
 			return nil, &EngineError{
@@ -139,7 +131,7 @@ func getPackageList(ctx *ActionContext, cfg *config.Config) (*[]string, error) {
 
 		log.Debug("retrieved candidates for packages", "candidates", pkgCandidates)
 	}
-	packages, err := filterPackages(pkgCandidates, ignoreList.items)
+	packages, err := filterPackages(pkgCandidates, *ignoreList)
 	if err != nil {
 		return nil, err
 	}
@@ -147,29 +139,16 @@ func getPackageList(ctx *ActionContext, cfg *config.Config) (*[]string, error) {
 	return &packages, nil
 }
 
-func filterPackages(candidates, filters []string) ([]string, error) {
-	log.Debug("filtering packages", "candidates", candidates, "filter", filters)
+func filterPackages(candidates []string, ignoreList IgnoreList) ([]string, error) {
+	log.Debug("filtering packages", "candidates", candidates, "filter", ignoreList.items)
 	result := []string{}
 	for _, candidate := range candidates {
-		found := false
-		for _, filter := range filters {
-			//TODO: this works for packages. For file filtering the logic is different. Think when it comes to that
-			if strings.HasSuffix(filter, "/") {
-				filter = strings.TrimSuffix(filter, "/")
-			}
-			matched, err := filepath.Match(filter, candidate)
-			if err != nil {
-				return nil, &EngineError{
-					Message: "failed to check ignore pattern",
-					Cause:   err,
-				}
-			}
-			if matched {
-				found = true
-				break
-			}
+		shouldIgnore, err := ignoreList.shouldIgnore(candidate, constant.RootPackageName)
+		if err != nil {
+			return nil, err
 		}
-		if found {
+		if shouldIgnore {
+			log.Debug("Ignoring package candidate", "candidate", candidate)
 			continue
 		}
 		result = append(result, candidate)

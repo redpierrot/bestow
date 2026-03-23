@@ -217,3 +217,11 @@ func ReadLines(path string) ([]string, error) {
 	}
 	return result, nil
 }
+
+func GetPathSegments(path string) []string {
+	parent, child := filepath.Split(path)
+	if parent == "" {
+		return []string{child}
+	}
+	return append(GetPathSegments(filepath.Clean(parent)), child)
+}

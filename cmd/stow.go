@@ -40,5 +40,9 @@ If no packages are provided, all the pakcages inside the source will be stowed.
 
 func init() {
 	addOperationFlags(stowCmd.Flags())
+
+	stowCmd.PersistentFlags().BoolP(FlagForce, "f", false, "remove the existing file and create the symlink")
+	stowCmd.PersistentFlags().BoolP(FlagAdopt, "a", false, "move the existing file to the source and create the symlinks")
+
 	rootCmd.AddCommand(stowCmd)
 }

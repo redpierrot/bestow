@@ -4,6 +4,8 @@ import (
 	"path/filepath"
 
 	"github.com/ThisaruGuruge/bestow/internal/config"
+	"github.com/ThisaruGuruge/bestow/internal/constant"
+	"github.com/bmatcuk/doublestar"
 )
 
 type IgnoreList struct {
@@ -34,4 +36,32 @@ func (i *IgnoreList) forPackage(pkg string) ([]string, error) {
 		return nil, err
 	}
 	return result, nil
+}
+
+func (i *IgnoreList) shouldIgnore(fileName, pkg string) (bool, error) {
+	var ignoreList []string
+
+	if pkg != constant.RootPackageName {
+		var err error
+		ignoreList, err = i.forPackage(pkg)
+		if err != nil {
+			// TODO: Do we really need a separate error here? I guess this is okay
+			return false, err
+		}
+	} else {
+		ignoreList = i.items
+	}
+	for _, ignoreItem := range ignoreList {
+		match, err := doublestar.PathMatch(ignoreItem, fileName)
+		if err != nil {
+			return false, &EngineError{
+				Message: "ignore pattern validation error",
+				Cause:   err,
+			}
+		}
+		if match {
+			return true, nil
+		}
+	}
+	return false, nil
 }

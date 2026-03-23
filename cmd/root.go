@@ -25,6 +25,8 @@ const (
 	FlagDryRun     string = "dry-run"
 	FlagConfigFile string = "config-file"
 	FlagProfile    string = "profile"
+	FlagForce      string = "force"
+	FlagAdopt      string = "adopt"
 )
 
 var version = "dev"

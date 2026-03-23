@@ -1,7 +1,12 @@
 package engine
 
 import (
+	"fmt"
+	"path/filepath"
+
+	"github.com/ThisaruGuruge/bestow/internal/constant"
 	"github.com/ThisaruGuruge/bestow/internal/file"
+	"github.com/ThisaruGuruge/bestow/internal/log"
 )
 
 type ConflictResolution string
@@ -25,6 +30,7 @@ type Step struct {
 	SourceFilePath      string
 	DestinationFilePath string
 	Conflict            ConflictResolution
+	BackupFile          string
 }
 
 func populateOperations(actionCtx ActionContext, executionCtx ExecutionContext) ([]Operation, error) {
@@ -42,9 +48,9 @@ func populateOperations(actionCtx ActionContext, executionCtx ExecutionContext) 
 	rootOperation := Operation{
 		Source:      source,
 		Destination: destination,
-		Package:     "",
+		Package:     constant.RootPackageName,
 	}
-	if err := populateStepsForRoot(&rootOperation); err != nil {
+	if err := populateStepsForRoot(&rootOperation, executionCtx.Ignore); err != nil {
 		return nil, err
 	}
 	result = append(result, rootOperation)
@@ -55,14 +61,13 @@ func populateOperations(actionCtx ActionContext, executionCtx ExecutionContext) 
 			Destination: destination,
 			Package:     pkg,
 		}
-		populateStepsForPackage(&operation)
+		populateStepsForPackage(&operation, executionCtx.Ignore)
 		result = append(result, operation)
-
 	}
 	return result, nil
 }
 
-func populateStepsForRoot(operation *Operation) error {
+func populateStepsForRoot(operation *Operation, ignoreList IgnoreList) error {
 	rootFileList, err := file.ListFiles(operation.Source)
 	if err != nil {
 		return &EngineError{
@@ -73,17 +78,25 @@ func populateStepsForRoot(operation *Operation) error {
 	}
 	steps := []Step{}
 	for _, fileName := range rootFileList {
+		doIgnore, err := ignoreList.shouldIgnore(fileName, constant.RootPackageName)
+		if err != nil {
+			return err
+		}
+		if doIgnore {
+			log.Debug("ignoring the file", "fileName", fileName)
+			continue
+		}
 		steps = append(steps, Step{
-			SourceFilePath: fileName,
+			SourceFilePath:      fileName,
+			DestinationFilePath: fileName,
 		})
 	}
 	operation.Steps = steps
 	return nil
 }
 
-func populateStepsForPackage(operation *Operation) error {
+func populateStepsForPackage(operation *Operation, ignoreList IgnoreList) error {
 	sourceFileList := []string{}
-	// destinationFileList := []string{}
 
 	err := file.ListAllFilesInDir(operation.Source, operation.Package, &sourceFileList)
 	if err != nil {
@@ -94,8 +107,19 @@ func populateStepsForPackage(operation *Operation) error {
 	}
 	steps := []Step{}
 	for _, fileName := range sourceFileList {
+		doIgnore, err := ignoreList.shouldIgnore(fileName, operation.Package)
+		if err != nil {
+			return err
+		}
+		if doIgnore {
+			log.Debug("ignoring the file", "fileName", fileName, "package", operation.Package)
+			continue
+		}
+		pathSegments := file.GetPathSegments(fileName)[1:]
+		destinationFilePath := filepath.Join(pathSegments...)
 		steps = append(steps, Step{
-			SourceFilePath: fileName,
+			SourceFilePath:      fileName,
+			DestinationFilePath: destinationFilePath,
 		})
 	}
 	operation.Steps = steps
@@ -113,11 +137,32 @@ func validateOperations(operations *[]Operation) error {
 }
 
 func validateOperation(operation *Operation) error {
-	// operation.Source
-	// operation.Destination
-	// operation.Package
-	// operation.Steps
-	//
-	// operation.Steps[0]
+	for _, step := range operation.Steps {
+		validateStep(operation.Source, operation.Destination, step, conflict)
+	}
+	return nil
+}
+
+// TODO: We should read files and have a struct to defien out custom file type.
+// It should include whether file exists, isLink, isDir, etc. Seems like we might need that repeatedly.
+// No point of reading the same file twice, I suppose.
+func validateStep(source, destination string, step Step, conflict ConflictResolution) error {
+	destinationFileName := filepath.Join(destination, step.DestinationFilePath)
+	sourceFileName := filepath.Join(source, step.SourceFilePath)
+
+	exists, err := file.Exists(destinationFileName)
+	if err != nil {
+		return &EngineError{
+			Message: "validation failed",
+			Cause:   err,
+		}
+	}
+	if exists {
+		log.Warn("File exists")
+		//TODO: check interactivity and conflict resolution
+		return nil
+	}
+	log.Info(fmt.Sprintf("[Link] %s -> %s", sourceFileName, destinationFileName))
+
 	return nil
 }
