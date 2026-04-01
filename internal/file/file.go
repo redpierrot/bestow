@@ -3,6 +3,7 @@ package file
 import (
 	"bufio"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -24,18 +25,14 @@ func (e *FileError) Error() string {
 
 func (e *FileError) Unwrap() error { return e.Cause }
 
-type File struct {
-	name   string
-	pkg    string
-	source string
-}
+type ExistingType string
 
-type FileInfo struct {
-	Exists   bool
-	Dir      bool
-	Symlink  bool
-	LinkPath string
-}
+const (
+	ExistingManagedSymlink ExistingType = "ExistingManagedSymlink"
+	ExistingForeignSymlink ExistingType = "ExistingForeignSymlink"
+	ExistingRegularFile    ExistingType = "ExistingRegularFile"
+	ExistingDir            ExistingType = "ExistingDirectory"
+)
 
 // Lists all the files in a given directory. The direcrtory path should be given as
 // the parent directory name and the directory name.
@@ -174,13 +171,9 @@ func CreateDir(path string) error {
 }
 
 func IsDir(path string) (bool, error) {
-	stat, err := os.Stat(path)
+	stat, err := getFileInfo(path)
 	if err != nil {
-		return false, &FileError{
-			Message: "failed to read from path",
-			Path:    path,
-			Cause:   err,
-		}
+		return false, err
 	}
 	return stat.IsDir(), nil
 }
@@ -233,8 +226,47 @@ func GetPathSegments(path string) []string {
 	return append(GetPathSegments(filepath.Clean(parent)), child)
 }
 
-func IsSameFile(src, dest string) bool {
-	srcInfo, _ := os.Stat(src)
-	destInfo, _ := os.Stat(dest)
-	return os.SameFile(srcInfo, destInfo)
+func GetExistingFileType(src, dest string) (ExistingType, error) {
+	log.Debug("checking existing file type", "source", src, "destination", dest)
+	stat, err := os.Lstat(dest)
+	if err != nil {
+		return ExistingRegularFile, &FileError{
+			Message: "failed to read the path",
+			Path:    dest,
+			Cause:   err,
+		}
+	}
+	if stat.IsDir() {
+		log.Debug("found directory", "path", dest)
+		return ExistingDir, nil
+	}
+	if stat.Mode()&fs.ModeSymlink == 0 {
+		log.Debug("found regular file", "path", dest)
+		return ExistingRegularFile, nil
+	}
+	log.Debug("found symlink", "path", dest)
+	srcInfo, err := getFileInfo(src)
+	if err != nil {
+		return ExistingRegularFile, err
+	}
+	destInfo, err := getFileInfo(dest)
+	if err != nil {
+		return ExistingRegularFile, err
+	}
+	if os.SameFile(srcInfo, destInfo) {
+		return ExistingManagedSymlink, nil
+	}
+	return ExistingForeignSymlink, nil
+}
+
+func getFileInfo(path string) (os.FileInfo, error) {
+	stat, err := os.Stat(path)
+	if err != nil {
+		return nil, &FileError{
+			Message: "failed to read from the path",
+			Path:    path,
+			Cause:   err,
+		}
+	}
+	return stat, nil
 }

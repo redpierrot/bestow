@@ -1,16 +1,9 @@
 package engine
 
-type ExistingType int
-
-const (
-	ExistingManagedSymlink ExistingType = iota
-	ExistingForeignSymlink
-	ExistingRegularFile
-	ExistingDir
-)
+import "github.com/ThisaruGuruge/bestow/internal/file"
 
 type ConflictResolver interface {
-	Resolve(src, dest string, existing ExistingType) (ResolveStrategy, error)
+	Resolve(src, dest string, existing file.ExistingType) (ResolveStrategy, error)
 }
 
 type StaticResolver struct {
@@ -18,6 +11,6 @@ type StaticResolver struct {
 }
 
 // TODO: Make sure to have a prune method to clear the history
-func (sr StaticResolver) Resolve(src, dest string, existing ExistingType) (ResolveStrategy, error) {
+func (sr StaticResolver) Resolve(src, dest string, existing file.ExistingType) (ResolveStrategy, error) {
 	return sr.strategy, nil
 }

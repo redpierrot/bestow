@@ -7,7 +7,6 @@ import (
 
 	"github.com/ThisaruGuruge/bestow/internal/engine"
 	"github.com/ThisaruGuruge/bestow/internal/log"
-	"github.com/ThisaruGuruge/bestow/internal/output"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 	"github.com/spf13/viper"
@@ -60,7 +59,6 @@ func checkVerbose(cmd *cobra.Command) error {
 func conflictResolve(flagValues []boolFlagValue) (engine.ResolveStrategy, error) {
 	enabledFlags := []boolFlagValue{}
 	for _, flagValue := range flagValues {
-		output.Success(fmt.Sprintf("Flag: %s, Value: %t", flagValue.name, flagValue.value))
 		if flagValue.value {
 			enabledFlags = append(enabledFlags, flagValue)
 		}
