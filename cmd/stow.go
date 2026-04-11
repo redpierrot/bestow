@@ -38,8 +38,10 @@ If no packages are provided, all the pakcages inside the source will be stowed.
 			Conflict: conflictResolution,
 		}
 		engine, err := engine.NewEngine(&ctx, cfg)
-		engine.Execute()
 		if err != nil {
+			return err
+		}
+		if err := engine.Execute(); err != nil {
 			return err
 		}
 		return nil

@@ -113,16 +113,16 @@ func (e *Engine) getPackageOperation(pkg string) ([]Operation, error) {
 // TODO: Handle interactive/non-interactive modes.
 // Pass config here to check interactivity and conflict resolution strategy
 // Should return error in any invalid scenario.
-func (e *Engine) resolveOperations(operations *[]Operation) ([]Operation, error) {
+func (e *Engine) resolveStowOperations(operations *[]Operation) ([]Operation, error) {
 	for i := range *operations {
-		if err := e.resolveOperation(&(*operations)[i]); err != nil {
+		if err := e.resolveStowOperation(&(*operations)[i]); err != nil {
 			return *operations, err
 		}
 	}
 	return *operations, nil
 }
 
-func (e *Engine) resolveOperation(operation *Operation) error {
+func (e *Engine) resolveStowOperation(operation *Operation) error {
 	destExists, _ := file.Exists(operation.Destination)
 	if destExists {
 		// TODO: Doesn't make any sense for the static resolver. But we need this when we have interactive mode
@@ -143,10 +143,65 @@ func (e *Engine) resolveOperation(operation *Operation) error {
 	return nil
 }
 
+func (e *Engine) resolveUnstowOperations(operations *[]Operation) ([]Operation, error) {
+	for i := range *operations {
+		if err := e.resolveUnstowOperation(&(*operations)[i]); err != nil {
+			return *operations, err
+		}
+	}
+	return *operations, nil
+}
+
+func (e *Engine) resolveUnstowOperation(operation *Operation) error {
+	destExists, err := file.Exists(operation.Destination)
+	if err != nil {
+		return &EngineError{
+			Message: "failed to check the destination file",
+			Command: e.Action,
+			Cause:   err,
+		}
+	}
+	if !destExists {
+		log.Debug("file have not been stowed", "source", operation.Source)
+		operation.Action = FileActionSkip
+		return nil
+	}
+	existingType, err := file.GetExistingFileType(operation.Source, operation.Destination)
+	if err != nil {
+		return &EngineError{
+			Message: "failed to check the destination file",
+			Command: e.Action,
+			Cause:   err,
+		}
+	}
+	if existingType != file.ExistingManagedSymlink {
+		operation.Action = FileActionSkip
+		return nil
+	}
+	operation.Action = FileActionRemoveLink
+	return nil
+}
+
 func (e *Engine) stow(operations []Operation) error {
+	log.Debug("stowing files")
+	// I'm sorry, but for sentimental reasons, I will not accept any AI-generated PRs here.
+	operations, err := e.resolveStowOperations(&operations)
+	if err != nil {
+		return &EngineError{
+			Message: "failed to resolve stow operation",
+			Command: e.Action,
+			Cause:   err,
+		}
+	}
+	operations = filterSkipFiles(operations)
+	if len(operations) == 0 {
+		return &EngineError{
+			Message: "no operations left for stow",
+			Command: e.Action,
+		}
+	}
 	for _, operation := range operations {
-		err := e.stowOperation(&operation)
-		if err != nil {
+		if err := e.stowOperation(&operation); err != nil {
 			return err
 		}
 	}
@@ -170,7 +225,62 @@ func (e *Engine) stowOperation(operation *Operation) error {
 }
 
 func (e *Engine) unstow(operations []Operation) error {
+	log.Debug("unstowing files", "pacakges", e.PackageList)
+	operations, err := e.resolveUnstowOperations(&operations)
+	if err != nil {
+		return err
+	}
+	operations = filterSkipFiles(operations)
+	if len(operations) == 0 {
+		return &EngineError{
+			Message: "no files left for unstow",
+			Command: e.Action,
+			Cause:   err,
+		}
+	}
+	for _, operation := range operations {
+		if err := e.unstowOperation(&operation); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
+func (e *Engine) unstowOperation(operation *Operation) error {
+	log.Debug("unstowing file", "source", operation.Source, "destination", operation.Destination)
+	exists, err := file.Exists(operation.Destination)
+	if err != nil {
+		return &EngineError{
+			Message: "failed to check the destination file",
+			Command: e.Action,
+			Cause:   err,
+		}
+	}
+	if !exists {
+		log.Debug("file not found for unstow", "path", operation.Destination)
+		return nil
+	}
+	fileType, err := file.GetExistingFileType(operation.Source, operation.Destination)
+	if err != nil {
+		return &EngineError{
+			Message: "failed to check the fily type",
+			Command: e.Action,
+			Cause:   err,
+		}
+	}
+	if fileType != file.ExistingManagedSymlink {
+		log.Warn("existing file is not managed by bestow", "existing_file", operation.Destination)
+		return nil
+	}
+	err = file.Remove(operation.Destination)
+	if err != nil {
+		return &EngineError{
+			Message: "failed to unstow the file",
+			Command: e.Action,
+			Cause:   err,
+		}
+	}
+	log.Debug("successfully unstowed the file", "source", operation.Source, "destination", operation.Destination)
 	return nil
 }
 

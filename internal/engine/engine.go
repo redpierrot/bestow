@@ -30,10 +30,10 @@ type EngineError struct {
 func (e *EngineError) Error() string {
 	msg := e.Message
 	if e.Command != "" {
-		msg += fmt.Sprint(": [%s]", e.Command)
+		msg += fmt.Sprintf(": [%s]", e.Command)
 	}
 	if e.Package != "" {
-		msg += fmt.Sprint(": [%s]", e.Package)
+		msg += fmt.Sprintf(": [%s]", e.Package)
 	}
 	if e.Cause != nil {
 		msg += fmt.Sprintf(": %v", e.Cause)
@@ -100,14 +100,6 @@ func (e *Engine) Execute() error {
 	if err != nil {
 		return err
 	}
-	operations = filterSkipFiles(operations)
-	// TODO: Check the length of the operations array after filtering and fail if len = 0
-	if len(operations) == 0 {
-		return &EngineError{
-			Message: "no operations left for process",
-			Command: e.Action,
-		}
-	}
 	e.executeOperations(operations)
 	return nil
 }
@@ -132,16 +124,7 @@ func (e *Engine) buildOperations() ([]Operation, error) {
 	operations, err := e.populateOperations()
 	if err != nil {
 		return nil, &EngineError{
-			Message: "failed to opulate operations",
-			Command: e.Action,
-			Cause:   err,
-		}
-	}
-	// I'm sorry, but for sentimental reasons, I will not accept any AI-generated PRs here.
-	operations, err = e.resolveOperations(&operations)
-	if err != nil {
-		return operations, &EngineError{
-			Message: "invalid operation",
+			Message: "failed to populate operations",
 			Command: e.Action,
 			Cause:   err,
 		}
