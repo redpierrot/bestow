@@ -52,13 +52,13 @@ func ListAllFilesInDir(parent string, dirName string) ([]string, error) {
 	if directoryPath == "" {
 		return nil, &FileError{
 			Message: "path name is empty",
-			Path:    directoryPath,
+			Path:    parent,
 		}
 	}
 	stat, statErr := os.Stat(directoryPath)
 	if os.IsNotExist(statErr) {
 		return nil, &FileError{
-			Message: "error occurred while reading the directory",
+			Message: "provided directory path not found",
 			Path:    directoryPath,
 			Cause:   statErr,
 		}
@@ -157,6 +157,9 @@ func CreateFile(fileName string, path string, data string) error {
 }
 
 func CreateDir(path string) error {
+	if createdDirs[path] {
+		return nil
+	}
 	log.Debug("creating dir", "path", path)
 	exists, err := Exists(path)
 	if err != nil {
@@ -177,8 +180,9 @@ func CreateDir(path string) error {
 			Cause:   err,
 		}
 	}
+	createdDirs[path] = true
+	log.Info("created directory", "path", path)
 	return nil
-
 }
 
 func IsDir(path string) (bool, error) {
@@ -231,7 +235,7 @@ func ReadLines(path string) ([]string, error) {
 
 func GetPathSegments(path string) []string {
 	parent, child := filepath.Split(path)
-	if parent == "" {
+	if parent == "" || parent == "/" {
 		return []string{child}
 	}
 	return append(GetPathSegments(filepath.Clean(parent)), child)
@@ -259,11 +263,11 @@ func GetExistingFileType(src, dest string) (ExistingType, error) {
 	log.Debug("found symlink", "path", dest)
 	srcInfo, err := getFileInfo(src)
 	if err != nil {
-		return ExistingRegularFile, err
+		return ExistingForeignSymlink, err
 	}
 	destInfo, err := getFileInfo(dest)
 	if err != nil {
-		return ExistingRegularFile, err
+		return ExistingForeignSymlink, err
 	}
 	if os.SameFile(srcInfo, destInfo) {
 		log.Debug("found managed symlink", "source", src, "destination", dest)
@@ -286,11 +290,8 @@ func getFileInfo(path string) (os.FileInfo, error) {
 
 func Link(src, dest string) error {
 	destParent := filepath.Dir(dest)
-	if !createdDirs[destParent] {
-		if err := CreateDir(destParent); err != nil {
-			return err
-		}
-		createdDirs[destParent] = true
+	if err := CreateDir(destParent); err != nil {
+		return err
 	}
 	if err := os.Symlink(src, dest); err != nil {
 		return &FileError{
@@ -299,7 +300,7 @@ func Link(src, dest string) error {
 			Cause:   err,
 		}
 	}
-	log.Debug("link created", "source", src, "destination", dest)
+	log.Info("link created", "source", src, "destination", dest)
 	return nil
 }
 
@@ -315,6 +316,7 @@ func Remove(path string) error {
 }
 
 func Backup(path string) error {
+	log.Debug("backing up file", "path", path)
 	fileName := filepath.Base(path)
 	newFileName := strings.Join([]string{fileName, constant.AppName, BackupFileExtension}, ".")
 	newFullPath := filepath.Join(filepath.Dir(path), newFileName)
@@ -325,7 +327,7 @@ func Backup(path string) error {
 			Cause:   err,
 		}
 	}
-
+	log.Info("successfully backed up the file", "old", path, "new", newFullPath)
 	return nil
 }
 func Copy(src, dest string) error {
