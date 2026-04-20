@@ -5,7 +5,6 @@ import (
 	"path/filepath"
 
 	"github.com/ThisaruGuruge/bestow/internal/config"
-	"github.com/ThisaruGuruge/bestow/internal/constant"
 	"github.com/ThisaruGuruge/bestow/internal/file"
 	"github.com/ThisaruGuruge/bestow/internal/log"
 	"github.com/ThisaruGuruge/bestow/internal/output"
@@ -185,7 +184,7 @@ func filterPackages(candidates []string, ignoreList IgnoreList) ([]string, error
 	log.Debug("filtering packages", "candidates", candidates, "filter", ignoreList.items)
 	result := []string{}
 	for _, candidate := range candidates {
-		shouldIgnore, err := ignoreList.shouldIgnore(candidate, constant.RootPackageName)
+		shouldIgnore, err := ignoreList.shouldIgnore(candidate, "")
 		if err != nil {
 			return nil, err
 		}

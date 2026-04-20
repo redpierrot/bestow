@@ -1,10 +1,9 @@
 package constant
 
 const (
-	AppName         string = "bestow"
-	IgnoreFile      string = ".bestowignore"
-	ConfigFile      string = "config.yaml"
-	ProfileKey      string = "profile"
-	DefaultProfile  string = "default"
-	RootPackageName string = "______ROOT______"
+	AppName        string = "bestow"
+	IgnoreFile     string = ".bestowignore"
+	ConfigFile     string = "config.yaml"
+	ProfileKey     string = "profile"
+	DefaultProfile string = "default"
 )

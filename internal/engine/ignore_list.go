@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 
 	"github.com/ThisaruGuruge/bestow/internal/config"
-	"github.com/ThisaruGuruge/bestow/internal/constant"
 	"github.com/bmatcuk/doublestar"
 )
 
@@ -33,23 +32,24 @@ func newIgnoreList(src string) (*IgnoreList, error) {
 func (i *IgnoreList) forPackage(pkg string) ([]string, error) {
 	result := append([]string(nil), i.items...)
 	if err := readIgnoreFile(filepath.Join(i.src, pkg), &result); err != nil {
-		return nil, err
+		return nil, &EngineError{
+			Message: "failed to read the ignore list for the package",
+			Cause:   err,
+		}
 	}
 	return result, nil
 }
 
 func (i *IgnoreList) shouldIgnore(fileName, pkg string) (bool, error) {
 	var ignoreList []string
-
-	if pkg != constant.RootPackageName {
+	if pkg == "" {
+		ignoreList = i.items
+	} else {
 		var err error
 		ignoreList, err = i.forPackage(pkg)
 		if err != nil {
-			// TODO: Do we really need a separate error here? I guess this is okay
 			return false, err
 		}
-	} else {
-		ignoreList = i.items
 	}
 	for _, ignoreItem := range ignoreList {
 		match, err := doublestar.PathMatch(ignoreItem, fileName)

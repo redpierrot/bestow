@@ -4,7 +4,6 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/ThisaruGuruge/bestow/internal/constant"
 	"github.com/ThisaruGuruge/bestow/internal/file"
 	"github.com/ThisaruGuruge/bestow/internal/log"
 )
@@ -60,7 +59,7 @@ func (e *Engine) getRootOperation(operations []Operation, src, dest string) ([]O
 		}
 	}
 	for _, fileName := range rootFileList {
-		doIgnore, err := e.Ignore.shouldIgnore(fileName, constant.RootPackageName)
+		doIgnore, err := e.Ignore.shouldIgnore(fileName, "")
 		if err != nil {
 			return nil, err
 		}
