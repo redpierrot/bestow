@@ -11,19 +11,10 @@ import (
 
 // stowCmd represents the stow command
 var stowCmd = &cobra.Command{
-	Use:   "stow",
-	Short: "stows the provided packages from source to destination",
-	Long: `stow will create symlinks to the dotfiles from a source to a destination.
-
-each directory in the source is considered a package. Each file inside the package will be symlinked in the destination.
-For example;
-
-bestow stow nvim
-
-will create symlinks for each file inside the 'nvim' directory, while maintaining the internal file strucutre.
-
-If no packages are provided, all the pakcages inside the source will be stowed.
-`,
+	Use:     "stow [packages...]",
+	Short:   StowShort,
+	Long:    StowLong,
+	Example: StowExamples,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		log.Debug("running stow command", "args", args)
 		flagValues := getConflictFlags(cmd)

@@ -39,19 +39,11 @@ var cfgFileFound bool
 
 var initConfigError error
 
-// rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "bestow",
-	Short: "bestow (BEtter STOW) is a modern dotfiles manager for Linux and MacOS",
-	Long: `A longer description that spans multiple lines and likely contains
-examples and usage of using your application. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
-	// Uncomment the following line if your bare application
-	// has an action associated with it:
-	// Run: func(cmd *cobra.Command, args []string) { },
+	Use:           "bestow",
+	Short:         RootCmdShort,
+	Long:          RootCmdLong,
+	Example:       RootCmdExamples,
 	Version:       version,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
@@ -74,8 +66,6 @@ to quickly create a Cobra application.`,
 	},
 }
 
-// Execute adds all child commands to the root command and sets flags appropriately.
-// This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
 	log.SetLogger(log.NewCharmLogger())
 	err := rootCmd.Execute()
@@ -87,6 +77,11 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
+	// disable showing `completion` in the available commands list while keeping the command available
+	rootCmd.CompletionOptions.HiddenDefaultCmd = true
+	// Hide the `help` subcommand from the subcommand list (only allow `-h/--help` flags)
+	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+
 	rootCmd.PersistentFlags().Bool(FlagDryRun, false, "run the command without actually making the file system changes")
 	rootCmd.PersistentFlags().Bool(FlagVerbose, false, "print verbose logs")
 	rootCmd.PersistentFlags().StringVar(&cfgFile, FlagConfigFile, "", "provide custom config file")

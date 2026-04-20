@@ -25,12 +25,8 @@ const (
 // initCmd represents the init command
 var initCmd = &cobra.Command{
 	Use:   "init",
-	Short: "Initializes the bestow configurations",
-	Long: `The init command will initialize the bestow configurations.
-If the XDG_CONFIG_HOME is set, it will be treated as the config home directory.
-
-If it is not set, the default "$HOME/.config" directory will be used as the config home.
-	`,
+	Short: InitShort,
+	Long:  InitLong,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		if err := checkVerbose(cmd); err != nil {
 			return fmt.Errorf("failed to check flags: %w", err)

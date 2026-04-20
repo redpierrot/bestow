@@ -11,14 +11,10 @@ import (
 
 // unstowCmd represents the unstow command
 var unstowCmd = &cobra.Command{
-	Use:   "unstow",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Use:     "unstow [packages...]",
+	Short:   UnstowShort,
+	Long:    UnstowLong,
+	Example: UnstowExamples,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		log.Debug("running stow command", "args", args)
 		ctx := engine.CommandContext{
@@ -30,7 +26,7 @@ to quickly create a Cobra application.`,
 			return err
 		}
 		if err := engine.Execute(); err != nil {
-			return nil
+			return err
 		}
 		return nil
 	},
