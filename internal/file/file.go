@@ -158,6 +158,7 @@ func CreateFile(fileName string, path string, data string) error {
 }
 
 func CreateDir(path string) error {
+	log.Debug("created dirs", "dir_list", createdDirs)
 	if createdDirs[path] {
 		return nil
 	}
@@ -172,6 +173,7 @@ func CreateDir(path string) error {
 	}
 	if exists {
 		log.Debug("directory already exists", "path", path)
+		createdDirs[path] = true
 		return nil
 	}
 	if err := os.MkdirAll(path, 0755); err != nil {
