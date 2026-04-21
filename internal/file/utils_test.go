@@ -7,6 +7,8 @@ import (
 	"testing"
 )
 
+var testDir *string
+
 func createTestFile(parentDir, content string, t *testing.T) string {
 	testFile, err := os.CreateTemp(parentDir, "bestow_test_file_")
 	if err != nil {
@@ -41,6 +43,7 @@ func createTempDirStructure() string {
 		fmt.Println("failed to retrieve the absolute path of the test directory")
 		os.Exit(1)
 	}
+	testDir = &absPath
 	return absPath
 }
 

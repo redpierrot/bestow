@@ -4,6 +4,8 @@ Copyright © 2026 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"strings"
+
 	"github.com/ThisaruGuruge/bestow/internal/engine"
 	"github.com/ThisaruGuruge/bestow/internal/log"
 	"github.com/spf13/cobra"
@@ -35,6 +37,8 @@ var stowCmd = &cobra.Command{
 		if err := engine.Execute(); err != nil {
 			return err
 		}
+		log.Info("successfully stowed the packages")
+		log.Debug("stowed packages", "packages", strings.Join(*engine.PackageList, ", "))
 		return nil
 	},
 }

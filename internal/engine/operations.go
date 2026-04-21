@@ -1,11 +1,13 @@
 package engine
 
 import (
+	"fmt"
 	"path/filepath"
 	"slices"
 
 	"github.com/ThisaruGuruge/bestow/internal/file"
 	"github.com/ThisaruGuruge/bestow/internal/log"
+	"github.com/ThisaruGuruge/bestow/internal/output"
 )
 
 type ResolveStrategy string
@@ -18,6 +20,8 @@ const (
 	ResolveInteractive ResolveStrategy = "interactive"
 )
 
+const rootPackage = "."
+
 type Operation struct {
 	Source      string
 	Destination string
@@ -27,7 +31,7 @@ type Operation struct {
 
 func (e *Engine) populateOperations() ([]Operation, error) {
 	result := []Operation{}
-	if slices.Contains(*e.PackageList, RootDir) {
+	if slices.Contains(*e.PackageList, rootPackage) {
 		rootOperations, err := e.getRootOperation(result, e.Source, e.Destination)
 		if err != nil {
 			return nil, err
@@ -36,10 +40,10 @@ func (e *Engine) populateOperations() ([]Operation, error) {
 	}
 
 	for _, pkg := range *e.PackageList {
-		// Skip processing root directory as a package
-		if pkg == RootDir {
+		if pkg == rootPackage {
 			continue
 		}
+		log.Debug("populating operations for package", "pacakge", pkg)
 		pacakgeOperations, err := e.getPackageOperation(pkg)
 		if err != nil {
 			return nil, err
@@ -59,12 +63,12 @@ func (e *Engine) getRootOperation(operations []Operation, src, dest string) ([]O
 		}
 	}
 	for _, fileName := range rootFileList {
-		doIgnore, err := e.Ignore.shouldIgnore(fileName, "")
+		doIgnore, err := e.Ignore.shouldIgnore(fileName, rootPackage)
 		if err != nil {
 			return nil, err
 		}
 		if doIgnore {
-			log.Debug("ignoring the file", "fileName", fileName)
+			log.Debug("ignoring the file", "fileName", fileName, "package", rootPackage)
 			continue
 		}
 		srcFile := filepath.Join(src, fileName)
@@ -210,6 +214,7 @@ func (e *Engine) stow(operations []Operation) error {
 func (e *Engine) stowOperation(operation *Operation) error {
 	switch operation.Action {
 	case FileActionSkip:
+		log.Debug("skipping file", "source", operation.Source, "destination", operation.Destination, "action", operation.Action)
 		return nil
 	case FileActionLink:
 		return createLink(operation.Source, operation.Destination)
@@ -290,6 +295,7 @@ func createLink(src, dest string) error {
 			Cause:   err,
 		}
 	}
+	output.Success(fmt.Sprintf("created: %s", dest))
 	return nil
 }
 

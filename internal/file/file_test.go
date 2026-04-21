@@ -8,8 +8,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-
-	"github.com/ThisaruGuruge/bestow/internal/log"
 )
 
 type testDirectory struct {
@@ -20,16 +18,9 @@ type testDirectory struct {
 
 func TestMain(m *testing.M) {
 	fmt.Println("Running File Tests")
-	log.SetLogger(log.NewCharmLogger())
-
 	testDir := createTempDirStructure()
-	log.Info("Created the temp directory", "test_directory_path", testDir)
-
 	code := m.Run()
-
-	log.Info("Finished File Tests. Cleaning up")
 	os.RemoveAll(testDir)
-
 	os.Exit(code)
 }
 
@@ -147,13 +138,6 @@ func TestCreateFile(t *testing.T) {
 	}
 }
 
-func TestGetPathSegments(t *testing.T) {
-	dir := createTestDirectory("test_path_segments", t).parent
-	log.Info("Directory Path", "path", dir)
-	segments := GetPathSegments(dir)
-	log.Info("recieved the path segments", "segments", segments)
-}
-
 func TestWriteFile(t *testing.T) {
 	testDir := createTestDirectory("test_write_file", t)
 	createDirectory(testDir.src, "sample", t)
@@ -265,7 +249,6 @@ func TestRemove(t *testing.T) {
 	noPermParent := createDirectory(dir, "no_perm", t)
 	noPerm := createTestFile(noPermParent, "no perm file", t)
 	setPerm(noPermParent, false, t)
-	defer setPerm(noPermParent, true, t)
 	nonExistentFileError := &FileError{
 		Message: "failed to remove the existing symlink/file",
 		Path:    "non_existent.file",
@@ -407,7 +390,7 @@ func TestGetExistingFileType(t *testing.T) {
 				if actual != tc.expected {
 					t.Fatalf("expected value mismatch: expected: %s actual: %s", tc.expected, actual)
 				}
-				log.Info("[TestGetExistingFileType]: test successful", "case", name)
+				t.Logf("[TestGetExistingFileType]: test '%s' successful", name)
 			}
 		})
 	}

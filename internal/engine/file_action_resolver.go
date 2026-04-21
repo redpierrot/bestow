@@ -16,10 +16,10 @@ const (
 )
 
 func (e *Engine) resolveFileAction(operation *Operation, strategy ResolveStrategy, existing file.ExistingType) error {
-	log.Debug("Resolving file actions", "operation", operation, "strategy", strategy, "existing_type", existing)
+	log.Debug("Resolving file actions", "source", operation.Source, "destination", operation.Destination, "strategy", strategy, "existing_type", existing)
 	switch existing {
 	case file.ExistingManagedSymlink:
-		log.Info("symlink already exists, skipping", "destination", operation.Destination, "strategy", strategy, "existing_type", existing)
+		log.Debug("symlink already exists, skipping", "destination", operation.Destination, "strategy", strategy, "existing_type", existing)
 		operation.Action = FileActionSkip
 	case file.ExistingDir:
 		return resolveExistingDir(operation, strategy)

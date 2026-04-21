@@ -17,8 +17,6 @@ const (
 	ActionUnstow Action = "unstow"
 )
 
-const RootDir string = "."
-
 type EngineError struct {
 	Message string
 	Command Action
@@ -184,7 +182,7 @@ func filterPackages(candidates []string, ignoreList IgnoreList) ([]string, error
 	log.Debug("filtering packages", "candidates", candidates, "filter", ignoreList.items)
 	result := []string{}
 	for _, candidate := range candidates {
-		shouldIgnore, err := ignoreList.shouldIgnore(candidate, "")
+		shouldIgnore, err := ignoreList.shouldIgnore(candidate, rootPackage)
 		if err != nil {
 			return nil, err
 		}

@@ -42,7 +42,7 @@ func (i *IgnoreList) forPackage(pkg string) ([]string, error) {
 
 func (i *IgnoreList) shouldIgnore(fileName, pkg string) (bool, error) {
 	var ignoreList []string
-	if pkg == "" {
+	if pkg == rootPackage {
 		ignoreList = i.items
 	} else {
 		var err error

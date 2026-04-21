@@ -119,6 +119,7 @@ func ListFiles(path string) ([]string, error) {
 		}
 		result = append(result, file.Name())
 	}
+	log.Debug("found files in the directory", "directory", path, "files", result)
 	return result, nil
 }
 
@@ -181,7 +182,7 @@ func CreateDir(path string) error {
 		}
 	}
 	createdDirs[path] = true
-	log.Info("created directory", "path", path)
+	log.Debug("created directory", "path", path)
 	return nil
 }
 
@@ -300,7 +301,7 @@ func Link(src, dest string) error {
 			Cause:   err,
 		}
 	}
-	log.Info("link created", "source", src, "destination", dest)
+	log.Debug("link created", "source", src, "destination", dest)
 	return nil
 }
 
@@ -327,7 +328,7 @@ func Backup(path string) error {
 			Cause:   err,
 		}
 	}
-	log.Info("successfully backed up the file", "old", path, "new", newFullPath)
+	log.Debug("successfully backed up the file", "old", path, "new", newFullPath)
 	return nil
 }
 func Copy(src, dest string) error {
