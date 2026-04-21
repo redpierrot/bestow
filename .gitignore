@@ -8,3 +8,5 @@ coverage.html
 # Generated Test Files
 **/bestow_test*
 
+**/__*
+
