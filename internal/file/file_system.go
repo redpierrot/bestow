@@ -14,6 +14,8 @@ type FileSystem interface {
 	GetExistingFileType(src, dest string) (ExistingType, error)
 	Link(src, dest string) error
 	Remove(path string) error
+	RemoveEmptyDirectories(path string) error
+	RemoveDirIfEmpty(path string) error
 	Backup(path string) error
 	Copy(src, dest string) error
 }

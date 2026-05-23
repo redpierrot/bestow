@@ -11,6 +11,7 @@ import (
 
 	"github.com/ThisaruGuruge/bestow/internal/config"
 	"github.com/ThisaruGuruge/bestow/internal/file"
+	"github.com/ThisaruGuruge/bestow/internal/output"
 )
 
 type Action string
@@ -46,7 +47,7 @@ func NewEngine(cfg *config.Config, l *slog.Logger) (*Engine, error) {
 			Cause:   err,
 		}
 	}
-	handler := file.NewFileHandler(l)
+	handler := file.NewFileHandler(l) // TODO: Pass "remove empty parents" parameter
 	return &Engine{
 		Source:      cfg.Source,
 		Destination: cfg.Destination,
@@ -79,15 +80,74 @@ func (e *Engine) Execute(ctx *CommandContext, args *[]string) error {
 // - skip because already stowed (due to state of the operation): include a summary
 // - skip because conflict resolution strategy is set to skip: print as same as any other operation
 func (e *Engine) executeOperations(ctx *CommandContext, operations []Operation) error {
-	switch ctx.Action {
-	case ActionStow:
-		if err := e.stow(operations); err != nil {
+	for _, operation := range operations {
+		if err := e.executeOperation(operation, ctx.DryRun); err != nil {
 			return err
 		}
-	case ActionUnstow:
-		if err := e.unstow(operations); err != nil {
-			return err
+	}
+	return nil
+}
+
+type Summary struct {
+	stowed   int
+	skipped  int
+	upToDate int
+}
+
+func (e *Engine) executeOperation(operation Operation, dryrun bool) error {
+	switch operation.Action {
+	case FileActionNoOp:
+		return nil
+	case FileActionSkip:
+		output.Success("[Skip] %s", operation.Destination)
+	case FileActionLink:
+		if !dryrun {
+			if err := e.FileSystem.Link(operation.Source, operation.Destination); err != nil {
+				return err
+			}
 		}
+		output.Success("[Link] %s -> %s", operation.Destination, operation.Source)
+	case FileActionUpdateLink:
+	case FileActionReplaceLink:
+		if !dryrun {
+			if err := e.FileSystem.Remove(operation.Destination); err != nil {
+				return err
+			}
+			if err := e.FileSystem.Link(operation.Source, operation.Destination); err != nil {
+				return err
+			}
+		}
+		output.Success("[Update] %s -> %s", operation.Destination, operation.Source)
+	case FileActionBackupLink:
+		if !dryrun {
+			if err := e.FileSystem.Backup(operation.Destination); err != nil {
+				return err
+			}
+			if err := e.FileSystem.Link(operation.Source, operation.Destination); err != nil {
+				return err
+			}
+		}
+		output.Success("[backup] %s -> %s", operation.Destination, operation.BackupPath)
+	case FileActionAdoptLink:
+		if !dryrun {
+			if err := e.FileSystem.Copy(operation.Destination, operation.Source); err != nil {
+				return err
+			}
+			if err := e.FileSystem.Remove(operation.Destination); err != nil {
+				return err
+			}
+			if err := e.FileSystem.Link(operation.Source, operation.Destination); err != nil {
+				return err
+			}
+		}
+		output.Success("[adopt] %s -> %s", operation.Destination, operation.Source)
+	case FileActionUnlink:
+		if !dryrun {
+			if err := e.FileSystem.Remove(operation.Destination); err != nil {
+				return err
+			}
+		}
+		output.Success("[remove] %s", operation.Destination)
 	}
 	return nil
 }
@@ -168,15 +228,4 @@ func (e *Engine) filterPackages(candidates []string, ignoreList IgnoreList) ([]s
 		result = append(result, candidate)
 	}
 	return result, nil
-}
-
-func filterSkipFiles(operations []Operation) []Operation {
-	result := []Operation{}
-	for _, operation := range operations {
-		if operation.Action == FileActionSkip {
-			continue
-		}
-		result = append(result, operation)
-	}
-	return result
 }

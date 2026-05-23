@@ -122,13 +122,13 @@ func (h *FileHandler) ListFiles(path string) ([]string, error) {
 	return result, nil
 }
 
-func (h *FileHandler) ListAllDirectories(source string) ([]string, error) {
-	h.Logger.Debug("listing all the directories", "source", source)
-	files, err := os.ReadDir(source)
+func (h *FileHandler) ListAllDirectories(path string) ([]string, error) {
+	h.Logger.Debug("listing all the directories", "source", path)
+	files, err := os.ReadDir(path)
 	if err != nil {
 		return nil, &FileError{
 			Message: "failed to read the files",
-			Path:    source,
+			Path:    path,
 			Cause:   err,
 		}
 	}
@@ -315,6 +315,58 @@ func (h *FileHandler) Remove(path string) error {
 			Cause:   err,
 		}
 	}
+	h.Logger.Debug("successfully removed the file", "file_name", path)
+	return nil
+}
+
+func (h *FileHandler) RemoveEmptyDirectories(path string) error {
+	h.Logger.Debug("removing all the empty directories in the parent", "parent", path)
+	dirs, err := h.ListAllDirectories(path)
+	if err != nil {
+		return err
+	}
+	for _, dir := range dirs {
+		err = h.RemoveDirIfEmpty(filepath.Join(path, dir))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (h *FileHandler) RemoveDirIfEmpty(path string) error {
+	isDir, err := h.IsDir(path)
+	if err != nil {
+		return err
+	}
+	if !isDir {
+		return nil
+	}
+	files, err := h.ListFiles(path)
+	if err != nil {
+		return err
+	}
+	if len(files) > 0 {
+		h.Logger.Debug("directory is not empty", "path", path)
+		return nil
+	}
+	dirs, err := h.ListAllDirectories(path)
+	if err != nil {
+		return err
+	}
+	for _, dir := range dirs {
+		if err := h.RemoveDirIfEmpty(filepath.Join(path, dir)); err != nil {
+			return err
+		}
+	}
+	isEmpty, err := h.IsEmpty(path)
+	if err != nil {
+		return err
+	}
+	if isEmpty {
+		h.Logger.Debug("directory is empty, removing", "path", path)
+		return h.Remove(path)
+	}
 	return nil
 }
 
@@ -369,9 +421,12 @@ func (h *FileHandler) IsEmpty(path string) (bool, error) {
 			Path:    path,
 		}
 	}
-	items, err := os.ReadDir(path)
-	if err != nil {
-		return false, err
+	f, err := os.Open(path)
+	defer f.Close()
+
+	_, err = f.ReadDir(1)
+	if err == io.EOF {
+		return true, nil
 	}
-	return len(items) == 0, nil
+	return false, nil
 }

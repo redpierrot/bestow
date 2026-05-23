@@ -11,12 +11,14 @@ import (
 type FileAction string
 
 const (
-	FileActionLink        FileAction = "Link"
-	FileActionReplaceLink FileAction = "ReplaceLink"
-	FileActionBackupLink  FileAction = "BackupLink"
-	FileActionAdoptLink   FileAction = "AdoptLink"
-	FileActionUnlink      FileAction = "Unlink"
-	FileActionSkip        FileAction = "Skip"
+	FileActionLink        FileAction = "Link"        // Link file
+	FileActionReplaceLink FileAction = "ReplaceLink" // Replace existing file or link
+	FileActionUpdateLink  FileAction = "UpdateLink"  // Update the existing managed link
+	FileActionBackupLink  FileAction = "BackupLink"  // Backup the existing file and link
+	FileActionAdoptLink   FileAction = "AdoptLink"   // Copy the existing file and link back
+	FileActionUnlink      FileAction = "Unlink"      // Remove the existing managed link (unstow)
+	FileActionSkip        FileAction = "Skip"        // Skip the file
+	FileActionNoOp        FileAction = "NoOperation" // No Operation Needed
 )
 
 func (e *Engine) resolveFileAction(operation *Operation, strategy ResolveStrategy, existing file.ExistingType) error {
@@ -57,6 +59,7 @@ func (e *Engine) resolveRegularFile(operation *Operation, strategy ResolveStrate
 		operation.Action = FileActionAdoptLink
 	case ResolveBackup:
 		operation.Action = FileActionBackupLink
+		operation.BackupPath = operation.Destination + file.BackupFileExtension
 	}
 	return nil
 }
