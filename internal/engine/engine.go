@@ -11,7 +11,6 @@ import (
 
 	"github.com/ThisaruGuruge/bestow/internal/config"
 	"github.com/ThisaruGuruge/bestow/internal/file"
-	"github.com/ThisaruGuruge/bestow/internal/output"
 )
 
 type Action string
@@ -39,7 +38,7 @@ type Engine struct {
 	FileSystem  file.FileSystem
 }
 
-func NewEngine(cfg *config.Config, l *slog.Logger) (*Engine, error) {
+func NewEngine(cfg *config.Config, dryrun bool, l *slog.Logger) (*Engine, error) {
 	ignoreList, err := newIgnoreList(cfg.Source, l)
 	if err != nil {
 		return nil, &EngineError{
@@ -65,11 +64,11 @@ func (e *Engine) Execute(ctx *CommandContext, args *[]string) error {
 		return nil
 	}
 
-	operations, err := e.populateOperations(ctx)
+	actions, err := e.populateOperations(ctx)
 	if err != nil {
 		return err
 	}
-	if err := e.executeOperations(ctx, operations); err != nil {
+	if err := e.executeFileActions(actions, ctx.DryRun); err != nil {
 		return err
 	}
 	return nil
@@ -79,9 +78,9 @@ func (e *Engine) Execute(ctx *CommandContext, args *[]string) error {
 // - in .bestowignore: debug log
 // - skip because already stowed (due to state of the operation): include a summary
 // - skip because conflict resolution strategy is set to skip: print as same as any other operation
-func (e *Engine) executeOperations(ctx *CommandContext, operations []Operation) error {
-	for _, operation := range operations {
-		if err := e.executeOperation(operation, ctx.DryRun); err != nil {
+func (e *Engine) executeFileActions(actions []FileAction, dryrun bool) error {
+	for _, action := range actions {
+		if err := action.Execute(e.FileSystem, dryrun); err != nil {
 			return err
 		}
 	}
@@ -92,64 +91,6 @@ type Summary struct {
 	stowed   int
 	skipped  int
 	upToDate int
-}
-
-func (e *Engine) executeOperation(operation Operation, dryrun bool) error {
-	switch operation.Action {
-	case FileActionNoOp:
-		return nil
-	case FileActionSkip:
-		output.Success("[Skip] %s", operation.Destination)
-	case FileActionLink:
-		if !dryrun {
-			if err := e.FileSystem.Link(operation.Source, operation.Destination); err != nil {
-				return err
-			}
-		}
-		output.Success("[Link] %s -> %s", operation.Destination, operation.Source)
-	case FileActionUpdateLink:
-	case FileActionReplaceLink:
-		if !dryrun {
-			if err := e.FileSystem.Remove(operation.Destination); err != nil {
-				return err
-			}
-			if err := e.FileSystem.Link(operation.Source, operation.Destination); err != nil {
-				return err
-			}
-		}
-		output.Success("[Update] %s -> %s", operation.Destination, operation.Source)
-	case FileActionBackupLink:
-		if !dryrun {
-			if err := e.FileSystem.Backup(operation.Destination); err != nil {
-				return err
-			}
-			if err := e.FileSystem.Link(operation.Source, operation.Destination); err != nil {
-				return err
-			}
-		}
-		output.Success("[backup] %s -> %s", operation.Destination, operation.BackupPath)
-	case FileActionAdoptLink:
-		if !dryrun {
-			if err := e.FileSystem.Copy(operation.Destination, operation.Source); err != nil {
-				return err
-			}
-			if err := e.FileSystem.Remove(operation.Destination); err != nil {
-				return err
-			}
-			if err := e.FileSystem.Link(operation.Source, operation.Destination); err != nil {
-				return err
-			}
-		}
-		output.Success("[adopt] %s -> %s", operation.Destination, operation.Source)
-	case FileActionUnlink:
-		if !dryrun {
-			if err := e.FileSystem.Remove(operation.Destination); err != nil {
-				return err
-			}
-		}
-		output.Success("[remove] %s", operation.Destination)
-	}
-	return nil
 }
 
 func (e *Engine) populatePackageList(args []string) ([]string, error) {
@@ -177,7 +118,7 @@ func (e *Engine) populatePackageList(args []string) ([]string, error) {
 }
 
 func (e *Engine) getAllPackages() ([]string, error) {
-	candidates, err := e.FileSystem.ListAllDirectories(e.Source)
+	candidates, err := e.FileSystem.ListDirs(e.Source)
 	if err != nil {
 		return nil, err
 	}

@@ -6,9 +6,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"strings"
-
-	"github.com/ThisaruGuruge/bestow/internal/constant"
 )
 
 type ExistingType string
@@ -27,6 +24,7 @@ const filePermissions = 0755
 type FileHandler struct {
 	CreatedDirs map[string]bool
 	Logger      *slog.Logger
+	Dryrun      bool
 }
 
 func NewFileHandler(l *slog.Logger) FileHandler {
@@ -36,14 +34,17 @@ func NewFileHandler(l *slog.Logger) FileHandler {
 	}
 }
 
-// Lists all the files in a given directory. The direcrtory path should be given as
-// the parent directory name and the directory name.
-// It will throw errors if the paths are incorrect or there are permission issues/IO issues
-// when reading the directory.
-// This calls itself recursively to get all the files (including the files inside subdirectories).
-// The result is added to the `fileList` provided.
-// No directory will be listed in the file list, only the files.
-func (h *FileHandler) ListAllFilesInDir(parent string, dirName string) ([]string, error) {
+// ListAllFiles Lists all the files in a given directory, including the files in subdirectories.
+// This does not include any directory inside the given path.
+//
+// Parameters:
+//   - parent: The parent directory
+//   - dirName: The name of the directory where the file list is needed
+//
+// Returns:
+//   - []string: The list of files as complete paths
+//   - error: A `FileError` if any of the step fails to complete the intended task
+func (h *FileHandler) ListAllFiles(parent string, dirName string) ([]string, error) {
 	directoryPath := filepath.Join(parent, dirName)
 	if directoryPath == "" {
 		return nil, &FileError{
@@ -78,7 +79,7 @@ func (h *FileHandler) ListAllFilesInDir(parent string, dirName string) ([]string
 	for _, file := range files {
 		if file.IsDir() {
 			dirPath := filepath.Join(dirName, file.Name())
-			subItems, err := h.ListAllFilesInDir(parent, dirPath)
+			subItems, err := h.ListAllFiles(parent, dirPath)
 			if err != nil {
 				return nil, err
 			}
@@ -91,11 +92,16 @@ func (h *FileHandler) ListAllFilesInDir(parent string, dirName string) ([]string
 	return result, nil
 }
 
-// Lists all the files in a given directory, excluding directories
-// will return error if the provided path:
-// - does not exist
-// - is not a directory
-// - is not readable/accessible
+// Lists the files in a given directory, excluding the directories.
+//
+// Parameters:
+//
+//	path: Path of the parent directory
+//
+// Returns:
+//
+//	[]string: List of files in the provided parent directory
+//	error: A "FileError" caused by any reason
 func (h *FileHandler) ListFiles(path string) ([]string, error) {
 	isDir, err := h.IsDir(path)
 	if err != nil {
@@ -122,7 +128,7 @@ func (h *FileHandler) ListFiles(path string) ([]string, error) {
 	return result, nil
 }
 
-func (h *FileHandler) ListAllDirectories(path string) ([]string, error) {
+func (h *FileHandler) ListDirs(path string) ([]string, error) {
 	h.Logger.Debug("listing all the directories", "source", path)
 	files, err := os.ReadDir(path)
 	if err != nil {
@@ -307,6 +313,13 @@ func (h *FileHandler) Link(src, dest string) error {
 	return nil
 }
 
+func (h *FileHandler) Move(src, target string) error {
+	if err := os.Rename(src, target); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (h *FileHandler) Remove(path string) error {
 	if err := os.Remove(path); err != nil {
 		return &FileError{
@@ -321,7 +334,7 @@ func (h *FileHandler) Remove(path string) error {
 
 func (h *FileHandler) RemoveEmptyDirectories(path string) error {
 	h.Logger.Debug("removing all the empty directories in the parent", "parent", path)
-	dirs, err := h.ListAllDirectories(path)
+	dirs, err := h.ListDirs(path)
 	if err != nil {
 		return err
 	}
@@ -350,7 +363,7 @@ func (h *FileHandler) RemoveDirIfEmpty(path string) error {
 		h.Logger.Debug("directory is not empty", "path", path)
 		return nil
 	}
-	dirs, err := h.ListAllDirectories(path)
+	dirs, err := h.ListDirs(path)
 	if err != nil {
 		return err
 	}
@@ -370,21 +383,6 @@ func (h *FileHandler) RemoveDirIfEmpty(path string) error {
 	return nil
 }
 
-func (h *FileHandler) Backup(path string) error {
-	h.Logger.Debug("backing up file", "path", path)
-	fileName := filepath.Base(path)
-	newFileName := strings.Join([]string{fileName, constant.AppName, BackupFileExtension}, ".")
-	newFullPath := filepath.Join(filepath.Dir(path), newFileName)
-	if err := os.Rename(path, newFullPath); err != nil {
-		return &FileError{
-			Message: "failed to rename the file",
-			Path:    path,
-			Cause:   err,
-		}
-	}
-	h.Logger.Debug("successfully backed up the file", "old", path, "new", newFullPath)
-	return nil
-}
 func (h *FileHandler) Copy(src, dest string) error {
 	srcFile, err := os.Open(src)
 	if err != nil {
@@ -422,6 +420,13 @@ func (h *FileHandler) IsEmpty(path string) (bool, error) {
 		}
 	}
 	f, err := os.Open(path)
+	if err != nil {
+		return false, &FileError{
+			Message: "failed to read from the path",
+			Path:    path,
+			Cause:   err,
+		}
+	}
 	defer f.Close()
 
 	_, err = f.ReadDir(1)

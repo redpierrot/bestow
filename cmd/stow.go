@@ -32,7 +32,9 @@ var stowCmd = &cobra.Command{
 			Args:             args,
 			ConflictStrategy: conflictResolution,
 		}
-		engine, err := engine.NewEngine(cfg, appLogger)
+		//TODO: Handle error?
+		dryrun, _ := cmd.Flags().GetBool(FlagDryRun)
+		engine, err := engine.NewEngine(cfg, dryrun, appLogger)
 		if err != nil {
 			return err
 		}

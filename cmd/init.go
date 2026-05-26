@@ -42,7 +42,9 @@ var initCmd = &cobra.Command{
 			Source:      source,
 			Destination: destination,
 		}
-		eng, err := engine.NewEngine(&config, appLogger)
+		// TODO: Handle error?
+		dryrun, _ := cmd.Flags().GetBool(FlagDryRun)
+		eng, err := engine.NewEngine(&config, dryrun, appLogger)
 		if err != nil {
 			return err
 		}
