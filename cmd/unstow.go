@@ -26,7 +26,7 @@ var unstowCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if err := engine.Execute(&ctx, &args); err != nil {
+		if err := engine.Execute(&ctx); err != nil {
 			return err
 		}
 		appLogger.Info("successfully unstowed the packages")

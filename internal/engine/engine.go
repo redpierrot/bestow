@@ -56,7 +56,7 @@ func NewEngine(cfg *config.Config, dryrun bool, l *slog.Logger) (*Engine, error)
 	}, nil
 }
 
-func (e *Engine) Execute(ctx *CommandContext, args *[]string) error {
+func (e *Engine) Execute(ctx *CommandContext) error {
 	if ctx.Action == ActionInit {
 		if err := e.init(ctx); err != nil {
 			return err

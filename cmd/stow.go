@@ -38,7 +38,7 @@ var stowCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if err := engine.Execute(&ctx, &args); err != nil {
+		if err := engine.Execute(&ctx); err != nil {
 			return err
 		}
 		appLogger.Info("successfully stowed the packages")
@@ -62,15 +62,15 @@ func getConflictFlags(cmd *cobra.Command) ([]boolFlagValue, error) {
 	}
 	adopt, err = cmd.Flags().GetBool(FlagAdopt)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read the flag %s: %w", FlagForce, err)
+		return nil, fmt.Errorf("failed to read the flag %s: %w", FlagAdopt, err)
 	}
 	backup, err = cmd.Flags().GetBool(FlagBackup)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read the flag %s: %w", FlagForce, err)
+		return nil, fmt.Errorf("failed to read the flag %s: %w", FlagBackup, err)
 	}
 	interactive, err = cmd.Flags().GetBool(FlagInteractive)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read the flag %s: %w", FlagForce, err)
+		return nil, fmt.Errorf("failed to read the flag %s: %w", FlagInteractive, err)
 	}
 
 	flagValues := []boolFlagValue{

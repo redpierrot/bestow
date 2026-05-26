@@ -54,7 +54,7 @@ var initCmd = &cobra.Command{
 			Force:      force,
 			IgnoreList: ignoreList,
 		}
-		if err := eng.Execute(&ctx, &[]string{}); err != nil {
+		if err := eng.Execute(&ctx); err != nil {
 			return err
 		}
 		output.Success("successfully initialized bestow")
