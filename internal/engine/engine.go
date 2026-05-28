@@ -35,7 +35,7 @@ type Engine struct {
 	Destination string
 	Ignore      IgnoreList
 	Logger      *slog.Logger
-	FileSystem  file.FileSystem
+	FileSystem  file.System
 }
 
 func NewEngine(cfg *config.Config, dryrun bool, l *slog.Logger) (*Engine, error) {
@@ -46,13 +46,13 @@ func NewEngine(cfg *config.Config, dryrun bool, l *slog.Logger) (*Engine, error)
 			Cause:   err,
 		}
 	}
-	handler := file.NewFileHandler(l) // TODO: Pass "remove empty parents" parameter
+	handler := file.NewHandler(l) // TODO: Pass "remove empty parents" parameter
 	return &Engine{
 		Source:      cfg.Source,
 		Destination: cfg.Destination,
 		Ignore:      *ignoreList,
 		Logger:      l.With("component", "engine"),
-		FileSystem:  &handler,
+		FileSystem:  handler,
 	}, nil
 }
 
@@ -118,9 +118,20 @@ func (e *Engine) populatePackageList(args []string) ([]string, error) {
 }
 
 func (e *Engine) getAllPackages() ([]string, error) {
-	candidates, err := e.FileSystem.ListDirs(e.Source)
+	dirs, err := e.FileSystem.ListDirs(e.Source)
 	if err != nil {
 		return nil, err
+	}
+	candidates := []string{}
+	for _, dir := range dirs {
+		candidate, err := filepath.Rel(e.Source, dir)
+		if err != nil {
+			return nil, &EngineError{
+				Message: "failed to retrieve the package name",
+				Cause:   err,
+			}
+		}
+		candidates = append(candidates, candidate)
 	}
 	return candidates, nil
 }

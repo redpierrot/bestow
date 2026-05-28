@@ -14,15 +14,15 @@ import (
 )
 
 type IgnoreList struct {
-	src         string
-	items       []string
-	fileHandler file.FileHandler
-	logger      *slog.Logger
+	src        string
+	items      []string
+	fileSystem file.System
+	logger     *slog.Logger
 }
 
 func newIgnoreList(src string, l *slog.Logger) (*IgnoreList, error) {
-	handler := file.NewFileHandler(l)
-	list := &IgnoreList{src: src, fileHandler: handler, logger: l.With("section", "ignore_handler")}
+	handler := file.NewHandler(l)
+	list := &IgnoreList{src: src, fileSystem: handler, logger: l.With("section", "ignore_handler")}
 
 	// Load global ignore list
 	configHome := config.AppConfigHome()
@@ -43,7 +43,7 @@ func (i *IgnoreList) forPackage(pkg string) ([]string, error) {
 		return i.items, nil
 	}
 	result := append([]string(nil), i.items...)
-	if err := readIgnoreFile(filepath.Join(i.src, pkg), &result, i.fileHandler); err != nil {
+	if err := readIgnoreFile(filepath.Join(i.src, pkg), &result, i.fileSystem); err != nil {
 		return nil, &EngineError{
 			Message: "failed to read the ignore list for the package",
 			Cause:   err,

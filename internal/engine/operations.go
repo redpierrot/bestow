@@ -70,7 +70,8 @@ func (e *Engine) getPackageOperation(pkg string, ctx *CommandContext) ([]FileAct
 }
 
 func (e *Engine) getFileOperations(pkg string) ([]OperationCandidate, error) {
-	fileList, err := e.FileSystem.ListAllFiles(e.Source, pkg)
+	pkgPath := filepath.Join(e.Source, pkg)
+	fileList, err := e.FileSystem.ListAllFiles(pkgPath)
 	if err != nil {
 		return nil, &EngineError{
 			Message: "failed to read the files in the package",
@@ -87,13 +88,19 @@ func (e *Engine) getFileOperations(pkg string) ([]OperationCandidate, error) {
 			e.Logger.Debug("ignoring the file due to ignore list", "file_name", fileName)
 			continue
 		}
-		sourceFile := filepath.Join(e.Source, fileName)
-		e.Logger.Debug("file name", "file_name", fileName)
-		relativePath := filepath.Join(e.FileSystem.GetPathSegments(fileName)[1:]...)
+		e.Logger.Debug("retrieving file path", "file_name", fileName, "source_file", fileName)
+		relativePath, err := filepath.Rel(pkgPath, fileName)
+		if err != nil {
+			return nil, &EngineError{
+				Message: "failed to calculate the relative path",
+				Cause:   err,
+			}
+		}
 		e.Logger.Debug("relative path of the file", "file_path", relativePath)
 		destinationFile := filepath.Join(e.Destination, relativePath)
+		e.Logger.Debug("retrieving file path", "file_name", fileName, "destination_file", destinationFile)
 		candidates = append(candidates, OperationCandidate{
-			source:      sourceFile,
+			source:      fileName,
 			destination: destinationFile,
 		})
 		e.Logger.Debug("adding candidate file", "file_name", fileName)
@@ -188,7 +195,7 @@ func (e *Engine) getStowFileAction(candidate OperationCandidate, strategy Resolv
 		return newFileActionSkip(candidate.source, candidate.destination), nil
 	case ResolveBackup:
 		e.Logger.Debug("existing file at the destination will be backed up and replaced", "destination", candidate.destination, "strategy", strategy)
-		backupFilePath := candidate.destination + file.BackupFileExtension
+		backupFilePath := candidate.destination + backupExtension
 		return newFileActionBackup(candidate.source, candidate.destination, backupFilePath), nil
 	case ResolveAdopt:
 		if existing == file.ExistingForeignSymlink {

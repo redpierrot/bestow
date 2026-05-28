@@ -25,10 +25,10 @@ const (
 	Remove
 )
 
-const bakcupExtention = ".bestow.backup"
+const backupExtension = ".bestow.backup"
 
 type FileAction interface {
-	Execute(fs file.FileSystem, dryrun bool) error
+	Execute(fs file.System, dryrun bool) error
 	Type() ActionType
 	Source() string
 	Destination() string
@@ -62,7 +62,7 @@ func newFileActionNoOp(source, destination, reason string) *FileActionNoOp {
 	}
 }
 
-func (f *FileActionNoOp) Execute(fs file.FileSystem, dryrun bool) error {
+func (f *FileActionNoOp) Execute(fs file.System, dryrun bool) error {
 	// Add to summary
 	return nil
 }
@@ -84,7 +84,7 @@ func newFileActionSkip(source, destination string) *FileActionSkip {
 	}
 }
 
-func (f *FileActionSkip) Execute(fs file.FileSystem, dryrun bool) error {
+func (f *FileActionSkip) Execute(fs file.System, dryrun bool) error {
 	output.Success("[%s] %s -> %s", labelSkip, f.destination, f.source)
 	return nil
 }
@@ -106,7 +106,7 @@ func newFileActionLink(source, destination string) *FileActionLink {
 	}
 }
 
-func (f *FileActionLink) Execute(fs file.FileSystem, dryrun bool) error {
+func (f *FileActionLink) Execute(fs file.System, dryrun bool) error {
 	if !dryrun {
 		if err := fs.Link(f.source, f.destination); err != nil {
 			return err
@@ -133,7 +133,7 @@ func newFileActionReplace(source, destination string) *FileActionReplace {
 	}
 }
 
-func (f *FileActionReplace) Execute(fs file.FileSystem, dryrun bool) error {
+func (f *FileActionReplace) Execute(fs file.System, dryrun bool) error {
 	if !dryrun {
 		if err := fs.Remove(f.destination); err != nil {
 			return err
@@ -168,8 +168,8 @@ func newFileActionBackup(source, destination, backup string) *FileActionBackup {
 	}
 }
 
-func (f *FileActionBackup) Execute(fs file.FileSystem, dryrun bool) error {
-	backupPath := f.destination + bakcupExtention
+func (f *FileActionBackup) Execute(fs file.System, dryrun bool) error {
+	backupPath := f.destination + backupExtension
 	if !dryrun {
 		if err := fs.Move(f.destination, backupPath); err != nil {
 			return err
@@ -202,7 +202,7 @@ func newFileActionAdopt(source, destination string) *FileActionAdopt {
 	}
 }
 
-func (f *FileActionAdopt) Execute(fs file.FileSystem, dryrun bool) error {
+func (f *FileActionAdopt) Execute(fs file.System, dryrun bool) error {
 	if !dryrun {
 		if err := fs.Remove(f.source); err != nil {
 			return err
@@ -241,7 +241,7 @@ func newFileActionRemove(source, destination string) *FileActionRemove {
 	}
 }
 
-func (f *FileActionRemove) Execute(fs file.FileSystem, dryrun bool) error {
+func (f *FileActionRemove) Execute(fs file.System, dryrun bool) error {
 	if !dryrun {
 		if err := fs.Remove(f.destination); err != nil {
 			return err

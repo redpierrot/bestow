@@ -12,9 +12,9 @@ import (
 	"github.com/ThisaruGuruge/bestow/internal/file"
 )
 
-func readIgnoreFile(source string, patterns *[]string, handler file.FileHandler) error {
+func readIgnoreFile(source string, patterns *[]string, fileSystem file.System) error {
 	filePath := filepath.Join(source, constant.IgnoreFile)
-	exists, err := handler.Exists(filePath)
+	exists, err := fileSystem.Exists(filePath)
 	if err != nil {
 		return &EngineError{
 			Message: "error occurred while reading the ignore file",
@@ -24,7 +24,7 @@ func readIgnoreFile(source string, patterns *[]string, handler file.FileHandler)
 	if !exists {
 		return nil
 	}
-	lines, err := handler.ReadLines(filePath)
+	lines, err := fileSystem.ReadLines(filePath)
 	if err != nil {
 		return &EngineError{
 			Message: "failed to read the ignore file",

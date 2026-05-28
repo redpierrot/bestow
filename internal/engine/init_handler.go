@@ -53,7 +53,8 @@ func (e *Engine) createIgnoreFile(appConfigDir string, force bool, ignoreList []
 	}
 	e.Logger.Debug("initializing ignore list", "ignore-list", ignoreList)
 
-	if err := e.FileSystem.CreateFile(constant.IgnoreFile, appConfigDir, getIgnoreFileContent(ignoreList)); err != nil {
+	ignoreFile := filepath.Join(appConfigDir, constant.IgnoreFile)
+	if err := e.FileSystem.CreateFile(ignoreFile, getIgnoreFileContent(ignoreList)); err != nil {
 		return err
 	}
 	output.Success("ignore file created successfully", "path", fullPath)
@@ -94,7 +95,8 @@ func (e *Engine) createConfigFile(source, destination string, force bool, appCon
 			Cause:   err,
 		}
 	}
-	if err := e.FileSystem.CreateFile(constant.ConfigFile, appConfigDir, config); err != nil {
+	configFile := filepath.Join(appConfigDir, constant.ConfigFile)
+	if err := e.FileSystem.CreateFile(configFile, config); err != nil {
 		return &EngineError{
 			Message: "failed to write to the config file: %w",
 			Cause:   err,
