@@ -15,22 +15,16 @@ import (
 	"path/filepath"
 )
 
-// TODO: Make this configurable or make it passable as a parameter
-const (
-	dirPermissions  = 0755
-	filePermissions = 0644
-)
-
-// Handler is the implementation of the System using io, os, and bufio go modules.
-type Handler struct {
+// NoWriteHandler is the implementation of the System using io, os, and bufio go modules.
+type NoWriteHandler struct {
 	// Should use mutex here if migrate to go routines
 	createdDirs map[string]bool
 	logger      *slog.Logger
 }
 
-// NewHandler returns a new Handler with the provided logger l.
-func NewHandler(l *slog.Logger) *Handler {
-	return &Handler{
+// NewNoWriteHandler returns a new NoWriteHandler with the provided logger l.
+func NewNoWriteHandler(l *slog.Logger) *NoWriteHandler {
+	return &NoWriteHandler{
 		createdDirs: make(map[string]bool),
 		logger:      l.With("component", "file"),
 	}
@@ -38,7 +32,7 @@ func NewHandler(l *slog.Logger) *Handler {
 
 // ListFiles returns a list of all the files in a given parent directory, excluding the directories.
 // The file list includes the full paths of the files found.
-func (h *Handler) ListFiles(parent string) ([]string, error) {
+func (h *NoWriteHandler) ListFiles(parent string) ([]string, error) {
 	isDir, err := h.IsDir(parent)
 	if err != nil {
 		return nil, err
@@ -63,7 +57,7 @@ func (h *Handler) ListFiles(parent string) ([]string, error) {
 
 // ListDirs lists all the subdirectories in a given parent directory.
 // The list contains the full path of the subdirectories found.
-func (h *Handler) ListDirs(parent string) ([]string, error) {
+func (h *NoWriteHandler) ListDirs(parent string) ([]string, error) {
 	h.logger.Debug("listing all the directories", "source", parent)
 	isDIr, err := h.IsDir(parent)
 	if err != nil {
@@ -88,7 +82,7 @@ func (h *Handler) ListDirs(parent string) ([]string, error) {
 
 // ListAllFiles lists all the files in a given parent directory, including the files in the subdirectories.
 // The returned list contains the full path of the files found.
-func (h *Handler) ListAllFiles(parent string) ([]string, error) {
+func (h *NoWriteHandler) ListAllFiles(parent string) ([]string, error) {
 	h.logger.Debug("listing all the files in the directory", "parent", parent)
 	isDir, err := h.IsDir(parent)
 	if err != nil {
@@ -115,17 +109,14 @@ func (h *Handler) ListAllFiles(parent string) ([]string, error) {
 }
 
 // CreateFile creates a file in the provided path and writes the provided content to the file.
-func (h *Handler) CreateFile(path, content string) error {
+func (h *NoWriteHandler) CreateFile(path, content string) error {
 	h.logger.Debug("writing to file", "file", path)
-	if err := os.WriteFile(path, []byte(content), filePermissions); err != nil {
-		return err
-	}
 	h.logger.Debug("successfully written to file", "path", path)
 	return nil
 }
 
 // CreateDir creates a directory on the provided path, including all the parent directories.
-func (h *Handler) CreateDir(path string) error {
+func (h *NoWriteHandler) CreateDir(path string) error {
 	h.logger.Debug("creating directory", "path", path)
 	if h.createdDirs[path] {
 		h.logger.Debug("directory already created", "path", path)
@@ -140,9 +131,6 @@ func (h *Handler) CreateDir(path string) error {
 		h.createdDirs[path] = true
 		return nil
 	}
-	if err := os.MkdirAll(path, dirPermissions); err != nil {
-		return err
-	}
 	h.createdDirs[path] = true
 	h.logger.Debug("created directory", "path", path)
 	return nil
@@ -150,13 +138,10 @@ func (h *Handler) CreateDir(path string) error {
 
 // Link creates a symlink of a provided src in the provided target.
 // If the target directory does not exist, link will create all the parent directories.
-func (h *Handler) Link(src, target string) error {
+func (h *NoWriteHandler) Link(src, target string) error {
 	h.logger.Debug("creating symlink", "source", src, "target", target)
 	destParent := filepath.Dir(target)
 	if err := h.CreateDir(destParent); err != nil {
-		return err
-	}
-	if err := os.Symlink(src, target); err != nil {
 		return err
 	}
 	h.logger.Debug("link created", "source", src, "target", target)
@@ -165,20 +150,18 @@ func (h *Handler) Link(src, target string) error {
 
 // Move moves a file from src to target
 // If the target directory does not exist, move will create all the parent directories.
-func (h *Handler) Move(src, target string) error {
+func (h *NoWriteHandler) Move(src, target string) error {
 	h.logger.Debug("moving file", "source", src, "target", target)
 	destParent := filepath.Dir(target)
 	if err := h.CreateDir(destParent); err != nil {
 		return err
 	}
-	if err := os.Rename(src, target); err != nil {
-		return err
-	}
+	h.logger.Debug("moved file", "from", src, "to", target)
 	return nil
 }
 
 // Remove removes the file in the provided path.
-func (h *Handler) Remove(path string) error {
+func (h *NoWriteHandler) Remove(path string) error {
 	h.logger.Debug("removing the file", "path", path)
 	exists, err := h.Exists(path)
 	if err != nil {
@@ -188,15 +171,12 @@ func (h *Handler) Remove(path string) error {
 		h.logger.Warn("file does not exist", "operation", "remove", "file", path)
 		return nil
 	}
-	if err := os.Remove(path); err != nil {
-		return err
-	}
 	h.logger.Debug("successfully removed the file", "file_name", path)
 	return nil
 }
 
 // IsDir checks whether the provided path is a directory.
-func (h *Handler) IsDir(path string) (bool, error) {
+func (h *NoWriteHandler) IsDir(path string) (bool, error) {
 	h.logger.Debug("checking whether the path is a directory", "path", path)
 	stat, err := os.Stat(path)
 	if err != nil {
@@ -210,7 +190,7 @@ func (h *Handler) IsDir(path string) (bool, error) {
 
 // IsEmptyDir returns true if the provided path is empty. It will return an error is the provided path is not a
 // directory.
-func (h *Handler) IsEmptyDir(path string) (bool, error) {
+func (h *NoWriteHandler) IsEmptyDir(path string) (bool, error) {
 	h.logger.Debug("checking if the provided path is an empty directory", "path", path)
 	isDir, err := h.IsDir(path)
 	if err != nil {
@@ -236,7 +216,7 @@ func (h *Handler) IsEmptyDir(path string) (bool, error) {
 }
 
 // Exists returns true if the provided path exists.
-func (h *Handler) Exists(path string) (bool, error) {
+func (h *NoWriteHandler) Exists(path string) (bool, error) {
 	h.logger.Debug("checking whether the provided path exists", "path", path)
 	_, err := os.Lstat(path)
 	if err != nil {
@@ -249,7 +229,7 @@ func (h *Handler) Exists(path string) (bool, error) {
 }
 
 // ReadLines reads the content of a file in the given path and returns the lines of text as a list of strings.
-func (h *Handler) ReadLines(path string) ([]string, error) {
+func (h *NoWriteHandler) ReadLines(path string) ([]string, error) {
 	h.logger.Debug("reading the file", "path", path)
 	file, err := os.Open(path)
 	if err != nil {
@@ -272,7 +252,7 @@ func (h *Handler) ReadLines(path string) ([]string, error) {
 //   - ExistingManagedSymlink: dst is a symlink that is managed by bestow
 //   - ExistingForeignSymlink: dst is a symlink that is not managed by bestow
 //   - ExistingDir: dst is a directory
-func (h *Handler) GetExistingFileType(src, dst string) (ExistingType, error) {
+func (h *NoWriteHandler) GetExistingFileType(src, dst string) (ExistingType, error) {
 	h.logger.Debug("checking existing file type", "source", src, "destination", dst)
 	lstat, err := os.Lstat(dst)
 	if err != nil {

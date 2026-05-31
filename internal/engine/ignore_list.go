@@ -5,6 +5,7 @@ All Rights Reversed (ɔ)
 package engine
 
 import (
+	"fmt"
 	"log/slog"
 	"path/filepath"
 
@@ -20,18 +21,17 @@ type IgnoreList struct {
 	logger     *slog.Logger
 }
 
-func newIgnoreList(src string, l *slog.Logger) (*IgnoreList, error) {
-	handler := file.NewHandler(l)
-	list := &IgnoreList{src: src, fileSystem: handler, logger: l.With("section", "ignore_handler")}
+func newIgnoreList(src string, fs file.System, l *slog.Logger) (*IgnoreList, error) {
+	list := &IgnoreList{src: src, fileSystem: fs, logger: l.With("section", "ignore_handler")}
 
 	// Load global ignore list
 	configHome := config.AppConfigHome()
-	if err := readIgnoreFile(configHome, &list.items, handler); err != nil {
+	if err := readIgnoreFile(configHome, &list.items, fs); err != nil {
 		return nil, err
 	}
 
 	//load source ignore list
-	if err := readIgnoreFile(src, &list.items, handler); err != nil {
+	if err := readIgnoreFile(src, &list.items, fs); err != nil {
 		return nil, err
 	}
 	return list, nil
@@ -44,10 +44,7 @@ func (i *IgnoreList) forPackage(pkg string) ([]string, error) {
 	}
 	result := append([]string(nil), i.items...)
 	if err := readIgnoreFile(filepath.Join(i.src, pkg), &result, i.fileSystem); err != nil {
-		return nil, &EngineError{
-			Message: "failed to read the ignore list for the package",
-			Cause:   err,
-		}
+		return nil, err
 	}
 	return result, nil
 }
@@ -61,10 +58,7 @@ func (i *IgnoreList) shouldIgnore(fileName, pkg string) (bool, error) {
 	for _, ignoreItem := range ignoreList {
 		match, err := doublestar.PathMatch(ignoreItem, fileName)
 		if err != nil {
-			return false, &EngineError{
-				Message: "ignore pattern validation error",
-				Cause:   err,
-			}
+			return false, fmt.Errorf("parse %s %s: %w", ignoreItem, fileName, err)
 		}
 		if match {
 			return true, nil

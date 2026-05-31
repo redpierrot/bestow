@@ -80,14 +80,17 @@ var rootCmd = &cobra.Command{
 func Execute() {
 	err := rootCmd.Execute()
 	if err != nil {
-		var engineError *engine.EngineError
-		if errors.As(err, &engineError) && engineError.Hint != "" {
-			if engineError.Cause != nil {
-				appLogger.Error(engineError.Message, "cause", engineError.Cause)
-			} else {
-				appLogger.Error(engineError.Message)
+		var hintedError *engine.HintedError
+		var conflictError *engine.ConflictError
+		if errors.As(err, &hintedError) && hintedError.Hint != "" {
+			appLogger.Error(hintedError.Error())
+			appLogger.Info(fmt.Sprintf("Hint: %s", hintedError.Hint))
+		} else if errors.As(err, &conflictError) {
+			appLogger.Error(conflictError.Error())
+			appLogger.Warn("[conflicts]")
+			for _, conflict := range conflictError.Conflicts {
+				appLogger.Warn("  ", "destination", conflict.Destination, "sources", strings.Join(conflict.Sources, ", "))
 			}
-			appLogger.Info(fmt.Sprintf("Hint: %s", engineError.Hint))
 		} else {
 			appLogger.Error(err.Error())
 		}
@@ -125,16 +128,16 @@ func initConfig() {
 		appLogger.Debug("no custom config file provided; using default", "path", configFilePath)
 		viper.SetConfigFile(configFilePath)
 	}
+	viper.SetEnvPrefix(strings.ToUpper(rootCmdName))
+	viper.AutomaticEnv()
 	if err := viper.ReadInConfig(); err != nil {
 		var pathErr *os.PathError
 		if errors.As(err, &pathErr) {
 			cfgFileFound = false
+		} else {
+			initConfigError = err
 		}
-		initConfigError = err
 	} else {
 		cfgFileFound = true
 	}
-
-	viper.SetEnvPrefix(strings.ToUpper(rootCmdName))
-	viper.AutomaticEnv()
 }

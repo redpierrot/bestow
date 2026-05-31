@@ -34,7 +34,7 @@ type OperationCandidate struct {
 }
 
 // TODO: Need to verify if two operations have the same destination.
-// Which should be an error; We should catch it here before proceesing to
+// Which should be an error; We should catch it here before processing to
 // execute the operations
 func (e *Engine) populateOperations(ctx *CommandContext) ([]FileAction, error) {
 	e.Logger.Debug("populating operations", "action", ctx.Action)
@@ -42,21 +42,13 @@ func (e *Engine) populateOperations(ctx *CommandContext) ([]FileAction, error) {
 	if err != nil {
 		return nil, err
 	}
-	result := make([]FileAction, 0, len(packageList))
+	candidates := []OperationCandidate{}
 	for _, pkg := range packageList {
-		pacakgeOperations, err := e.getPackageOperation(pkg, ctx)
+		packageCandidates, err := e.getFileOperations(pkg)
 		if err != nil {
 			return nil, err
 		}
-		result = append(result, pacakgeOperations...)
-	}
-	return result, nil
-}
-
-func (e *Engine) getPackageOperation(pkg string, ctx *CommandContext) ([]FileAction, error) {
-	candidates, err := e.getFileOperations(pkg)
-	if err != nil {
-		return nil, err
+		candidates = append(candidates, packageCandidates...)
 	}
 	switch ctx.Action {
 	case ActionStow:
@@ -64,46 +56,42 @@ func (e *Engine) getPackageOperation(pkg string, ctx *CommandContext) ([]FileAct
 	case ActionUnstow:
 		return e.resolveUnstowOpts(candidates)
 	}
-	return nil, &EngineError{
-		Message: fmt.Sprintf("unsupported action %s", ctx.Action),
-	}
+	return nil, fmt.Errorf("action %s: %w", ctx.Action, ErrUnsupportedAction)
 }
 
 func (e *Engine) getFileOperations(pkg string) ([]OperationCandidate, error) {
 	pkgPath := filepath.Join(e.Source, pkg)
 	fileList, err := e.FileSystem.ListAllFiles(pkgPath)
 	if err != nil {
-		return nil, &EngineError{
-			Message: "failed to read the files in the package",
-			Cause:   err,
-		}
+		return nil, err
 	}
 	candidates := make([]OperationCandidate, 0, len(fileList))
-	for _, fileName := range fileList {
-		doIgnore, err := e.Ignore.shouldIgnore(fileName, pkg)
+	for _, filePath := range fileList {
+		relPath, err := filepath.Rel(pkgPath, filePath)
+		if err != nil {
+			return nil, err
+		}
+		doIgnore, err := e.Ignore.shouldIgnore(relPath, pkg)
 		if err != nil {
 			return nil, err
 		}
 		if doIgnore {
-			e.Logger.Debug("ignoring the file due to ignore list", "file_name", fileName)
+			e.Logger.Debug("ignoring the file due to ignore list", "file_name", filePath)
 			continue
 		}
-		e.Logger.Debug("retrieving file path", "file_name", fileName, "source_file", fileName)
-		relativePath, err := filepath.Rel(pkgPath, fileName)
+		e.Logger.Debug("retrieving file path", "file_name", filePath, "source_file", filePath)
+		relativePath, err := filepath.Rel(pkgPath, filePath)
 		if err != nil {
-			return nil, &EngineError{
-				Message: "failed to calculate the relative path",
-				Cause:   err,
-			}
+			return nil, err
 		}
 		e.Logger.Debug("relative path of the file", "file_path", relativePath)
 		destinationFile := filepath.Join(e.Destination, relativePath)
-		e.Logger.Debug("retrieving file path", "file_name", fileName, "destination_file", destinationFile)
+		e.Logger.Debug("retrieving file path", "file_name", filePath, "destination_file", destinationFile)
 		candidates = append(candidates, OperationCandidate{
-			source:      fileName,
+			source:      filePath,
 			destination: destinationFile,
 		})
-		e.Logger.Debug("adding candidate file", "file_name", fileName)
+		e.Logger.Debug("adding candidate file", "file_name", filePath)
 	}
 	return candidates, nil
 }
@@ -125,15 +113,16 @@ func (e *Engine) resolveStowOpts(candidates []OperationCandidate, strategy Resol
 	for destination, sources := range destinations {
 		if len(sources) > 1 {
 			conflicts = append(conflicts, DestinationConflict{
-				destination: destination,
-				sources:     sources,
+				Destination: destination,
+				Sources:     sources,
 			})
 		}
 	}
 	if len(conflicts) > 0 {
-		return nil, &EngineError{
-			Message:   "multiple files competing for the same destination",
+		return nil, &ConflictError{
+			Op:        "stow",
 			Conflicts: conflicts,
+			Err:       ErrMultiFile,
 		}
 	}
 	return actions, nil
@@ -158,26 +147,20 @@ func (e *Engine) resolveUnstowOpts(candidates []OperationCandidate) ([]FileActio
 func (e *Engine) getStowFileAction(candidate OperationCandidate, strategy ResolveStrategy) (FileAction, error) {
 	destExists, err := e.FileSystem.Exists(candidate.destination)
 	if err != nil {
-		return nil, &EngineError{
-			Message: "failed to check the destination file",
-			Cause:   err,
-			Hint:    "check permissions on destination",
-		}
+		return nil, err
 	}
 	if !destExists {
 		return newFileActionLink(candidate.source, candidate.destination), nil
 	}
 	existing, err := e.FileSystem.GetExistingFileType(candidate.source, candidate.destination)
 	if err != nil {
-		return nil, &EngineError{
-			Message: "failed to read the existing file",
-			Cause:   err,
-		}
+		return nil, err
 	}
 	if existing == file.ExistingDir {
-		return nil, &EngineError{
-			Message: "destination is a directory",
-			Hint:    fmt.Sprintf("check the directory %s", candidate.destination),
+		return nil, &HintedError{
+			Op:   fmt.Sprintf("stow %s %s", candidate.source, candidate.destination),
+			Hint: fmt.Sprintf("remove the directory %s", candidate.destination),
+			Err:  ErrDestIsDir,
 		}
 	}
 	// TODO: Managed symlink finding strategy has a flaw.
@@ -198,19 +181,20 @@ func (e *Engine) getStowFileAction(candidate OperationCandidate, strategy Resolv
 		backupFilePath := candidate.destination + backupExtension
 		return newFileActionBackup(candidate.source, candidate.destination, backupFilePath), nil
 	case ResolveAdopt:
-		if existing == file.ExistingForeignSymlink {
+		switch existing {
+		case file.ExistingForeignSymlink:
 			e.Logger.Warn("cannot adopt the existing symlink at destination", "destination", candidate.destination)
 			return newFileActionNoOp(candidate.source, candidate.destination, "foreign symlinks cannot be adopted"), nil
-		}
-		if existing == file.ExistingRegularFile {
+		case file.ExistingRegularFile:
 			e.Logger.Debug("existing destination will be adopted to source", "destination", candidate.destination, "strategy", strategy)
 			return newFileActionAdopt(candidate.source, candidate.destination), nil
+		default:
+			return nil, fmt.Errorf("unsupported existing file type %s", existing)
 		}
 	default:
 		e.Logger.Warn("unsupported resolution strategy", "strategy", strategy, "destination", candidate.destination)
-		return newFileActionSkip(candidate.source, candidate.destination), nil
+		return nil, fmt.Errorf("unsupported strategy %s: %w", strategy, ErrUnsupportedAction)
 	}
-	return newFileActionSkip(candidate.source, candidate.destination), nil
 }
 
 func (e *Engine) getUnstowFileAction(candidate OperationCandidate) (FileAction, error) {
@@ -223,15 +207,13 @@ func (e *Engine) getUnstowFileAction(candidate OperationCandidate) (FileAction, 
 	}
 	existing, err := e.FileSystem.GetExistingFileType(candidate.source, candidate.destination)
 	if err != nil {
-		return nil, &EngineError{
-			Message: "failed to read the existing file",
-			Cause:   err,
-		}
+		return nil, err
 	}
 	if existing == file.ExistingDir {
-		return nil, &EngineError{
-			Message: "destination is a directory",
-			Hint:    fmt.Sprintf("check the directory %s", candidate.destination),
+		return nil, &HintedError{
+			Op:   fmt.Sprintf("unstow %s %s", candidate.source, candidate.destination),
+			Hint: fmt.Sprintf("remove the directory %s", candidate.destination),
+			Err:  ErrDestIsDir,
 		}
 	}
 	if existing == file.ExistingManagedSymlink {

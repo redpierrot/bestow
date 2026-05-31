@@ -5,6 +5,7 @@ All Rights Reversed (ɔ)
 package engine
 
 import (
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -13,23 +14,17 @@ import (
 )
 
 func readIgnoreFile(source string, patterns *[]string, fileSystem file.System) error {
-	filePath := filepath.Join(source, constant.IgnoreFile)
-	exists, err := fileSystem.Exists(filePath)
+	ignoreFile := filepath.Join(source, constant.IgnoreFile)
+	exists, err := fileSystem.Exists(ignoreFile)
 	if err != nil {
-		return &EngineError{
-			Message: "error occurred while reading the ignore file",
-			Cause:   err,
-		}
+		return fmt.Errorf("read %s: %w", ignoreFile, err)
 	}
 	if !exists {
 		return nil
 	}
-	lines, err := fileSystem.ReadLines(filePath)
+	lines, err := fileSystem.ReadLines(ignoreFile)
 	if err != nil {
-		return &EngineError{
-			Message: "failed to read the ignore file",
-			Cause:   err,
-		}
+		return fmt.Errorf("read %s: %w", ignoreFile, err)
 	}
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)

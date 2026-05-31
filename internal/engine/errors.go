@@ -5,34 +5,55 @@ All Rights Reversed (ɔ)
 package engine
 
 import (
-	"fmt"
-	"strings"
+	"errors"
 )
 
-type EngineError struct {
-	Message   string
-	Cause     error
-	Hint      string
+// HintedError represents an error with a hint to the user.
+// The Hint filed includes the hint for the error, and it should be handled in
+// the outputs where the error is surfaced.
+type HintedError struct {
+	Op   string
+	Hint string
+	Err  error
+}
+
+func (e *HintedError) Error() string {
+	if e.Op == "" {
+		return e.Err.Error()
+	}
+	return e.Op + ": " + e.Err.Error()
+}
+
+func (e *HintedError) Unwrap() error {
+	return e.Err
+}
+
+// ConflictError represents the errors where stow fails due to conflicts.
+// The Conflicts filed includes all conflicts found during the operation, which
+// should be handled by the output.
+type ConflictError struct {
+	Op        string
 	Conflicts []DestinationConflict
+	Err       error
 }
 
 type DestinationConflict struct {
-	destination string
-	sources     []string
+	Destination string
+	Sources     []string
 }
 
-func (e *EngineError) Error() string {
-	message := e.Message
-	if e.Cause != nil {
-		message = fmt.Sprintf("%s: %v", message, e.Cause)
+func (e *ConflictError) Error() string {
+	if e.Op == "" {
+		return e.Err.Error()
 	}
-	for _, c := range e.Conflicts {
-		message = fmt.Sprintf("%s\n  %s <- [%s]", message, c.destination, strings.Join(c.sources, ", "))
-	}
-	if e.Hint != "" {
-		message = fmt.Sprintf("%s: [Hint] %s", message, e.Hint)
-	}
-	return message
+	return e.Op + ": " + e.Err.Error()
 }
 
-func (e *EngineError) Unwrap() error { return e.Cause }
+func (e *ConflictError) Unwrap() error { return e.Err }
+
+var ErrDestIsDir = errors.New("destination is a directory")
+var ErrPkgIsNotDir = errors.New("package is not a directory")
+var ErrRootIsNotPkg = errors.New("root (.) is not a package")
+var ErrFileExists = errors.New("file already exists")
+var ErrMultiFile = errors.New("multiple files competing for the same destination")
+var ErrUnsupportedAction = errors.New("unsupported action")

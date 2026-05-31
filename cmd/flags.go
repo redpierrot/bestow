@@ -50,7 +50,7 @@ func bindOperationalFlags(cmd *cobra.Command, v *viper.Viper) {
 func checkVerbose(cmd *cobra.Command) (bool, error) {
 	verbose, err := cmd.Flags().GetBool(FlagVerbose)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("parse flag %s: %w", FlagVerbose, err)
 	}
 	return verbose, nil
 }

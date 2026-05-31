@@ -5,6 +5,8 @@ All Rights Reversed (ɔ)
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/ThisaruGuruge/bestow/internal/config"
 	"github.com/ThisaruGuruge/bestow/internal/engine"
 	"github.com/ThisaruGuruge/bestow/internal/output"
@@ -35,20 +37,34 @@ var initCmd = &cobra.Command{
 		return nil
 	},
 	RunE: func(cmd *cobra.Command, args []string) error {
-		source, _ := cmd.Flags().GetString(flagInitSource)
-		destination, _ := cmd.Flags().GetString(flagInitDestination)
-		force, _ := cmd.Flags().GetBool(flagInitForce)
+		source, err := cmd.Flags().GetString(flagInitSource)
+		if err != nil {
+			return fmt.Errorf("parse flag %s: %w", flagInitSource, err)
+		}
+		destination, err := cmd.Flags().GetString(flagInitDestination)
+		if err != nil {
+			return fmt.Errorf("parse flag %s: %w", flagDestination, err)
+		}
+		force, err := cmd.Flags().GetBool(flagInitForce)
+		if err != nil {
+			return fmt.Errorf("parse flag %s: %w", FlagForce, err)
+		}
 		config := config.Config{
 			Source:      source,
 			Destination: destination,
 		}
-		// TODO: Handle error?
-		dryrun, _ := cmd.Flags().GetBool(FlagDryRun)
+		dryrun, err := cmd.Flags().GetBool(FlagDryRun)
+		if err != nil {
+			return fmt.Errorf("parse flag %s: %w", FlagDryRun, err)
+		}
 		eng, err := engine.NewEngine(&config, dryrun, appLogger)
 		if err != nil {
 			return err
 		}
 		ignoreList, err := cmd.Flags().GetStringSlice(flagInitIgnoreList)
+		if err != nil {
+			return fmt.Errorf("parse flag %s: %w", flagInitIgnoreList, err)
+		}
 		ctx := engine.CommandContext{
 			Action:     engine.ActionInit,
 			Force:      force,

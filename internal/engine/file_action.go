@@ -1,3 +1,7 @@
+/*
+All Rights Reversed (ɔ)
+*/
+
 package engine
 
 import (
@@ -204,13 +208,7 @@ func newFileActionAdopt(source, destination string) *FileActionAdopt {
 
 func (f *FileActionAdopt) Execute(fs file.System, dryrun bool) error {
 	if !dryrun {
-		if err := fs.Remove(f.source); err != nil {
-			return err
-		}
-	}
-	output.Success("[%s] %s", labelRemove, f.source)
-	if !dryrun {
-		if err := fs.Copy(f.destination, f.source); err != nil {
+		if err := fs.Move(f.destination, f.source); err != nil {
 			return err
 		}
 	}

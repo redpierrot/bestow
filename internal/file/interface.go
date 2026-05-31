@@ -25,9 +25,6 @@ type System interface {
 	// Link creates a symlink of the provided src in the provided target.
 	Link(src, target string) error
 
-	// Copy copies a file from src to dst.
-	Copy(src, dst string) error
-
 	// Move moves a file from src to target.
 	Move(src, target string) error
 

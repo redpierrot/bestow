@@ -5,6 +5,8 @@ All Rights Reversed (ɔ)
 package cmd
 
 import (
+	"fmt"
+
 	"github.com/ThisaruGuruge/bestow/internal/engine"
 	"github.com/spf13/cobra"
 )
@@ -15,18 +17,20 @@ var unstowCmd = &cobra.Command{
 	Long:    unstowLong,
 	Example: unstowExamples,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		appLogger.Debug("running stow command", "args", args)
+		appLogger.Debug("running unstow command", "args", args)
+		dryrun, err := cmd.Flags().GetBool(FlagDryRun)
+		if err != nil {
+			return fmt.Errorf("parse %s: %w", FlagDryRun, err)
+		}
+		eng, err := engine.NewEngine(cfg, dryrun, appLogger)
+		if err != nil {
+			return err
+		}
 		ctx := engine.CommandContext{
 			Action: engine.ActionUnstow,
 			Args:   args,
 		}
-		// TODO: Handle error?
-		dryrun, _ := cmd.Flags().GetBool(FlagDryRun)
-		engine, err := engine.NewEngine(cfg, dryrun, appLogger)
-		if err != nil {
-			return err
-		}
-		if err := engine.Execute(&ctx); err != nil {
+		if err := eng.Execute(&ctx); err != nil {
 			return err
 		}
 		appLogger.Info("successfully unstowed the packages")

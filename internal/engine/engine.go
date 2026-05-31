@@ -33,24 +33,26 @@ type CommandContext struct {
 type Engine struct {
 	Source      string
 	Destination string
-	Ignore      IgnoreList
+	Ignore      *IgnoreList
 	Logger      *slog.Logger
 	FileSystem  file.System
 }
 
 func NewEngine(cfg *config.Config, dryrun bool, l *slog.Logger) (*Engine, error) {
-	ignoreList, err := newIgnoreList(cfg.Source, l)
-	if err != nil {
-		return nil, &EngineError{
-			Message: "failed to initialize the ignore list",
-			Cause:   err,
-		}
+	var handler file.System
+	if dryrun {
+		handler = file.NewNoWriteHandler(l)
+	} else {
+		handler = file.NewHandler(l) // TODO: Pass "remove empty parents" parameter
 	}
-	handler := file.NewHandler(l) // TODO: Pass "remove empty parents" parameter
+	ignoreList, err := newIgnoreList(cfg.Source, handler, l)
+	if err != nil {
+		return nil, err
+	}
 	return &Engine{
 		Source:      cfg.Source,
 		Destination: cfg.Destination,
-		Ignore:      *ignoreList,
+		Ignore:      ignoreList,
 		Logger:      l.With("component", "engine"),
 		FileSystem:  handler,
 	}, nil
@@ -109,7 +111,7 @@ func (e *Engine) populatePackageList(args []string) ([]string, error) {
 			return nil, err
 		}
 	}
-	packages, err := e.filterPackages(pkgCandidates, e.Ignore)
+	packages, err := e.filterPackages(pkgCandidates)
 	if err != nil {
 		return nil, err
 	}
@@ -126,10 +128,7 @@ func (e *Engine) getAllPackages() ([]string, error) {
 	for _, dir := range dirs {
 		candidate, err := filepath.Rel(e.Source, dir)
 		if err != nil {
-			return nil, &EngineError{
-				Message: "failed to retrieve the package name",
-				Cause:   err,
-			}
+			return nil, fmt.Errorf("rel %s %s: %w", e.Source, dir, err)
 		}
 		candidates = append(candidates, candidate)
 	}
@@ -140,23 +139,22 @@ func (e *Engine) getPackagesFromArgs(candidates []string) ([]string, error) {
 	result := []string{}
 	for _, candidate := range candidates {
 		if candidate == "." {
-			return nil, &EngineError{
-				Message: "invalid package; root is not considered a package",
-				Hint:    "move root files to suitable directory (`zsh/`, `bash/`, etc.)",
+			return nil, &HintedError{
+				Op:   fmt.Sprintf("read package %s", candidate),
+				Hint: "move root files to suitable directory (`zsh/`, `bash/`, etc.)",
+				Err:  ErrRootIsNotPkg,
 			}
 		}
 		pkgPath := filepath.Clean(candidate)
 		isDir, err := e.FileSystem.IsDir(filepath.Join(e.Source, pkgPath))
 		if err != nil {
-			return nil, &EngineError{
-				Message: "failed to read the package",
-				Cause:   err,
-			}
+			return nil, fmt.Errorf("read package %s: %w", candidate, err)
 		}
 		if !isDir {
-			return nil, &EngineError{
-				Message: "failed to read the package; path is not a directory",
-				Hint:    fmt.Sprintf("path: %s", pkgPath),
+			return nil, &HintedError{
+				Op:   fmt.Sprintf("read package %s", candidate),
+				Hint: fmt.Sprintf("make sure the %s is a directory", candidate),
+				Err:  ErrPkgIsNotDir,
 			}
 		}
 		result = append(result, pkgPath)
@@ -164,11 +162,11 @@ func (e *Engine) getPackagesFromArgs(candidates []string) ([]string, error) {
 	return result, nil
 }
 
-func (e *Engine) filterPackages(candidates []string, ignoreList IgnoreList) ([]string, error) {
-	e.Logger.Debug("filtering packages", "candidates", candidates, "filter", ignoreList.items)
+func (e *Engine) filterPackages(candidates []string) ([]string, error) {
+	e.Logger.Debug("filtering packages", "candidates", candidates, "filter", e.Ignore.items)
 	result := []string{}
 	for _, candidate := range candidates {
-		shouldIgnore, err := ignoreList.shouldIgnore(candidate, "")
+		shouldIgnore, err := e.Ignore.shouldIgnore(candidate, "")
 		if err != nil {
 			return nil, err
 		}

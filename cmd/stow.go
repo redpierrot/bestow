@@ -26,14 +26,15 @@ var stowCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-
+		dryrun, err := cmd.Flags().GetBool(FlagDryRun)
+		if err != nil {
+			return fmt.Errorf("parse flag %s: %w", FlagDryRun, err)
+		}
 		ctx := engine.CommandContext{
 			Action:           engine.ActionStow,
 			Args:             args,
 			ConflictStrategy: conflictResolution,
 		}
-		//TODO: Handle error?
-		dryrun, _ := cmd.Flags().GetBool(FlagDryRun)
 		engine, err := engine.NewEngine(cfg, dryrun, appLogger)
 		if err != nil {
 			return err
@@ -58,19 +59,19 @@ func getConflictFlags(cmd *cobra.Command) ([]boolFlagValue, error) {
 	var err error
 	force, err = cmd.Flags().GetBool(FlagForce)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read the flag %s: %w", FlagForce, err)
+		return nil, fmt.Errorf("parse flag %s: %w", FlagForce, err)
 	}
 	adopt, err = cmd.Flags().GetBool(FlagAdopt)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read the flag %s: %w", FlagAdopt, err)
+		return nil, fmt.Errorf("parse flag %s: %w", FlagAdopt, err)
 	}
 	backup, err = cmd.Flags().GetBool(FlagBackup)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read the flag %s: %w", FlagBackup, err)
+		return nil, fmt.Errorf("parse flag %s: %w", FlagBackup, err)
 	}
 	interactive, err = cmd.Flags().GetBool(FlagInteractive)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read the flag %s: %w", FlagInteractive, err)
+		return nil, fmt.Errorf("parse flag %s: %w", FlagInteractive, err)
 	}
 
 	flagValues := []boolFlagValue{

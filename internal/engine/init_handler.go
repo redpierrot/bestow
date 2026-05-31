@@ -15,11 +15,17 @@ import (
 )
 
 // TODO: Check both files before touching them
+// Check dryrun before executing.
 func (e *Engine) init(ctx *CommandContext) error {
 	e.Logger.Debug("initializing bestow")
 	appConfigDir := config.AppConfigHome()
-	if err := e.FileSystem.CreateDir(appConfigDir); err != nil {
-		return fmt.Errorf("failed to create the config directory: %w", err)
+	if ctx.DryRun {
+		output.Success("[create]", "directory", appConfigDir)
+
+	} else {
+		if err := e.FileSystem.CreateDir(appConfigDir); err != nil {
+			return err
+		}
 	}
 	if err := e.createConfigFile(e.Source, e.Destination, ctx.Force, appConfigDir); err != nil {
 		return err
@@ -32,32 +38,26 @@ func (e *Engine) init(ctx *CommandContext) error {
 
 func (e *Engine) createIgnoreFile(appConfigDir string, force bool, ignoreList []string) error {
 	e.Logger.Debug("creating ignore file")
-	fullPath := filepath.Join(appConfigDir, constant.IgnoreFile)
-	exists, err := e.FileSystem.Exists(fullPath)
+	ignoreFile := filepath.Join(appConfigDir, constant.IgnoreFile)
+	exists, err := e.FileSystem.Exists(ignoreFile)
 	if err != nil {
-		return &EngineError{
-			Message: "failed to read the ignore file",
-			Cause:   err,
-			Hint:    "use --force to overwrite",
-		}
+		return err
 	}
 	if exists {
 		if !force {
-			return &EngineError{
-				Message: fmt.Sprintf("failed to create ignore file; file '%s' already exists", fullPath),
-				Cause:   err,
-				Hint:    "Use '--force' to overwrite",
+			return &HintedError{
+				Op:   fmt.Sprintf("create ignorefile %s", ignoreFile),
+				Hint: "use --force to overwrite",
+				Err:  ErrFileExists,
 			}
 		}
-		e.Logger.Warn("ignore file exists; overwriting", "ignore-file", fullPath)
+		e.Logger.Warn("ignore file exists; overwriting", "ignore-file", ignoreFile)
 	}
 	e.Logger.Debug("initializing ignore list", "ignore-list", ignoreList)
-
-	ignoreFile := filepath.Join(appConfigDir, constant.IgnoreFile)
 	if err := e.FileSystem.CreateFile(ignoreFile, getIgnoreFileContent(ignoreList)); err != nil {
 		return err
 	}
-	output.Success("ignore file created successfully", "path", fullPath)
+	output.Success("ignore file created successfully", "path", ignoreFile)
 	return nil
 }
 
@@ -70,38 +70,29 @@ func getIgnoreFileContent(ignoreList []string) string {
 }
 
 func (e *Engine) createConfigFile(source, destination string, force bool, appConfigDir string) error {
-	fullPath := filepath.Join(appConfigDir, constant.ConfigFile)
-	e.Logger.Debug("creating the config file", "path", fullPath)
-	exists, err := e.FileSystem.Exists(fullPath)
+	configFile := filepath.Join(appConfigDir, constant.ConfigFile)
+	e.Logger.Debug("creating the config file", "path", configFile)
+	exists, err := e.FileSystem.Exists(configFile)
 	if err != nil {
-		return &EngineError{
-			Message: "failed to check config file path: %w",
-			Cause:   err,
-		}
+		return err
 	}
 	if exists {
 		if !force {
-			return &EngineError{
-				Message: fmt.Sprintf("failed to create config file; file '%s' already exists", fullPath),
-				Hint:    "use --force to overwrite",
+			return &HintedError{
+				Op:   fmt.Sprintf("create configfile %s", configFile),
+				Hint: "use --force to overwrite",
+				Err:  ErrFileExists,
 			}
 		}
-		e.Logger.Warn("config file exists; overwriting", "config-file", fullPath)
+		e.Logger.Warn("config file exists; overwriting", "config-file", configFile)
 	}
 	config, err := config.GetDefaultConfigTemplate(source, destination)
 	if err != nil {
-		return &EngineError{
-			Message: "failed to load default configs: %w",
-			Cause:   err,
-		}
+		return fmt.Errorf("load config %s %s: %w", source, destination, err)
 	}
-	configFile := filepath.Join(appConfigDir, constant.ConfigFile)
 	if err := e.FileSystem.CreateFile(configFile, config); err != nil {
-		return &EngineError{
-			Message: "failed to write to the config file: %w",
-			Cause:   err,
-		}
+		return err
 	}
-	output.Success("config file created successfully", "path", fullPath)
+	output.Success("config file created successfully", "path", configFile)
 	return nil
 }
