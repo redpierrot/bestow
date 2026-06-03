@@ -10,5 +10,14 @@ const (
 	TypeSuccess Type = iota
 	TypeStep
 	TypeWarn
-	TypeHint
 )
+
+type Summary struct {
+	Stowed   int
+	Unstowed int
+	Replaced int
+	Backed   int
+	Adopted  int
+	Skipped  int
+	UpToDate int
+}
