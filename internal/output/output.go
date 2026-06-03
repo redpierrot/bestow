@@ -38,6 +38,9 @@ var hintStyle = lipgloss.NewStyle().
 
 var actionStyle = lipgloss.NewStyle().Width(actionStringLength).Align(lipgloss.Right)
 
+var conflictDestStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Blue)
+var conflictSrcStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Yellow)
+
 type Level int
 
 const (
@@ -118,14 +121,25 @@ func (o *Output) printSummaryLine(summary *engine.Summary) {
 		parts = append(parts, fmt.Sprintf("skipped: %d", summary.Skipped))
 	}
 	if summary.UpToDate > 0 {
-		parts = append(parts, fmt.Sprintf("up to date: %d", summary.UpToDate))
+		parts = append(parts, fmt.Sprintf("up-to-date: %d", summary.UpToDate))
 	}
 	if len(parts) == 0 {
 		return
 	}
 	lipgloss.Println(strings.Join(parts, "   "))
 }
+
 func (o *Output) PrintHint(hint string) {
 	message := "[hint] " + hint
 	lipgloss.Fprintln(os.Stderr, hintStyle.Render(message))
+}
+
+func (o *Output) PrintConflict(conflicts []engine.DestinationConflict) {
+	lipgloss.Fprintln(os.Stderr, conflictDestStyle.Render("conflicts:"))
+	for _, conflict := range conflicts {
+		lipgloss.Fprintln(os.Stderr, conflictDestStyle.Render(conflict.Destination))
+		for _, source := range conflict.Sources {
+			lipgloss.Fprintln(os.Stderr, conflictSrcStyle.Render("-", source))
+		}
+	}
 }

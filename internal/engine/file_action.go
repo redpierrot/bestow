@@ -6,6 +6,7 @@ package engine
 
 import (
 	"fmt"
+	"log/slog"
 
 	"github.com/ThisaruGuruge/bestow/internal/file"
 )
@@ -80,6 +81,7 @@ type FileAction interface {
 type fileActionBase struct {
 	source      string
 	destination string
+	logger      *slog.Logger
 }
 
 func (fab fileActionBase) Source() string {
@@ -95,11 +97,12 @@ type FileActionUpToDate struct {
 	reason string
 }
 
-func newFileActionUpToDate(source, destination, reason string) *FileActionUpToDate {
+func newFileActionUpToDate(source, destination, reason string, l *slog.Logger) *FileActionUpToDate {
 	return &FileActionUpToDate{
 		fileActionBase: fileActionBase{
 			source:      source,
 			destination: destination,
+			logger:      l,
 		},
 		reason: reason,
 	}
@@ -120,11 +123,12 @@ type FileActionSkip struct {
 	reason string
 }
 
-func newFileActionSkip(source, destination, reason string) *FileActionSkip {
+func newFileActionSkip(source, destination, reason string, l *slog.Logger) *FileActionSkip {
 	return &FileActionSkip{
 		fileActionBase: fileActionBase{
 			source:      source,
 			destination: destination,
+			logger:      l,
 		},
 		reason: reason,
 	}
@@ -148,11 +152,12 @@ type FileActionLink struct {
 	fileActionBase
 }
 
-func newFileActionLink(source, destination string) *FileActionLink {
+func newFileActionLink(source, destination string, l *slog.Logger) *FileActionLink {
 	return &FileActionLink{
 		fileActionBase: fileActionBase{
 			source:      source,
 			destination: destination,
+			logger:      l,
 		},
 	}
 }
@@ -178,17 +183,20 @@ type FileActionReplace struct {
 	fileActionBase
 }
 
-func newFileActionReplace(source, destination string) *FileActionReplace {
+func newFileActionReplace(source, destination string, l *slog.Logger) *FileActionReplace {
 	return &FileActionReplace{
 		fileActionBase: fileActionBase{
 			source:      source,
 			destination: destination,
+			logger:      l,
 		},
 	}
 }
 
 func (f *FileActionReplace) Execute(fs file.System) ([]ActionEvent, error) {
-	if err := fs.Remove(f.destination); err != nil {
+	var events []ActionEvent
+	tmp := f.destination + backupExtension
+	if err := fs.Move(f.destination, tmp); err != nil {
 		return nil, err
 	}
 	removeStep := ActionEvent{
@@ -196,15 +204,25 @@ func (f *FileActionReplace) Execute(fs file.System) ([]ActionEvent, error) {
 		Msg:       f.destination,
 		EventType: EventStep,
 	}
+	events = append(events, removeStep)
 	if err := fs.Link(f.source, f.destination); err != nil {
+		if err := fs.Move(tmp, f.destination); err != nil {
+			f.logger.Warn("failed to restore the tmp", "tmp_file", tmp, "original_file", f.destination)
+			return nil, fmt.Errorf("recover %s %s: %w", tmp, f.destination, err)
+		}
 		return nil, err
+	}
+	if err := fs.Remove(tmp); err != nil {
+		f.logger.Warn("failed to remove the tmp", "tmp_file", tmp)
+		return nil, fmt.Errorf("remove %s: %w", tmp, err)
 	}
 	linkStep := ActionEvent{
 		Action:    actionLink,
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
 		EventType: EventSuccess,
 	}
-	return []ActionEvent{removeStep, linkStep}, nil
+	events = append(events, linkStep)
+	return events, nil
 }
 
 func (f *FileActionReplace) Type() ActionType {
@@ -216,11 +234,12 @@ type FileActionBackup struct {
 	backup string
 }
 
-func newFileActionBackup(source, destination, backup string) *FileActionBackup {
+func newFileActionBackup(source, destination, backup string, l *slog.Logger) *FileActionBackup {
 	return &FileActionBackup{
 		fileActionBase: fileActionBase{
 			source:      source,
 			destination: destination,
+			logger:      l,
 		},
 		backup: backup,
 	}
@@ -230,12 +249,18 @@ func (f *FileActionBackup) Execute(fs file.System) ([]ActionEvent, error) {
 	if err := fs.Move(f.destination, f.backup); err != nil {
 		return nil, err
 	}
+	var events []ActionEvent
 	moveStep := ActionEvent{
 		Action:    actionBackup,
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.backup),
 		EventType: EventStep,
 	}
+	events = append(events, moveStep)
 	if err := fs.Link(f.source, f.destination); err != nil {
+		if err := fs.Move(f.backup, f.destination); err != nil {
+			f.logger.Warn("failed to restore the backup", "backup_file", f.backup, "original_file", f.destination)
+			return nil, fmt.Errorf("recover %s %s: %w", f.backup, f.destination, err)
+		}
 		return nil, err
 	}
 	linkStep := ActionEvent{
@@ -243,7 +268,8 @@ func (f *FileActionBackup) Execute(fs file.System) ([]ActionEvent, error) {
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
 		EventType: EventSuccess,
 	}
-	return []ActionEvent{moveStep, linkStep}, nil
+	events = append(events, linkStep)
+	return events, nil
 }
 
 func (f *FileActionBackup) Type() ActionType {
@@ -254,11 +280,12 @@ type FileActionAdopt struct {
 	fileActionBase
 }
 
-func newFileActionAdopt(source, destination string) *FileActionAdopt {
+func newFileActionAdopt(source, destination string, l *slog.Logger) *FileActionAdopt {
 	return &FileActionAdopt{
 		fileActionBase: fileActionBase{
 			source:      source,
 			destination: destination,
+			logger:      l,
 		},
 	}
 }
@@ -267,12 +294,18 @@ func (f *FileActionAdopt) Execute(fs file.System) ([]ActionEvent, error) {
 	if err := fs.Move(f.destination, f.source); err != nil {
 		return nil, err
 	}
+	var events []ActionEvent
 	moveStep := ActionEvent{
 		Action:    actionAdopt,
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
 		EventType: EventStep,
 	}
+	events = append(events, moveStep)
 	if err := fs.Link(f.source, f.destination); err != nil {
+		if err := fs.Move(f.source, f.destination); err != nil {
+			f.logger.Warn("failed to restore the original", "new_file", f.source, "original_file", f.destination)
+			return nil, fmt.Errorf("recover %s %s: %w", f.source, f.destination, err)
+		}
 		return nil, err
 	}
 	linkStep := ActionEvent{
@@ -280,7 +313,8 @@ func (f *FileActionAdopt) Execute(fs file.System) ([]ActionEvent, error) {
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
 		EventType: EventSuccess,
 	}
-	return []ActionEvent{moveStep, linkStep}, nil
+	events = append(events, linkStep)
+	return events, nil
 }
 
 func (f *FileActionAdopt) Type() ActionType {
@@ -291,11 +325,12 @@ type FileActionRemove struct {
 	fileActionBase
 }
 
-func newFileActionRemove(source, destination string) *FileActionRemove {
+func newFileActionRemove(source, destination string, l *slog.Logger) *FileActionRemove {
 	return &FileActionRemove{
 		fileActionBase: fileActionBase{
 			source:      source,
 			destination: destination,
+			logger:      l,
 		},
 	}
 }

@@ -20,6 +20,17 @@ const (
 	ActionUnstow
 )
 
+func (a Action) String() string {
+	switch a {
+	case ActionStow:
+		return "stow"
+	case ActionUnstow:
+		return "unstow"
+	default:
+		return "unknown action"
+	}
+}
+
 type CommandContext struct {
 	Action           Action
 	Args             []string

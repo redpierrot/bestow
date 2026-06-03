@@ -154,7 +154,7 @@ func (e *Engine) getStowFileAction(candidate OperationCandidate, strategy Resolv
 		return nil, err
 	}
 	if !destExists {
-		return newFileActionLink(candidate.source, candidate.destination), nil
+		return newFileActionLink(candidate.source, candidate.destination, e.logger), nil
 	}
 	existing, err := e.fileSystem.GetExistingFileType(candidate.source, candidate.destination)
 	if err != nil {
@@ -171,27 +171,27 @@ func (e *Engine) getStowFileAction(candidate OperationCandidate, strategy Resolv
 	// Managed symlink: Existing link lives inside the source
 	// This can be either the same file or not. Should update it anyway
 	if existing == file.ExistingManagedSymlink {
-		return newFileActionUpToDate(candidate.source, candidate.destination, "file already stowed"), nil
+		return newFileActionUpToDate(candidate.source, candidate.destination, "file already stowed", e.logger), nil
 	}
 	switch strategy {
 	case ResolveForce:
 		e.logger.Debug("existing destination will be replaced", "destination", candidate.destination, "strategy", strategy)
-		return newFileActionReplace(candidate.source, candidate.destination), nil
+		return newFileActionReplace(candidate.source, candidate.destination, e.logger), nil
 	case ResolveSkip:
 		e.logger.Debug("skipping the existing file at the destination", "destination", candidate.destination, "strategy", strategy)
-		return newFileActionSkip(candidate.source, candidate.destination, "strategy skip"), nil
+		return newFileActionSkip(candidate.source, candidate.destination, "strategy skip", e.logger), nil
 	case ResolveBackup:
 		e.logger.Debug("existing file at the destination will be backed up and replaced", "destination", candidate.destination, "strategy", strategy)
 		backupFilePath := candidate.destination + backupExtension
-		return newFileActionBackup(candidate.source, candidate.destination, backupFilePath), nil
+		return newFileActionBackup(candidate.source, candidate.destination, backupFilePath, e.logger), nil
 	case ResolveAdopt:
 		switch existing {
 		case file.ExistingForeignSymlink:
 			e.logger.Warn("cannot adopt the existing symlink at destination", "destination", candidate.destination)
-			return newFileActionSkip(candidate.source, candidate.destination, "adopt foreign symlink"), nil
+			return newFileActionSkip(candidate.source, candidate.destination, "adopt foreign symlink", e.logger), nil
 		case file.ExistingRegularFile:
 			e.logger.Debug("existing destination will be adopted to source", "destination", candidate.destination, "strategy", strategy)
-			return newFileActionAdopt(candidate.source, candidate.destination), nil
+			return newFileActionAdopt(candidate.source, candidate.destination, e.logger), nil
 		default:
 			return nil, fmt.Errorf("unsupported existing file type %s", existing)
 		}
@@ -207,7 +207,7 @@ func (e *Engine) getUnstowFileAction(candidate OperationCandidate) (FileAction, 
 		return nil, err
 	}
 	if !exists {
-		return newFileActionUpToDate(candidate.source, candidate.destination, "destination does not exist"), nil
+		return newFileActionUpToDate(candidate.source, candidate.destination, "destination does not exist", e.logger), nil
 	}
 	existing, err := e.fileSystem.GetExistingFileType(candidate.source, candidate.destination)
 	if err != nil {
@@ -221,12 +221,12 @@ func (e *Engine) getUnstowFileAction(candidate OperationCandidate) (FileAction, 
 			Err:  ErrDestIsDir,
 		}
 	case file.ExistingRegularFile:
-		return newFileActionSkip(candidate.source, candidate.destination, "regular file"), nil
+		return newFileActionSkip(candidate.source, candidate.destination, "regular file", e.logger), nil
 	case file.ExistingManagedSymlink:
-		return newFileActionRemove(candidate.source, candidate.destination), nil
+		return newFileActionRemove(candidate.source, candidate.destination, e.logger), nil
 	case file.ExistingForeignSymlink:
-		return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink"), nil
+		return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink", e.logger), nil
 	}
 	e.logger.Warn("destination is not managed by bestow", "destination", candidate.destination, "file_type", existing)
-	return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink"), nil
+	return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink", e.logger), nil
 }
