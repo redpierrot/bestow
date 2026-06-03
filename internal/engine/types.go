@@ -7,14 +7,14 @@ package engine
 type ExecuteSummary struct {
 	Actions          []ActionEvent
 	OperationSummary *Summary
-	Label            string
+	Dryrun           bool
 }
 
 type Summary struct {
 	Stowed   int
 	Unstowed int
 	Replaced int
-	Backed   int
+	BackedUp int
 	Adopted  int
 	Skipped  int
 	UpToDate int

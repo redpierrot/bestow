@@ -32,7 +32,7 @@ type Engine struct {
 	ignore      *IgnoreList
 	logger      *slog.Logger
 	fileSystem  file.System
-	actionLabel string
+	dryrun      bool
 }
 
 func NewEngine(cfg *config.Config, dryrun bool, l *slog.Logger) (*Engine, error) {
@@ -46,17 +46,13 @@ func NewEngine(cfg *config.Config, dryrun bool, l *slog.Logger) (*Engine, error)
 	if err != nil {
 		return nil, err
 	}
-	label := ""
-	if dryrun {
-		label = "[dryrun]"
-	}
 	return &Engine{
 		source:      cfg.Source,
 		destination: cfg.Destination,
 		ignore:      ignoreList,
 		logger:      l.With("component", "engine"),
 		fileSystem:  handler,
-		actionLabel: label,
+		dryrun:      dryrun,
 	}, nil
 }
 
@@ -92,7 +88,7 @@ func (e *Engine) executeFileActions(actions []FileAction) (*ExecuteSummary, erro
 		case Replace:
 			summary.Replaced += 1
 		case Backup:
-			summary.Backed += 1
+			summary.BackedUp += 1
 		case Adopt:
 			summary.Adopted += 1
 		case Remove:
@@ -105,7 +101,7 @@ func (e *Engine) executeFileActions(actions []FileAction) (*ExecuteSummary, erro
 	return &ExecuteSummary{
 		Actions:          actionList,
 		OperationSummary: summary,
-		Label:            e.actionLabel,
+		Dryrun:           e.dryrun,
 	}, nil
 }
 

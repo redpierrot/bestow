@@ -20,6 +20,21 @@ const (
 	ResolveBackup
 )
 
+func (r ResolveStrategy) String() string {
+	switch r {
+	case ResolveSkip:
+		return "skip"
+	case ResolveForce:
+		return "force"
+	case ResolveAdopt:
+		return "adopt"
+	case ResolveBackup:
+		return "backup"
+	default:
+		return fmt.Sprintf("unknown %d", r)
+	}
+}
+
 type OperationCandidate struct {
 	source      string
 	destination string
@@ -60,7 +75,7 @@ func validateDestinations(candidates []OperationCandidate) error {
 			destinations[candidate.destination] = append(destinations[candidate.destination], candidate.source)
 		}
 	}
-	conflicts := []DestinationConflict{}
+	conflicts := make([]DestinationConflict, 0, len(destinations))
 	for destination, sources := range destinations {
 		if len(sources) > 1 {
 			conflicts = append(conflicts, DestinationConflict{

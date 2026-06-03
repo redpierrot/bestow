@@ -13,6 +13,8 @@ import (
 	"github.com/ThisaruGuruge/bestow/internal/engine"
 )
 
+const actionStringLength = 7
+
 var successStyle = lipgloss.NewStyle().
 	Bold(true).
 	Foreground(lipgloss.Green)
@@ -34,6 +36,8 @@ var hintStyle = lipgloss.NewStyle().
 	Bold(true).
 	Foreground(lipgloss.Magenta)
 
+var actionStyle = lipgloss.NewStyle().Width(actionStringLength).Align(lipgloss.Right)
+
 type Level int
 
 const (
@@ -51,12 +55,17 @@ func NewOutput(level Level) *Output {
 	}
 }
 
+func (o *Output) SetLevel(level Level) {
+	o.OutputLevel = level
+}
+
 func (o *Output) PrintAction(action engine.ActionEvent, label string) {
 	var message string
+	formattedAction := actionStyle.Render(action.Action)
 	if label == "" {
-		message = fmt.Sprintf("%s %s", action.Action, action.Msg)
+		message = fmt.Sprintf("%s: %s", formattedAction, action.Msg)
 	} else {
-		message = fmt.Sprintf("%s %s %s", label, action.Action, action.Msg)
+		message = fmt.Sprintf("%s %s: %s", label, formattedAction, action.Msg)
 	}
 	var text string
 	switch action.EventType {
@@ -75,9 +84,13 @@ func (o *Output) PrintAction(action engine.ActionEvent, label string) {
 }
 
 func (o *Output) PrintSummary(summary *engine.ExecuteSummary) {
+	var label string
+	if summary.Dryrun {
+		label = "[dryrun]"
+	}
 	if o.OutputLevel != Quiet {
 		for _, action := range summary.Actions {
-			o.PrintAction(action, summary.Label)
+			o.PrintAction(action, label)
 		}
 	}
 	o.printSummaryLine(summary.OperationSummary)
@@ -95,8 +108,8 @@ func (o *Output) printSummaryLine(summary *engine.Summary) {
 	if summary.Replaced > 0 {
 		parts = append(parts, fmt.Sprintf("replaced: %d", summary.Replaced))
 	}
-	if summary.Backed > 0 {
-		parts = append(parts, fmt.Sprintf("backed up: %d", summary.Backed))
+	if summary.BackedUp > 0 {
+		parts = append(parts, fmt.Sprintf("backed up: %d", summary.BackedUp))
 	}
 	if summary.Adopted > 0 {
 		parts = append(parts, fmt.Sprintf("adopted: %d", summary.Adopted))

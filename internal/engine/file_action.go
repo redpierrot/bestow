@@ -11,13 +11,12 @@ import (
 )
 
 const (
-	actionUpToDate = "[up-to-date]"
-	actionLink     = "[link      ]"
-	actionBackup   = "[backup    ]"
-	actionSkip     = "[skip      ]"
-	actionAdopt    = "[adopt     ]"
-	actionRemove   = "[remove    ]"
-	actionCreated  = "[created]"
+	actionLink    = "link"
+	actionBackup  = "backup"
+	actionSkip    = "skip"
+	actionAdopt   = "adopt"
+	actionRemove  = "remove"
+	actionCreated = "created"
 )
 
 type EventType int
@@ -30,20 +29,41 @@ const (
 	EventIgnore
 )
 
-type ActionType string
+type ActionType int
 
 const (
-	UpToDate ActionType = "up-to-date"
-	Skip     ActionType = "skip"
-	Link     ActionType = "link"
-	Replace  ActionType = "replace"
-	Backup   ActionType = "backup"
-	Adopt    ActionType = "adopt"
-	Remove   ActionType = "remove"
+	UpToDate ActionType = iota
+	Skip
+	Link
+	Replace
+	Backup
+	Adopt
+	Remove
 )
 
+func (a ActionType) String() string {
+	switch a {
+	case UpToDate:
+		return "up-to-date"
+	case Skip:
+		return "skip"
+	case Link:
+		return "link"
+	case Replace:
+		return "replace"
+	case Backup:
+		return "backup"
+	case Adopt:
+		return "adopt"
+	case Remove:
+		return "remove"
+	default:
+		return fmt.Sprintf("Unknown %d", a)
+	}
+}
+
 type ActionEvent struct {
-	Action    ActionType
+	Action    string
 	Msg       string
 	EventType EventType
 }
@@ -87,7 +107,7 @@ func newFileActionUpToDate(source, destination, reason string) *FileActionUpToDa
 
 func (f *FileActionUpToDate) Execute(fs file.System) ([]ActionEvent, error) {
 	return []ActionEvent{
-		{Action: actionUpToDate, EventType: EventIgnore},
+		{EventType: EventIgnore},
 	}, nil
 }
 
@@ -247,7 +267,7 @@ func (f *FileActionAdopt) Execute(fs file.System) ([]ActionEvent, error) {
 	if err := fs.Move(f.destination, f.source); err != nil {
 		return nil, err
 	}
-	moveStep := &ActionEvent{
+	moveStep := ActionEvent{
 		Action:    actionAdopt,
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
 		EventType: EventStep,
@@ -255,12 +275,12 @@ func (f *FileActionAdopt) Execute(fs file.System) ([]ActionEvent, error) {
 	if err := fs.Link(f.source, f.destination); err != nil {
 		return nil, err
 	}
-	linkStep := &ActionEvent{
+	linkStep := ActionEvent{
 		Action:    actionLink,
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
 		EventType: EventSuccess,
 	}
-	return []ActionEvent{*moveStep, *linkStep}, nil
+	return []ActionEvent{moveStep, linkStep}, nil
 }
 
 func (f *FileActionAdopt) Type() ActionType {
