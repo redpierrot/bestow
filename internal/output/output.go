@@ -95,8 +95,8 @@ func (o *Output) PrintSummary(summary *engine.ExecuteSummary) {
 		for _, action := range summary.Actions {
 			o.PrintAction(action, label)
 		}
+		o.printSummaryLine(summary.OperationSummary)
 	}
-	o.printSummaryLine(summary.OperationSummary)
 }
 
 func (o *Output) printSummaryLine(summary *engine.Summary) {
