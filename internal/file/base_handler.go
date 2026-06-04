@@ -49,11 +49,11 @@ func (h *baseHandler) ListFiles(parent string) ([]string, error) {
 // The list contains the full path of the subdirectories found.
 func (h *baseHandler) ListDirs(parent string) ([]string, error) {
 	h.logger.Debug("listing all the directories", "source", parent)
-	isDIr, err := h.IsDir(parent)
+	isDir, err := h.IsDir(parent)
 	if err != nil {
 		return nil, err
 	}
-	if !isDIr {
+	if !isDir {
 		return nil, fmt.Errorf("listDirs %s: %w", parent, ErrNotDir)
 	}
 	files, err := os.ReadDir(parent)

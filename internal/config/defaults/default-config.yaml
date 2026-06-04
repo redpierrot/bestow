@@ -6,7 +6,7 @@ version: 0.1.0
 # Bestow Profiles. Different profiles can have different source and destinations
 profiles:
   default:
-    # Source Directory (your dotfiles repo)
+    # Source Directory (e.g. dotfiles repo)
     source: {{ .Source }}
     # Destination Directory (your $HOME directory)
     destination: {{ .Destination }}

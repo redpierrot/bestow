@@ -42,13 +42,13 @@ type Engine struct {
 	destination string
 	ignore      *IgnoreList
 	logger      *slog.Logger
-	fileSystem  file.System
-	dryrun      bool
+	fileSystem  FileSystem
+	dryRun      bool
 }
 
-func NewEngine(cfg *config.Config, dryrun bool, l *slog.Logger) (*Engine, error) {
-	var handler file.System
-	if dryrun {
+func NewEngine(cfg *config.Config, dryRun bool, l *slog.Logger) (*Engine, error) {
+	var handler FileSystem
+	if dryRun {
 		handler = file.NewNoWriteHandler(l)
 	} else {
 		handler = file.NewHandler(l)
@@ -63,7 +63,7 @@ func NewEngine(cfg *config.Config, dryrun bool, l *slog.Logger) (*Engine, error)
 		ignore:      ignoreList,
 		logger:      l.With("component", "engine"),
 		fileSystem:  handler,
-		dryrun:      dryrun,
+		dryRun:      dryRun,
 	}, nil
 }
 
@@ -105,14 +105,14 @@ func (e *Engine) executeFileActions(actions []FileAction) (*ExecuteSummary, erro
 		case Remove:
 			summary.Unstowed += 1
 		default:
-			panic(fmt.Sprintf("undefined action %d", actionType))
+			return nil, fmt.Errorf("undefined action %d", actionType)
 		}
 		actionList = append(actionList, fileActions...)
 	}
 	return &ExecuteSummary{
 		Actions:          actionList,
 		OperationSummary: summary,
-		Dryrun:           e.dryrun,
+		DryRun:           e.dryRun,
 	}, nil
 }
 

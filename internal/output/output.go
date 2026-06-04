@@ -88,7 +88,7 @@ func (o *Output) PrintAction(action engine.ActionEvent, label string) {
 
 func (o *Output) PrintSummary(summary *engine.ExecuteSummary) {
 	var label string
-	if summary.Dryrun {
+	if summary.DryRun {
 		label = "[dryrun]"
 	}
 	if o.OutputLevel != Quiet {

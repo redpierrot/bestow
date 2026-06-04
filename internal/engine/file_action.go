@@ -7,8 +7,6 @@ package engine
 import (
 	"fmt"
 	"log/slog"
-
-	"github.com/ThisaruGuruge/bestow/internal/file"
 )
 
 const (
@@ -72,7 +70,7 @@ type ActionEvent struct {
 const backupExtension = ".bestow.backup"
 
 type FileAction interface {
-	Execute(fs file.System) ([]ActionEvent, error)
+	Execute(fs FileSystem) ([]ActionEvent, error)
 	Type() ActionType
 	Source() string
 	Destination() string
@@ -108,7 +106,8 @@ func newFileActionUpToDate(source, destination, reason string, l *slog.Logger) *
 	}
 }
 
-func (f *FileActionUpToDate) Execute(fs file.System) ([]ActionEvent, error) {
+func (f *FileActionUpToDate) Execute(fs FileSystem) ([]ActionEvent, error) {
+	f.logger.Debug(f.reason, "source", f.source, "destination", f.destination)
 	return []ActionEvent{
 		{EventType: EventIgnore},
 	}, nil
@@ -134,7 +133,7 @@ func newFileActionSkip(source, destination, reason string, l *slog.Logger) *File
 	}
 }
 
-func (f *FileActionSkip) Execute(fs file.System) ([]ActionEvent, error) {
+func (f *FileActionSkip) Execute(fs FileSystem) ([]ActionEvent, error) {
 	return []ActionEvent{
 		{
 			Action:    actionSkip,
@@ -162,7 +161,7 @@ func newFileActionLink(source, destination string, l *slog.Logger) *FileActionLi
 	}
 }
 
-func (f *FileActionLink) Execute(fs file.System) ([]ActionEvent, error) {
+func (f *FileActionLink) Execute(fs FileSystem) ([]ActionEvent, error) {
 	if err := fs.Link(f.source, f.destination); err != nil {
 		return nil, err
 	}
@@ -193,7 +192,7 @@ func newFileActionReplace(source, destination string, l *slog.Logger) *FileActio
 	}
 }
 
-func (f *FileActionReplace) Execute(fs file.System) ([]ActionEvent, error) {
+func (f *FileActionReplace) Execute(fs FileSystem) ([]ActionEvent, error) {
 	var events []ActionEvent
 	tmp := f.destination + backupExtension
 	if err := fs.Move(f.destination, tmp); err != nil {
@@ -245,7 +244,7 @@ func newFileActionBackup(source, destination, backup string, l *slog.Logger) *Fi
 	}
 }
 
-func (f *FileActionBackup) Execute(fs file.System) ([]ActionEvent, error) {
+func (f *FileActionBackup) Execute(fs FileSystem) ([]ActionEvent, error) {
 	if err := fs.Move(f.destination, f.backup); err != nil {
 		return nil, err
 	}
@@ -290,7 +289,7 @@ func newFileActionAdopt(source, destination string, l *slog.Logger) *FileActionA
 	}
 }
 
-func (f *FileActionAdopt) Execute(fs file.System) ([]ActionEvent, error) {
+func (f *FileActionAdopt) Execute(fs FileSystem) ([]ActionEvent, error) {
 	if err := fs.Move(f.destination, f.source); err != nil {
 		return nil, err
 	}
@@ -335,7 +334,7 @@ func newFileActionRemove(source, destination string, l *slog.Logger) *FileAction
 	}
 }
 
-func (f *FileActionRemove) Execute(fs file.System) ([]ActionEvent, error) {
+func (f *FileActionRemove) Execute(fs FileSystem) ([]ActionEvent, error) {
 	if err := fs.Remove(f.destination); err != nil {
 		return nil, err
 	}

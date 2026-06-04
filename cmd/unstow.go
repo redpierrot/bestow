@@ -5,8 +5,6 @@ All Rights Reversed (ɔ)
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/ThisaruGuruge/bestow/internal/engine"
 	"github.com/spf13/cobra"
 )
@@ -22,9 +20,9 @@ var unstowCmd = &cobra.Command{
 			return err
 		}
 		appLogger.Debug("running unstow command", "args", args)
-		dryrun, err := cmd.Flags().GetBool(flagDryRun)
+		dryrun, err := getBoolFlag(cmd.Flags(), flagDryRun)
 		if err != nil {
-			return fmt.Errorf("parse %s: %w", flagDryRun, err)
+			return err
 		}
 		eng, err := engine.NewEngine(cfg, dryrun, appLogger)
 		if err != nil {

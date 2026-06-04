@@ -51,9 +51,11 @@ func (e *ConflictError) Error() string {
 
 func (e *ConflictError) Unwrap() error { return e.Err }
 
-var ErrDestIsDir = errors.New("destination is a directory")
-var ErrPkgIsNotDir = errors.New("package is not a directory")
-var ErrRootIsNotPkg = errors.New("root (.) is not a package")
-var ErrFileExists = errors.New("file already exists")
-var ErrMultiFile = errors.New("multiple files competing for the same destination")
-var ErrUnsupportedAction = errors.New("unsupported action")
+var (
+	ErrDestIsDir         = errors.New("destination is a directory")
+	ErrPkgIsNotDir       = errors.New("package is not a directory")
+	ErrRootIsNotPkg      = errors.New("root (.) is not a package")
+	ErrFileExists        = errors.New("file already exists")
+	ErrMultiFile         = errors.New("multiple files competing for the same destination")
+	ErrUnsupportedAction = errors.New("unsupported action")
+)

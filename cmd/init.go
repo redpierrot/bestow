@@ -25,27 +25,27 @@ var initCmd = &cobra.Command{
 	Long:    initLong,
 	Example: initExamples,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		source, err := cmd.Flags().GetString(flagInitSource)
+		source, err := getStringFlag(cmd.Flags(), flagInitSource)
 		if err != nil {
-			return fmt.Errorf("parse flag %s: %w", flagInitSource, err)
+			return err
 		}
-		destination, err := cmd.Flags().GetString(flagInitDestination)
+		destination, err := getStringFlag(cmd.Flags(), flagInitDestination)
 		if err != nil {
-			return fmt.Errorf("parse flag %s: %w", flagInitDestination, err)
+			return err
 		}
-		force, err := cmd.Flags().GetBool(flagInitForce)
+		force, err := getBoolFlag(cmd.Flags(), flagInitForce)
 		if err != nil {
-			return fmt.Errorf("parse flag %s: %w", flagInitForce, err)
+			return err
 		}
 		initCfg := config.Config{
 			Source:      source,
 			Destination: destination,
 		}
-		dryrun, err := cmd.Flags().GetBool(flagDryRun)
+		dryRun, err := getBoolFlag(cmd.Flags(), flagDryRun)
 		if err != nil {
-			return fmt.Errorf("parse flag %s: %w", flagDryRun, err)
+			return err
 		}
-		eng, err := engine.NewEngine(&initCfg, dryrun, appLogger)
+		eng, err := engine.NewEngine(&initCfg, dryRun, appLogger)
 		if err != nil {
 			return err
 		}
@@ -69,8 +69,8 @@ var initCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(initCmd)
 	initCmd.Flags().StringSlice(flagInitIgnoreList, config.DefaultIgnoreList, "list of file/directory names bestow should ignore. This is the global set of values. For repo or package specific ignore lists, use specific .bestowignore files")
-	initCmd.Flags().StringP(flagInitSource, "s", "", "source of dotfiles for symlinks; written to 'config.yaml'")
+	initCmd.Flags().StringP(flagInitSource, "s", "", "source directory of the files for symlinks; written to 'config.yaml'")
 	initCmd.MarkFlagRequired(flagInitSource)
-	initCmd.Flags().StringP(flagInitDestination, "d", "", "destination for the dotfiles symlinks; written to 'config.yaml'. (defaults to '$HOME')")
+	initCmd.Flags().StringP(flagInitDestination, "d", "", "destination for the symlinks; written to 'config.yaml'. (defaults to user home directory)")
 	initCmd.Flags().BoolP(flagInitForce, "f", false, "forcefully overwrite any existing config files for bestow")
 }

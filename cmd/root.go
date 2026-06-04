@@ -56,10 +56,7 @@ func Execute() {
 			appOutput.PrintHint(hintedError.Hint)
 		} else if errors.As(err, &conflictError) {
 			appLogger.Error(conflictError.Error())
-			appLogger.Warn("[conflicts]")
-			for _, conflict := range conflictError.Conflicts {
-				appLogger.Warn("  ", "destination", conflict.Destination, "sources", strings.Join(conflict.Sources, ", "))
-			}
+			appOutput.PrintConflict(conflictError.Conflicts)
 		} else {
 			appLogger.Error(err.Error())
 		}
@@ -84,10 +81,10 @@ func init() {
 	// Hide the `help` subcommand from the subcommand list (only allow `-h/--help` flags)
 	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
 
-	rootCmd.PersistentFlags().Bool(flagDryRun, false, "run the command without actually making the file system changes")
-	rootCmd.PersistentFlags().Bool(flagVerbose, false, "print verbose logs")
-	rootCmd.PersistentFlags().Bool(flagQuiet, false, "quiet logs; only print the summary")
-	rootCmd.PersistentFlags().StringVar(&cfgFile, flagConfigFile, "", "provide custom config file")
+	rootCmd.PersistentFlags().BoolP(flagDryRun, "n", false, "run the command without actually making the file system changes")
+	rootCmd.PersistentFlags().BoolP(flagVerbose, "v", false, "print verbose logs")
+	rootCmd.PersistentFlags().BoolP(flagQuiet, "q", false, "quiet logs; only print the summary")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, flagConfigFile, "c", "", "provide custom config file")
 	rootCmd.PersistentFlags().String(flagProfile, "default", "profile to run the command")
 
 	rootCmd.MarkFlagsMutuallyExclusive(flagQuiet, flagVerbose)

@@ -6,10 +6,9 @@ package cmd
 
 import (
 	"errors"
-	"fmt"
-	"os"
 
 	"github.com/ThisaruGuruge/bestow/internal/config"
+	"github.com/ThisaruGuruge/bestow/internal/engine"
 	"github.com/ThisaruGuruge/bestow/internal/output"
 	"github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
@@ -19,13 +18,13 @@ import (
 var ErrIncompatibleFlags = errors.New("mutually exclusive flags")
 
 func setupLogging(cmd *cobra.Command) error {
-	verbose, err := cmd.Flags().GetBool(flagVerbose)
+	verbose, err := getBoolFlag(cmd.Flags(), flagVerbose)
 	if err != nil {
-		return fmt.Errorf("parse flag %s: %w", flagVerbose, err)
+		return err
 	}
-	quiet, err := cmd.Flags().GetBool(flagQuiet)
+	quiet, err := getBoolFlag(cmd.Flags(), flagQuiet)
 	if err != nil {
-		return fmt.Errorf("parse flag %s: %w", flagQuiet, err)
+		return err
 	}
 	if verbose {
 		logHandler.SetLevel(log.DebugLevel)
@@ -38,11 +37,10 @@ func setupLogging(cmd *cobra.Command) error {
 
 func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 	if err := viper.ReadInConfig(); err != nil {
-		var pathErr *os.PathError
-		if errors.As(err, &pathErr) {
-			appLogger.Warn("config file not found; using $HOME as the default destination")
-		} else {
-			return nil, fmt.Errorf("read config: %w", err)
+		return nil, &engine.HintedError{
+			Op:   "read config",
+			Err:  err,
+			Hint: "run the command `bestow init` to initialize",
 		}
 	}
 	bindOperationalFlags(cmd, viper.GetViper())

@@ -34,13 +34,6 @@ type Config struct {
 	Destination string
 }
 
-type ConfigError struct {
-	Message    string
-	ConfigName string
-	Value      string
-	Cause      error
-}
-
 func AppConfigHome() string {
 	return filepath.Join(XdgConfigHome(), constant.AppName)
 }
@@ -65,36 +58,17 @@ func XdgConfigHome() string {
 func GetConfig(viper *viper.Viper, l *slog.Logger) (*Config, error) {
 	config, err := loadConfig(viper, l)
 	if err != nil {
-		return nil, &ConfigError{
-			Message: "failed to read the configs",
-			Cause:   err,
-		}
+		return nil, err
 	}
 	return config, nil
 }
-
-func (e *ConfigError) Error() string {
-	msg := e.Message
-	if e.ConfigName != "" {
-		msg += fmt.Sprintf(" [%s]", e.ConfigName)
-	}
-	if e.Cause != nil {
-		msg += fmt.Sprintf(": %v", e.Cause)
-	}
-	return msg
-}
-
-func (e *ConfigError) Unwrap() error { return e.Cause }
 
 func loadConfig(viper *viper.Viper, l *slog.Logger) (*Config, error) {
 	l.Debug("loading configs")
 
 	var raw rawConfig
 	if err := viper.Unmarshal(&raw); err != nil {
-		return nil, &ConfigError{
-			Message: "failed to load the configs",
-			Cause:   err,
-		}
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 	l.Debug("unmarshaled the configs", "raw", raw)
 
@@ -104,11 +78,7 @@ func loadConfig(viper *viper.Viper, l *slog.Logger) (*Config, error) {
 	}
 	profile, ok := raw.Profiles[profileName]
 	if !ok {
-		return nil, &ConfigError{
-			Message:    "profile not found",
-			ConfigName: "profile",
-			Value:      profileName,
-		}
+		return nil, fmt.Errorf("profile %s: %w", profileName, ErrNotFound)
 	}
 
 	cfg := Config{

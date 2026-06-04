@@ -10,10 +10,9 @@ import (
 	"strings"
 
 	"github.com/ThisaruGuruge/bestow/internal/constant"
-	"github.com/ThisaruGuruge/bestow/internal/file"
 )
 
-func readIgnoreFile(source string, fileSystem file.System) ([]string, error) {
+func readIgnoreFile(source string, fileSystem FileSystem) ([]string, error) {
 	ignoreFile := filepath.Join(source, constant.IgnoreFile)
 	exists, err := fileSystem.Exists(ignoreFile)
 	if err != nil {

@@ -10,19 +10,18 @@ import (
 	"path/filepath"
 
 	"github.com/ThisaruGuruge/bestow/internal/config"
-	"github.com/ThisaruGuruge/bestow/internal/file"
 	"github.com/bmatcuk/doublestar/v4"
 )
 
 type IgnoreList struct {
 	src          string
 	items        []string
-	fileSystem   file.System
+	fileSystem   FileSystem
 	logger       *slog.Logger
 	packageLists map[string][]string
 }
 
-func newIgnoreList(src string, fs file.System, l *slog.Logger) (*IgnoreList, error) {
+func newIgnoreList(src string, fs FileSystem, l *slog.Logger) (*IgnoreList, error) {
 	list := &IgnoreList{src: src, fileSystem: fs, logger: l.With("section", "ignore_handler"), packageLists: make(map[string][]string)}
 
 	// Load global ignore list

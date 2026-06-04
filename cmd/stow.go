@@ -5,8 +5,6 @@ All Rights Reversed (ɔ)
 package cmd
 
 import (
-	"fmt"
-
 	"github.com/ThisaruGuruge/bestow/internal/engine"
 	"github.com/spf13/cobra"
 )
@@ -23,17 +21,17 @@ var stowCmd = &cobra.Command{
 		}
 		appLogger.Debug("running stow command", "args", args)
 		var force, adopt, backup bool
-		force, err = cmd.Flags().GetBool(flagForce)
+		force, err = getBoolFlag(cmd.Flags(), flagForce)
 		if err != nil {
-			return fmt.Errorf("parse flag %s: %w", flagForce, err)
+			return err
 		}
-		adopt, err = cmd.Flags().GetBool(flagAdopt)
+		adopt, err = getBoolFlag(cmd.Flags(), flagAdopt)
 		if err != nil {
-			return fmt.Errorf("parse flag %s: %w", flagAdopt, err)
+			return err
 		}
-		backup, err = cmd.Flags().GetBool(flagBackup)
+		backup, err = getBoolFlag(cmd.Flags(), flagBackup)
 		if err != nil {
-			return fmt.Errorf("parse flag %s: %w", flagBackup, err)
+			return err
 		}
 		var strategy engine.ResolveStrategy
 		if force {
@@ -46,9 +44,9 @@ var stowCmd = &cobra.Command{
 			strategy = engine.ResolveBackup
 		}
 
-		dryrun, err := cmd.Flags().GetBool(flagDryRun)
+		dryrun, err := getBoolFlag(cmd.Flags(), flagDryRun)
 		if err != nil {
-			return fmt.Errorf("parse flag %s: %w", flagDryRun, err)
+			return err
 		}
 		ctx := engine.CommandContext{
 			Action:           engine.ActionStow,
