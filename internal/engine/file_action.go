@@ -67,7 +67,8 @@ type ActionEvent struct {
 	EventType EventType
 }
 
-const backupExtension = ".bestow.backup"
+const backupExtension = "bestow.backup"
+const tmpExtension = "bestow.tmp"
 
 type FileAction interface {
 	Execute(fs FileSystem) ([]ActionEvent, error)
@@ -194,7 +195,7 @@ func newFileActionReplace(source, destination string, l *slog.Logger) *FileActio
 
 func (f *FileActionReplace) Execute(fs FileSystem) ([]ActionEvent, error) {
 	var events []ActionEvent
-	tmp := f.destination + backupExtension
+	tmp := fmt.Sprintf("%s.%s", f.destination, tmpExtension)
 	if err := fs.Move(f.destination, tmp); err != nil {
 		return nil, err
 	}

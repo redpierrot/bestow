@@ -20,6 +20,8 @@ const (
 	ResolveBackup
 )
 
+const maxBackupFileCount = 6
+
 func (r ResolveStrategy) String() string {
 	switch r {
 	case ResolveSkip:
@@ -182,8 +184,11 @@ func (e *Engine) getStowFileAction(candidate OperationCandidate, strategy Resolv
 		return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("%s: %s", existing.String(), strategy), e.logger), nil
 	case ResolveBackup:
 		e.logger.Debug("existing file at the destination will be backed up and replaced", "destination", candidate.destination, "strategy", strategy)
-		backupFilePath := candidate.destination + backupExtension
-		return newFileActionBackup(candidate.source, candidate.destination, backupFilePath, e.logger), nil
+		backupPath, err := e.calculateBackupPath(candidate.destination)
+		if err != nil {
+			return nil, err
+		}
+		return newFileActionBackup(candidate.source, candidate.destination, backupPath, e.logger), nil
 	case ResolveAdopt:
 		switch existing {
 		case file.ExistingForeignSymlink:
@@ -229,4 +234,24 @@ func (e *Engine) getUnstowFileAction(candidate OperationCandidate) (FileAction, 
 	}
 	e.logger.Warn("destination is not managed by bestow", "destination", candidate.destination, "file_type", existing)
 	return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink", e.logger), nil
+}
+
+func (e *Engine) calculateBackupPath(dest string) (string, error) {
+	i := 0
+	for i < maxBackupFileCount {
+		backupPath := fmt.Sprintf("%s.%d.%s", dest, i, backupExtension)
+		exists, err := e.fileSystem.Exists(backupPath)
+		if err != nil {
+			return "", fmt.Errorf("backup %s: %w", backupPath, err)
+		}
+		if !exists {
+			return backupPath, nil
+		}
+		i += 1
+	}
+	return "", &HintedError{
+		Op:   fmt.Sprintf("backup %s", dest),
+		Err:  ErrMaxBackupsExceeded,
+		Hint: fmt.Sprintf("remove existing backups %s.*.bestow.backup", dest),
+	}
 }
