@@ -6,6 +6,7 @@ package engine
 
 import (
 	"errors"
+	"fmt"
 )
 
 // HintedError represents an error with a hint to the user.
@@ -40,7 +41,7 @@ func (e *AggregatedError) Error() string {
 }
 
 func (e *AggregatedError) Unwrap() error {
-	return errors.Join(e.Items...)
+	return fmt.Errorf("%s: %w", e.Msg, errors.Join(e.Items...))
 }
 
 // ConflictError represents the errors where stow fails due to conflicts.
