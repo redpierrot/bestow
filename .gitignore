@@ -1,0 +1,15 @@
+build/
+bin/
+
+# Coverage Reports
+coverage.out
+coverage.html
+
+# Generated Test Files
+**/bestow_test*
+
+**/__*
+
+.harper-dictionary.txt
+CLAUDE.md
+.docs
