@@ -94,11 +94,11 @@ func getIgnoreFileContent(ignoreList []string) string {
 
 func (e *Engine) createConfigFile(source, destination, configFile string) (*ActionEvent, error) {
 	e.logger.Debug("creating the config file", "path", configFile)
-	config, err := config.GetDefaultConfigTemplate(source, destination)
+	cfg, err := config.GetDefaultConfigTemplate(source, destination)
 	if err != nil {
 		return nil, fmt.Errorf("load config %s %s: %w", source, destination, err)
 	}
-	if err := e.fileSystem.CreateFile(configFile, config); err != nil {
+	if err := e.fileSystem.CreateFile(configFile, cfg); err != nil {
 		return nil, err
 	}
 	return &ActionEvent{

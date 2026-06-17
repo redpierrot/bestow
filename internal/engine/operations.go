@@ -272,11 +272,11 @@ func (e *Engine) calculateBackupPath(dest string) (string, error) {
 		if !exists {
 			return backupPath, nil
 		}
-		i += 1
+		i++
 	}
 	return "", &HintedError{
 		Op:   fmt.Sprintf("backup %s", dest),
-		Err:  ErrMaxBackupsExceeded,
+		Err:  fmt.Errorf("exceeds maximum backup count %d", maxBackupFileCount),
 		Hint: fmt.Sprintf("remove existing backups %s.*.bestow.backup", dest),
 	}
 }
