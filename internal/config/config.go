@@ -55,15 +55,7 @@ func XdgConfigHome() string {
 }
 
 // TODO: Support directory-level config file for different source and destination options
-func GetConfig(viper *viper.Viper, l *slog.Logger) (*Config, error) {
-	config, err := loadConfig(viper, l)
-	if err != nil {
-		return nil, err
-	}
-	return config, nil
-}
-
-func loadConfig(viper *viper.Viper, l *slog.Logger) (*Config, error) {
+func NewConfig(viper *viper.Viper, l *slog.Logger) (*Config, error) {
 	l.Debug("loading configs")
 
 	var raw rawConfig

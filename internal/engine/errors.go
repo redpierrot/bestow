@@ -6,7 +6,6 @@ package engine
 
 import (
 	"errors"
-	"fmt"
 )
 
 // HintedError represents an error with a hint to the user.
@@ -68,11 +67,10 @@ func (e *ConflictError) Error() string {
 func (e *ConflictError) Unwrap() error { return e.Err }
 
 var (
-	ErrDestIsDir          = errors.New("destination is a directory")
-	ErrPkgIsNotDir        = errors.New("package is not a directory")
-	ErrRootIsNotPkg       = errors.New("root (.) is not a package")
-	ErrFileExists         = errors.New("file already exists")
-	ErrMultiFile          = errors.New("multiple files competing for the same destination")
-	ErrUnsupportedAction  = errors.New("unsupported action")
-	ErrMaxBackupsExceeded = errors.New(fmt.Sprintf("exceeds maximum backup count %d", maxBackupFileCount))
+	ErrDestIsDir         = errors.New("destination is a directory")
+	ErrPkgIsNotDir       = errors.New("package is not a directory")
+	ErrRootIsNotPkg      = errors.New("root (.) is not a package")
+	ErrFileExists        = errors.New("file already exists")
+	ErrMultiFile         = errors.New("multiple files competing for the same destination")
+	ErrUnsupportedAction = errors.New("unsupported action")
 )

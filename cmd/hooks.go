@@ -44,7 +44,7 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 		}
 	}
 	bindOperationalFlags(cmd, viper.GetViper())
-	cfg, err := config.GetConfig(viper.GetViper(), appLogger)
+	cfg, err := config.NewConfig(viper.GetViper(), appLogger)
 	if err != nil {
 		return nil, err
 	}
