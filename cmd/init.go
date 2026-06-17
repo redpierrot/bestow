@@ -12,6 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// These flags are defined seprately because semantically, the init flags are different than the common operation flags.
 const (
 	flagInitIgnoreList  string = "ignore-list"
 	flagInitSource      string = "source"
@@ -21,7 +22,7 @@ const (
 
 var initCmd = &cobra.Command{
 	Use:     "init",
-	Short:   InitShort,
+	Short:   initShort,
 	Long:    initLong,
 	Example: initExamples,
 	RunE: func(cmd *cobra.Command, args []string) error {

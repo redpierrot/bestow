@@ -43,7 +43,7 @@ bestow unstow nvim
 bestow unstow nvim --dry-run
 `
 
-const InitShort string = "Initializes the bestow configurations"
+const initShort string = "Initializes the bestow configurations"
 const initLong string = `The init command will initialize the bestow configurations.
 If the XDG_CONFIG_HOME is set, it will be treated as the config home directory.
 
