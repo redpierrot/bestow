@@ -73,6 +73,9 @@ func (e *Engine) Execute(ctx *CommandContext) (*ExecuteSummary, error) {
 	if err != nil {
 		return nil, err
 	}
+	if err := e.checkPreflight(actions); err != nil {
+		return nil, err
+	}
 	summary, err := e.executeFileActions(actions)
 	if err != nil {
 		return nil, err
@@ -80,15 +83,31 @@ func (e *Engine) Execute(ctx *CommandContext) (*ExecuteSummary, error) {
 	return summary, nil
 }
 
+func (e *Engine) checkPreflight(actions []fileAction) error {
+	errorList := make([]error, 0, len(actions))
+	for _, action := range actions {
+		if err := action.preflight(e.fileSystem); err != nil {
+			errorList = append(errorList, err)
+		}
+	}
+	if len(errorList) > 0 {
+		return &AggregatedError{
+			Msg:   "preflight checks failed",
+			Items: errorList,
+		}
+	}
+	return nil
+}
+
 func (e *Engine) executeFileActions(actions []fileAction) (*ExecuteSummary, error) {
 	summary := &Summary{}
 	actionList := make([]ActionEvent, 0, len(actions))
 	for _, action := range actions {
-		fileActions, err := action.Execute(e.fileSystem)
+		fileActions, err := action.execute(e.fileSystem)
 		if err != nil {
 			return nil, err
 		}
-		actionType := action.Type()
+		actionType := action.kind()
 		switch actionType {
 		case UpToDate:
 			summary.UpToDate += 1

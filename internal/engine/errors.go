@@ -29,6 +29,21 @@ func (e *HintedError) Unwrap() error {
 	return e.Err
 }
 
+// AggregatedError represents a collection of errors that needs to be grouped
+// together for presenting.
+type AggregatedError struct {
+	Msg   string
+	Items []error
+}
+
+func (e *AggregatedError) Error() string {
+	return e.Unwrap().Error()
+}
+
+func (e *AggregatedError) Unwrap() error {
+	return errors.Join(e.Items...)
+}
+
 // ConflictError represents the errors where stow fails due to conflicts.
 // The Conflicts filed includes all conflicts found during the operation, which
 // should be handled by the output.

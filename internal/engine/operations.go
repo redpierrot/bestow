@@ -49,14 +49,22 @@ func (e *Engine) populateOperations(ctx *CommandContext) ([]fileAction, error) {
 		return nil, err
 	}
 	candidates := make([]OperationCandidate, 0, len(packageList))
+	errorList := make([]error, 0, len(packageList))
 	for _, pkg := range packageList {
 		packageCandidates, err := e.getFileOperations(pkg)
 		if err != nil {
-			return nil, err
+			errorList = append(errorList, err)
+			continue
 		}
 		candidates = append(candidates, packageCandidates...)
 	}
-	if err := validateDestinations(candidates); err != nil {
+	if len(errorList) > 0 {
+		return nil, &AggregatedError{
+			Msg:   "failed to calculate the operations",
+			Items: errorList,
+		}
+	}
+	if err := e.validateDestinations(candidates); err != nil {
 		return nil, err
 	}
 
@@ -70,7 +78,7 @@ func (e *Engine) populateOperations(ctx *CommandContext) ([]fileAction, error) {
 	return nil, fmt.Errorf("action %s: %w", ctx.Action, ErrUnsupportedAction)
 }
 
-func validateDestinations(candidates []OperationCandidate) error {
+func (e *Engine) validateDestinations(candidates []OperationCandidate) error {
 	destinations := make(map[string][]string)
 	for _, candidate := range candidates {
 		if candidate.destination != "" {
@@ -93,6 +101,7 @@ func validateDestinations(candidates []OperationCandidate) error {
 			Err:       ErrMultiFile,
 		}
 	}
+	e.logger.Debug("all destinations are valid")
 	return nil
 }
 
@@ -128,24 +137,40 @@ func (e *Engine) getFileOperations(pkg string) ([]OperationCandidate, error) {
 
 func (e *Engine) resolveStowOpts(candidates []OperationCandidate, strategy ResolveStrategy) ([]fileAction, error) {
 	actions := make([]fileAction, 0, len(candidates))
+	errorList := make([]error, 0, len(candidates))
 	for _, candidate := range candidates {
 		action, err := e.getStowFileAction(candidate, strategy)
 		if err != nil {
-			return nil, err
+			errorList = append(errorList, err)
+			continue
 		}
 		actions = append(actions, action)
+	}
+	if len(errorList) > 0 {
+		return nil, &AggregatedError{
+			Msg:   "failed to resolve operations",
+			Items: errorList,
+		}
 	}
 	return actions, nil
 }
 
 func (e *Engine) resolveUnstowOpts(candidates []OperationCandidate) ([]fileAction, error) {
 	actions := make([]fileAction, 0, len(candidates))
+	errorList := make([]error, 0, len(candidates))
 	for _, candidate := range candidates {
 		action, err := e.getUnstowFileAction(candidate)
 		if err != nil {
-			return nil, err
+			errorList = append(errorList, err)
+			continue
 		}
 		actions = append(actions, action)
+	}
+	if len(errorList) > 0 {
+		return nil, &AggregatedError{
+			Msg:   "failed to resolve operations",
+			Items: errorList,
+		}
 	}
 	return actions, nil
 }

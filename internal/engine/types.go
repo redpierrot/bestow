@@ -71,4 +71,10 @@ type FileSystem interface {
 	//   - ExistingForeignSymlink: dst is a symlink that is not managed by bestow
 	//   - ExistingDir: dst is a directory
 	GetExistingFileType(src, dest string) (file.ExistingType, error)
+
+	// Readable returns whether a provided path is readable
+	Readable(path string) error
+
+	// Writable returns whether a provided path is writable
+	Writable(path string) error
 }

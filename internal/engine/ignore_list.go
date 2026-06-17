@@ -31,12 +31,14 @@ func newIgnoreList(src string, reader IgnoreReader, l *slog.Logger) (*IgnoreList
 
 	// Load global ignore list
 	configHome := config.AppConfigHome()
+	list.logger.Debug("reading global ignore file", "path", configHome)
 	ignoreItems, err := readIgnoreFile(configHome, reader)
 	if err != nil {
 		return nil, err
 	}
 
 	//load source ignore list
+	list.logger.Debug("readong source ignore file", "path", src)
 	items, err := readIgnoreFile(src, reader)
 	if err != nil {
 		return nil, err
@@ -54,7 +56,9 @@ func (i *IgnoreList) forPackage(pkg string) ([]string, error) {
 	if i.packageLists[pkg] != nil {
 		return i.packageLists[pkg], nil
 	}
-	result, err := readIgnoreFile(filepath.Join(i.src, pkg), i.fileSystem)
+	pkgPath := filepath.Join(i.src, pkg)
+	i.logger.Debug("read package ignore file", "path", pkgPath)
+	result, err := readIgnoreFile(pkgPath, i.fileSystem)
 	if err != nil {
 		return nil, err
 	}

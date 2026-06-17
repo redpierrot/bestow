@@ -13,6 +13,8 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+
+	"golang.org/x/sys/unix"
 )
 
 // baseHandler is the implementation of the System using io, os, and bufio go modules.
@@ -139,7 +141,7 @@ func (h *baseHandler) IsEmptyDir(path string) (bool, error) {
 
 // Exists returns true if the provided path exists.
 func (h *baseHandler) Exists(path string) (bool, error) {
-	h.logger.Debug("checking whether the provided path exists", "path", path)
+	h.logger.Debug("checking path exists", "path", path)
 	_, err := os.Lstat(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
@@ -207,4 +209,20 @@ func (h *baseHandler) GetExistingFileType(src, dst string) (ExistingType, error)
 		return ExistingManagedSymlink, nil
 	}
 	return ExistingForeignSymlink, nil
+}
+
+// Readable returns whether a provided path is readable
+func (h *baseHandler) Readable(path string) error {
+	if err := unix.Access(path, unix.R_OK); err != nil {
+		return fmt.Errorf("read %s: %w", path, err)
+	}
+	return nil
+}
+
+// Writable returns whether a provided path is writable
+func (h *baseHandler) Writable(path string) error {
+	if err := unix.Access(path, unix.W_OK); err != nil {
+		return fmt.Errorf("write %s: %w", path, err)
+	}
+	return nil
 }

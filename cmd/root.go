@@ -51,12 +51,15 @@ func Execute() {
 	if err != nil {
 		var hintedError *engine.HintedError
 		var conflictError *engine.ConflictError
+		var aggregatedError *engine.AggregatedError
 		if errors.As(err, &hintedError) && hintedError.Hint != "" {
 			appLogger.Error(hintedError.Error())
 			appOutput.PrintHint(hintedError.Hint)
 		} else if errors.As(err, &conflictError) {
 			appLogger.Error(conflictError.Error())
 			appOutput.PrintConflict(conflictError.Conflicts)
+		} else if errors.As(err, &aggregatedError) {
+			appOutput.PrintAggregatedError(aggregatedError)
 		} else {
 			appLogger.Error(err.Error())
 		}

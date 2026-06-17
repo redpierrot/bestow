@@ -32,6 +32,10 @@ var warnStyle = lipgloss.NewStyle().
 	Bold(true).
 	Foreground(lipgloss.Yellow)
 
+var errStyle = lipgloss.NewStyle().
+	Bold(true).
+	Foreground(lipgloss.Red)
+
 var hintStyle = lipgloss.NewStyle().
 	Bold(true).
 	Foreground(lipgloss.Magenta)
@@ -141,5 +145,12 @@ func (o *Output) PrintConflict(conflicts []engine.DestinationConflict) {
 		for _, source := range conflict.Sources {
 			lipgloss.Fprintln(os.Stderr, conflictSrcStyle.Render("-", source))
 		}
+	}
+}
+
+func (o *Output) PrintAggregatedError(err *engine.AggregatedError) {
+	lipgloss.Fprintln(os.Stderr, errStyle.Render(err.Msg))
+	for _, item := range err.Items {
+		lipgloss.Fprintln(os.Stderr, errStyle.Render(fmt.Sprintf("  %s", item.Error())))
 	}
 }
