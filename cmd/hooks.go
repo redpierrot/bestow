@@ -30,6 +30,7 @@ func setupLogging(cmd *cobra.Command) error {
 		logHandler.SetLevel(log.DebugLevel)
 	}
 	if quiet {
+		logHandler.SetLevel(log.ErrorLevel)
 		appOutput.SetLevel(output.Quiet)
 	}
 	return nil
