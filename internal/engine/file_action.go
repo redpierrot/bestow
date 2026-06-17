@@ -7,6 +7,7 @@ package engine
 import (
 	"fmt"
 	"log/slog"
+	"os"
 	"path/filepath"
 )
 
@@ -104,18 +105,18 @@ func newFileActionUpToDate(source, destination, reason string, l *slog.Logger) *
 	}
 }
 
-func (f *fileActionUpToDate) preflight(fs FileSystem) error {
+func (f *fileActionUpToDate) preflight(_ FileSystem) error {
 	return nil
 }
 
-func (f *fileActionUpToDate) execute(fs FileSystem) ([]ActionEvent, error) {
+func (f *fileActionUpToDate) execute(_ FileSystem) ([]ActionEvent, error) {
 	f.logger.Debug(f.reason, "source", f.source, "destination", f.destination)
 	return []ActionEvent{
 		{EventType: EventIgnore},
 	}, nil
 }
 
-func (f *fileActionUpToDate) undo(fs FileSystem) ([]ActionEvent, error) {
+func (f *fileActionUpToDate) undo(_ FileSystem) ([]ActionEvent, error) {
 	return []ActionEvent{
 		{EventType: EventIgnore},
 	}, nil
@@ -141,11 +142,11 @@ func newFileActionSkip(source, destination, reason string, l *slog.Logger) *file
 	}
 }
 
-func (f *fileActionSkip) preflight(fs FileSystem) error {
+func (f *fileActionSkip) preflight(_ FileSystem) error {
 	return nil
 }
 
-func (f *fileActionSkip) execute(fs FileSystem) ([]ActionEvent, error) {
+func (f *fileActionSkip) execute(_ FileSystem) ([]ActionEvent, error) {
 	return []ActionEvent{
 		{
 			Action:    actionSkip,
@@ -155,7 +156,7 @@ func (f *fileActionSkip) execute(fs FileSystem) ([]ActionEvent, error) {
 	}, nil
 }
 
-func (f *fileActionSkip) undo(fs FileSystem) ([]ActionEvent, error) {
+func (f *fileActionSkip) undo(_ FileSystem) ([]ActionEvent, error) {
 	return []ActionEvent{
 		{EventType: EventIgnore},
 	}, nil
@@ -263,8 +264,7 @@ func (f *fileActionReplace) execute(fs FileSystem) ([]ActionEvent, error) {
 	events = append(events, removeStep)
 	if err := fs.Link(f.source, f.destination); err != nil {
 		if err := fs.Move(tmp, f.destination); err != nil {
-			// TODO: Return a suitable error stating the corrupted state
-			f.logger.Warn("failed to restore the tmp", "tmp_file", tmp, "original_file", f.destination)
+			f.logger.Warn("failed to restore the tmp; manual recovery needed", "tmp_file", tmp, "original_file", f.destination)
 			return nil, fmt.Errorf("recover %s %s: %w", tmp, f.destination, err)
 		}
 		return nil, err
@@ -515,6 +515,9 @@ func existingParent(path string, fs FileSystem) (string, error) {
 	}
 	if !exists {
 		parent := filepath.Dir(path)
+		if filepath.Clean(parent) == string(os.PathSeparator) {
+			return parent, nil
+		}
 		return existingParent(parent, fs)
 	}
 	return path, nil

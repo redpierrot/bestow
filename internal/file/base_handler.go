@@ -63,6 +63,9 @@ func (h *baseHandler) ListAllFiles(parent string) ([]string, error) {
 		if err != nil {
 			return err
 		}
+		if d.Type()&os.ModeSymlink != 0 {
+			return nil
+		}
 		if !d.IsDir() {
 			result = append(result, path)
 		}
@@ -169,6 +172,9 @@ func (h *baseHandler) GetExistingFileType(src, dst string) (ExistingType, error)
 	h.logger.Debug("found symlink", "path", dst)
 	srcInfo, err := os.Stat(src)
 	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return ExistingForeignSymlink, nil
+		}
 		return ExistingUnknown, err
 	}
 	destInfo, err := os.Stat(dst)
