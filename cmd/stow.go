@@ -5,6 +5,7 @@ All Rights Reversed (ɔ)
 package cmd
 
 import (
+	"github.com/ThisaruGuruge/bestow/internal/config"
 	"github.com/ThisaruGuruge/bestow/internal/engine"
 	"github.com/spf13/cobra"
 )
@@ -48,16 +49,21 @@ var stowCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		ctx := engine.CommandContext{
+		engineCtx := engine.EngineContext{
+			Source:      cfg.Source,
+			Destination: cfg.Destination,
+			ConfigHome:  config.AppConfigHome(),
+		}
+		eng, err := engine.NewEngine(&engineCtx, dryrun, appLogger)
+		cmdCtx := engine.CommandContext{
 			Action:           engine.ActionStow,
 			Args:             args,
 			ConflictStrategy: strategy,
 		}
-		eng, err := engine.NewEngine(cfg, dryrun, appLogger)
 		if err != nil {
 			return err
 		}
-		summary, err := eng.Execute(&ctx)
+		summary, err := eng.Execute(&cmdCtx)
 		if err != nil {
 			return err
 		}

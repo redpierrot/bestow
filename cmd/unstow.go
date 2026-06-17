@@ -5,6 +5,7 @@ All Rights Reversed (ɔ)
 package cmd
 
 import (
+	"github.com/ThisaruGuruge/bestow/internal/config"
 	"github.com/ThisaruGuruge/bestow/internal/engine"
 	"github.com/spf13/cobra"
 )
@@ -24,7 +25,12 @@ var unstowCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		eng, err := engine.NewEngine(cfg, dryrun, appLogger)
+		engineCtx := engine.EngineContext{
+			Source:      cfg.Source,
+			Destination: cfg.Destination,
+			ConfigHome:  config.AppConfigHome(),
+		}
+		eng, err := engine.NewEngine(&engineCtx, dryrun, appLogger)
 		if err != nil {
 			return err
 		}

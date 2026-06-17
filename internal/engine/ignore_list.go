@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"path/filepath"
 
-	"github.com/ThisaruGuruge/bestow/internal/config"
 	"github.com/bmatcuk/doublestar/v4"
 )
 
@@ -26,11 +25,10 @@ type IgnoreReader interface {
 	ReadLines(path string) ([]string, error)
 }
 
-func newIgnoreList(src string, reader IgnoreReader, l *slog.Logger) (*IgnoreList, error) {
+func newIgnoreList(src, configHome string, reader IgnoreReader, l *slog.Logger) (*IgnoreList, error) {
 	list := &IgnoreList{src: src, fileSystem: reader, logger: l.With("section", "ignore_handler"), packageLists: make(map[string][]string)}
 
 	// Load global ignore list
-	configHome := config.AppConfigHome()
 	list.logger.Debug("reading global ignore file", "path", configHome)
 	ignoreItems, err := readIgnoreFile(configHome, reader)
 	if err != nil {

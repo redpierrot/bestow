@@ -9,7 +9,6 @@ import (
 	"log/slog"
 	"path/filepath"
 
-	"github.com/ThisaruGuruge/bestow/internal/config"
 	"github.com/ThisaruGuruge/bestow/internal/file"
 )
 
@@ -46,14 +45,20 @@ type Engine struct {
 	dryRun      bool
 }
 
-func NewEngine(cfg *config.Config, dryRun bool, l *slog.Logger) (*Engine, error) {
+type EngineContext struct {
+	ConfigHome  string
+	Source      string
+	Destination string
+}
+
+func NewEngine(cfg *EngineContext, dryRun bool, l *slog.Logger) (*Engine, error) {
 	var handler FileSystem
 	if dryRun {
 		handler = file.NewNoWriteHandler(l)
 	} else {
 		handler = file.NewHandler(l)
 	}
-	ignoreList, err := newIgnoreList(cfg.Source, handler, l)
+	ignoreList, err := newIgnoreList(cfg.Source, cfg.ConfigHome, handler, l)
 	if err != nil {
 		return nil, err
 	}
