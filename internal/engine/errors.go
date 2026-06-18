@@ -37,7 +37,7 @@ type AggregatedError struct {
 }
 
 func (e *AggregatedError) Error() string {
-	return e.Unwrap().Error()
+	return fmt.Sprintf("%s: %w", e.Msg, errors.Join(e.Items...).Error())
 }
 
 func (e *AggregatedError) Unwrap() error {

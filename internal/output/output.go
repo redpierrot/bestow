@@ -93,6 +93,9 @@ func (o *Output) PrintAction(action engine.ActionEvent, label string) {
 }
 
 func (o *Output) PrintSummary(summary *engine.ExecuteResult) {
+	if summary == nil {
+		return
+	}
 	var label string
 	if summary.DryRun {
 		label = "[dryrun]"
@@ -106,6 +109,9 @@ func (o *Output) PrintSummary(summary *engine.ExecuteResult) {
 }
 
 func (o *Output) printSummaryLine(summary *engine.OpsSummary) {
+	if summary == nil {
+		return
+	}
 	summaryFields := 7
 	parts := make([]string, 0, summaryFields)
 	if summary.Stowed > 0 {

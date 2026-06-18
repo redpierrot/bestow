@@ -108,7 +108,7 @@ func (h *baseHandler) IsEmptyDir(path string) (bool, error) {
 	defer f.Close()
 
 	_, err = f.ReadDir(1)
-	if err == io.EOF {
+	if errors.Is(err, io.EOF) {
 		return true, nil
 	}
 	if err != nil {
