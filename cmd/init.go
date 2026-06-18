@@ -58,7 +58,6 @@ var initCmd = &cobra.Command{
 		ctx := engine.InitContext{
 			Force:      force,
 			IgnoreList: ignoreList,
-			ConfigDir:  config.AppConfigHome(),
 		}
 		summary, err := eng.Init(&ctx)
 		if err != nil {

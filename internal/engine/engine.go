@@ -42,6 +42,7 @@ type Engine struct {
 	ignore      *IgnoreList
 	logger      *slog.Logger
 	fileSystem  FileSystem
+	configHome  string
 	dryRun      bool
 }
 
@@ -68,6 +69,7 @@ func NewEngine(cfg *EngineContext, dryRun bool, l *slog.Logger) (*Engine, error)
 		ignore:      ignoreList,
 		logger:      l.With("component", "engine"),
 		fileSystem:  handler,
+		configHome:  cfg.ConfigHome,
 		dryRun:      dryRun,
 	}, nil
 }
@@ -109,9 +111,13 @@ func (e *Engine) executeFileActions(actions []fileAction) (*ExecuteResult, error
 	events := make([]ActionEvent, 0, len(actions))
 	completedActions := make([]fileAction, 0, len(actions))
 	for _, action := range actions {
-		operationEvents, err := action.execute(e.fileSystem)
-		if err != nil {
-			return e.undoFileActions(completedActions, summary, events)
+		operationEvents, executeErr := action.execute(e.fileSystem)
+		if executeErr != nil {
+			summary, undoErr := e.undoFileActions(completedActions, summary, events)
+			if undoErr != nil {
+				return summary, undoErr
+			}
+			return summary, executeErr
 		}
 		actionType := action.kind()
 		switch actionType {

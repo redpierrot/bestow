@@ -16,17 +16,16 @@ import (
 type InitContext struct {
 	Force      bool
 	IgnoreList []string
-	ConfigDir  string
 }
 
 func (e *Engine) Init(ctx *InitContext) (*ExecuteResult, error) {
 	e.logger.Debug("initializing bestow")
-	configFile := filepath.Join(ctx.ConfigDir, constant.ConfigFile)
-	ignoreFile := filepath.Join(ctx.ConfigDir, constant.IgnoreFile)
+	configFile := filepath.Join(e.configHome, constant.ConfigFile)
+	ignoreFile := filepath.Join(e.configHome, constant.IgnoreFile)
 	if err := e.checkExistingFiles(configFile, ignoreFile, ctx.Force); err != nil {
 		return nil, err
 	}
-	if err := e.fileSystem.CreateDir(ctx.ConfigDir); err != nil {
+	if err := e.fileSystem.CreateDir(e.configHome); err != nil {
 		return nil, err
 	}
 	configAction, err := e.createConfigFile(e.source, e.destination, configFile)
@@ -38,7 +37,7 @@ func (e *Engine) Init(ctx *InitContext) (*ExecuteResult, error) {
 		return nil, err
 	}
 	actions := []ActionEvent{*configAction, *ignoreAction}
-	return &ExecuteResult{Events: actions, Summary: &OpsSummary{}}, nil
+	return &ExecuteResult{Events: actions}, nil
 }
 
 func (e *Engine) checkExistingFiles(configFile, ignoreFile string, force bool) error {
