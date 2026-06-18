@@ -77,7 +77,6 @@ const backupExtension = "bestow.backup"
 const tmpExtension = "bestow.tmp"
 
 type fileAction interface {
-	preflight(fs FileSystem) error
 	execute(fs FileSystem) ([]ActionEvent, error)
 	undo(fs FileSystem) ([]ActionEvent, error)
 	kind() ActionKind
@@ -103,10 +102,6 @@ func newFileActionUpToDate(source, destination, reason string, l *slog.Logger) *
 		},
 		reason: reason,
 	}
-}
-
-func (f *fileActionUpToDate) preflight(_ FileSystem) error {
-	return nil
 }
 
 func (f *fileActionUpToDate) execute(_ FileSystem) ([]ActionEvent, error) {
@@ -142,10 +137,6 @@ func newFileActionSkip(source, destination, reason string, l *slog.Logger) *file
 	}
 }
 
-func (f *fileActionSkip) preflight(_ FileSystem) error {
-	return nil
-}
-
 func (f *fileActionSkip) execute(_ FileSystem) ([]ActionEvent, error) {
 	return []ActionEvent{
 		{
@@ -178,20 +169,6 @@ func newFileActionLink(source, destination string, l *slog.Logger) *fileActionLi
 			logger:      l,
 		},
 	}
-}
-
-func (f *fileActionLink) preflight(fs FileSystem) error {
-	if err := fs.Readable(f.source); err != nil {
-		return err
-	}
-	existingDestPath, err := existingParent(f.destination, fs)
-	if err != nil {
-		return err
-	}
-	if err := fs.Writable(existingDestPath); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (f *fileActionLink) execute(fs FileSystem) ([]ActionEvent, error) {
@@ -237,17 +214,6 @@ func newFileActionReplace(source, destination string, l *slog.Logger) *fileActio
 			logger:      l,
 		},
 	}
-}
-
-func (f *fileActionReplace) preflight(fs FileSystem) error {
-	if err := fs.Readable(f.source); err != nil {
-		return err
-	}
-	destParent := filepath.Dir(f.destination)
-	if err := fs.Writable(destParent); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (f *fileActionReplace) execute(fs FileSystem) ([]ActionEvent, error) {
@@ -317,17 +283,6 @@ func newFileActionBackup(source, destination, backup string, l *slog.Logger) *fi
 	}
 }
 
-func (f *fileActionBackup) preflight(fs FileSystem) error {
-	if err := fs.Readable(f.source); err != nil {
-		return err
-	}
-	destParent := filepath.Dir(f.destination)
-	if err := fs.Writable(destParent); err != nil {
-		return err
-	}
-	return nil
-}
-
 func (f *fileActionBackup) execute(fs FileSystem) ([]ActionEvent, error) {
 	if err := fs.Move(f.destination, f.backup); err != nil {
 		return nil, err
@@ -384,21 +339,6 @@ func newFileActionAdopt(source, destination string, l *slog.Logger) *fileActionA
 			logger:      l,
 		},
 	}
-}
-
-func (f *fileActionAdopt) preflight(fs FileSystem) error {
-	srcParent, err := existingParent(f.source, fs)
-	if err != nil {
-		return err
-	}
-	if err := fs.Writable(srcParent); err != nil {
-		return err
-	}
-	destParent := filepath.Dir(f.destination)
-	if err := fs.Writable(destParent); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (f *fileActionAdopt) execute(fs FileSystem) ([]ActionEvent, error) {
@@ -467,14 +407,6 @@ func newFileActionRemove(source, destination string, l *slog.Logger) *fileAction
 			logger:      l,
 		},
 	}
-}
-
-func (f *fileActionRemove) preflight(fs FileSystem) error {
-	destParent := filepath.Dir(f.destination)
-	if err := fs.Writable(destParent); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (f *fileActionRemove) execute(fs FileSystem) ([]ActionEvent, error) {
