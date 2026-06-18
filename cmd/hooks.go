@@ -5,8 +5,6 @@ All Rights Reversed (ɔ)
 package cmd
 
 import (
-	"errors"
-
 	"github.com/ThisaruGuruge/bestow/internal/config"
 	"github.com/ThisaruGuruge/bestow/internal/engine"
 	"github.com/ThisaruGuruge/bestow/internal/output"
@@ -14,8 +12,6 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-var ErrIncompatibleFlags = errors.New("mutually exclusive flags")
 
 func setupLogging(cmd *cobra.Command) error {
 	verbose, err := getBoolFlag(cmd.Flags(), flagVerbose)
