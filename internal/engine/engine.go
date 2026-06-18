@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"slices"
 
 	"github.com/ThisaruGuruge/bestow/internal/file"
 )
@@ -130,7 +131,8 @@ func (e *Engine) executeFileActions(actions []fileAction) (*ExecuteResult, error
 }
 
 func (e *Engine) undoFileActions(actions []fileAction, summary *OpsSummary, events []ActionEvent) (*ExecuteResult, error) {
-	for _, action := range actions {
+	// Undo the completed actions from the last action to the top
+	for _, action := range slices.Backward(actions) {
 		operationEvents, err := action.undo(e.fileSystem)
 		if err != nil {
 			return &ExecuteResult{
