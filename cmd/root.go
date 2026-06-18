@@ -42,8 +42,6 @@ var rootCmd = &cobra.Command{
 	Version:       version,
 	SilenceErrors: true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		// Note: Setup logging should run for all sub commands.
-		// If a subcommand defines its own PersistentPreRunE, it should call this.
 		return setupLogging(cmd)
 	},
 }
@@ -93,6 +91,7 @@ func init() {
 	rootCmd.PersistentFlags().String(flagProfile, "default", "profile to run the command")
 
 	rootCmd.MarkFlagsMutuallyExclusive(flagQuiet, flagVerbose)
+	cobra.EnableTraverseRunHooks = true
 }
 
 func initConfig() {
