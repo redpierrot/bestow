@@ -163,3 +163,7 @@ func (o *Output) PrintAggregatedError(err *engine.AggregatedError) {
 		lipgloss.Fprintln(os.Stderr, errStyle.Render(fmt.Sprintf("  %s", item.Error())))
 	}
 }
+
+func (o *Output) PrintCommandError(err error) {
+	lipgloss.Fprintln(os.Stderr, errStyle.Render(err.Error()))
+}

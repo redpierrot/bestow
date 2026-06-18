@@ -53,15 +53,15 @@ func Execute() {
 		var conflictError *engine.ConflictError
 		var aggregatedError *engine.AggregatedError
 		if errors.As(err, &hintedError) && hintedError.Hint != "" {
-			appLogger.Error(hintedError.Error())
+			appOutput.PrintCommandError(hintedError)
 			appOutput.PrintHint(hintedError.Hint)
 		} else if errors.As(err, &conflictError) {
-			appLogger.Error(conflictError.Error())
+			appOutput.PrintCommandError(conflictError)
 			appOutput.PrintConflict(conflictError.Conflicts)
 		} else if errors.As(err, &aggregatedError) {
 			appOutput.PrintAggregatedError(aggregatedError)
 		} else {
-			appLogger.Error(err.Error())
+			appOutput.PrintCommandError(err)
 		}
 		os.Exit(1)
 	}
