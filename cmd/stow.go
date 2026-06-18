@@ -55,6 +55,9 @@ var stowCmd = &cobra.Command{
 			ConfigHome:  config.AppConfigHome(),
 		}
 		eng, err := engine.NewEngine(&engineCtx, dryrun, appLogger)
+		if err != nil {
+			return err
+		}
 		cmdCtx := engine.CommandContext{
 			Action:           engine.CommandStow,
 			Args:             args,
