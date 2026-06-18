@@ -39,10 +39,10 @@ var unstowCmd = &cobra.Command{
 			Args:   args,
 		}
 		summary, err := eng.Execute(&ctx)
+		appOutput.PrintSummary(summary)
 		if err != nil {
 			return err
 		}
-		appOutput.PrintSummary(summary)
 		return nil
 	},
 }

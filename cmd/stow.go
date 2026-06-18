@@ -67,10 +67,10 @@ var stowCmd = &cobra.Command{
 			return err
 		}
 		summary, err := eng.Execute(&cmdCtx)
+		appOutput.PrintSummary(summary)
 		if err != nil {
 			return err
 		}
-		appOutput.PrintSummary(summary)
 		return nil
 	},
 }
