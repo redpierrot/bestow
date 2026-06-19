@@ -25,20 +25,20 @@ var unstowCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		engineCtx := engine.EngineContext{
+		engineCfg := engine.EngineConfig{
 			Source:      cfg.Source,
 			Destination: cfg.Destination,
 			ConfigHome:  config.AppConfigHome(),
 		}
-		eng, err := engine.NewEngine(&engineCtx, dryrun, appLogger)
+		eng, err := engine.NewEngine(&engineCfg, dryrun, appLogger)
 		if err != nil {
 			return err
 		}
-		ctx := engine.CommandContext{
+		commandCfg := engine.CommandConfig{
 			Action: engine.CommandUnstow,
 			Args:   args,
 		}
-		summary, err := eng.Execute(&ctx)
+		summary, err := eng.Execute(cmd.Context(), &commandCfg)
 		appOutput.PrintSummary(summary)
 		if err != nil {
 			return err

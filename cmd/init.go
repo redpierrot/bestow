@@ -38,7 +38,7 @@ var initCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		engineCtx := engine.EngineContext{
+		engineCfg := engine.EngineConfig{
 			Source:      source,
 			Destination: destination,
 			ConfigHome:  config.AppConfigHome(),
@@ -47,7 +47,7 @@ var initCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		eng, err := engine.NewEngine(&engineCtx, dryRun, appLogger)
+		eng, err := engine.NewEngine(&engineCfg, dryRun, appLogger)
 		if err != nil {
 			return err
 		}

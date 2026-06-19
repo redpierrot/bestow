@@ -31,7 +31,7 @@ func (a CommandAction) String() string {
 	}
 }
 
-type CommandContext struct {
+type CommandConfig struct {
 	Action           CommandAction
 	Args             []string
 	ConflictStrategy ResolveStrategy
@@ -47,13 +47,13 @@ type Engine struct {
 	dryRun      bool
 }
 
-type EngineContext struct {
+type EngineConfig struct {
 	ConfigHome  string
 	Source      string
 	Destination string
 }
 
-func NewEngine(cfg *EngineContext, dryRun bool, l *slog.Logger) (*Engine, error) {
+func NewEngine(cfg *EngineConfig, dryRun bool, l *slog.Logger) (*Engine, error) {
 	var handler FileSystem
 	if dryRun {
 		handler = file.NewNoWriteHandler(l)

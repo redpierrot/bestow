@@ -42,9 +42,9 @@ type OperationCandidate struct {
 	destination string
 }
 
-func (e *Engine) populateOperations(ctx *CommandContext) ([]fileAction, error) {
-	e.logger.Debug("populating operations", "action", ctx.Action)
-	packageList, err := e.populatePackageList(ctx.Args)
+func (e *Engine) populateOperations(cfg *CommandConfig) ([]fileAction, error) {
+	e.logger.Debug("populating operations", "action", cfg.Action)
+	packageList, err := e.populatePackageList(cfg.Args)
 	if err != nil {
 		return nil, err
 	}
@@ -68,14 +68,14 @@ func (e *Engine) populateOperations(ctx *CommandContext) ([]fileAction, error) {
 		return nil, err
 	}
 
-	switch ctx.Action {
+	switch cfg.Action {
 	case CommandStow:
-		return e.resolveStowOpts(candidates, ctx.ConflictStrategy)
+		return e.resolveStowOpts(candidates, cfg.ConflictStrategy)
 	case CommandUnstow:
 		// TODO: Remove empty parents should be config and unstow should handle it
 		return e.resolveUnstowOpts(candidates)
 	}
-	return nil, fmt.Errorf("action %s: %w", ctx.Action, ErrUnsupportedAction)
+	return nil, fmt.Errorf("action %s: %w", cfg.Action, ErrUnsupportedAction)
 }
 
 func (e *Engine) validateDestinations(candidates []OperationCandidate) error {
@@ -194,9 +194,6 @@ func (e *Engine) getStowFileAction(candidate OperationCandidate, strategy Resolv
 			Err:  ErrDestIsDir,
 		}
 	}
-	// TODO: Managed symlink finding strategy has a flaw.
-	// Managed symlink: Existing link lives inside the source
-	// This can be either the same file or not. Should update it anyway
 	if existing == file.ExistingManagedSymlink {
 		return newFileActionUpToDate(candidate.source, candidate.destination, "file already stowed", e.logger), nil
 	}
