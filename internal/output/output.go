@@ -15,36 +15,6 @@ import (
 
 const actionStringLength = 7
 
-var successStyle = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(lipgloss.Green)
-
-var stepStyle = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(lipgloss.Cyan)
-
-var skipStyle = lipgloss.NewStyle().
-	Bold(true).
-	Faint(true).
-	Foreground(lipgloss.Green)
-
-var warnStyle = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(lipgloss.Yellow)
-
-var errStyle = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(lipgloss.Red)
-
-var hintStyle = lipgloss.NewStyle().
-	Bold(true).
-	Foreground(lipgloss.Magenta)
-
-var actionStyle = lipgloss.NewStyle().Width(actionStringLength).Align(lipgloss.Right)
-
-var conflictDestStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Blue)
-var conflictSrcStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Yellow)
-
 type Level int
 
 const (
@@ -53,22 +23,40 @@ const (
 )
 
 type Output struct {
-	OutputLevel Level
+	level        Level
+	successStyle lipgloss.Style
+	warnStyle    lipgloss.Style
+	errStyle     lipgloss.Style
+	stepStyle    lipgloss.Style
+	skipStyle    lipgloss.Style
+	hintStyle    lipgloss.Style
+	undoStyle    lipgloss.Style
+	actionStyle  lipgloss.Style
 }
 
-func NewOutput(level Level) *Output {
+func NewOutput(l Level) *Output {
+	hasDarkBg := lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
+	lightDark := lipgloss.LightDark(hasDarkBg)
 	return &Output{
-		OutputLevel: level,
+		level:        l,
+		successStyle: lipgloss.NewStyle().Bold(true).Foreground(lightDark(lipgloss.Green, lipgloss.BrightGreen)),
+		warnStyle:    lipgloss.NewStyle().Bold(true).Foreground(lightDark(lipgloss.Yellow, lipgloss.BrightYellow)),
+		errStyle:     lipgloss.NewStyle().Bold(true).Foreground(lightDark(lipgloss.Red, lipgloss.BrightRed)),
+		stepStyle:    lipgloss.NewStyle().Bold(true).Foreground(lightDark(lipgloss.Cyan, lipgloss.BrightCyan)).Faint(true),
+		skipStyle:    lipgloss.NewStyle().Italic(true).Foreground(lightDark(lipgloss.BrightBlack, lipgloss.White)).Faint(true),
+		hintStyle:    lipgloss.NewStyle().Italic(true).Foreground(lightDark(lipgloss.Blue, lipgloss.BrightBlue)),
+		undoStyle:    lipgloss.NewStyle().Bold(true).Foreground(lightDark(lipgloss.Magenta, lipgloss.BrightMagenta)),
+		actionStyle:  lipgloss.NewStyle().Width(actionStringLength).Align(lipgloss.Right).Transform(strings.ToUpper),
 	}
 }
 
 func (o *Output) SetLevel(level Level) {
-	o.OutputLevel = level
+	o.level = level
 }
 
 func (o *Output) PrintAction(action engine.ActionEvent, label string) {
 	var message string
-	formattedAction := actionStyle.Render(action.Action)
+	formattedAction := o.actionStyle.Render(action.Action)
 	if label == "" {
 		message = fmt.Sprintf("%s: %s", formattedAction, action.Msg)
 	} else {
@@ -77,15 +65,15 @@ func (o *Output) PrintAction(action engine.ActionEvent, label string) {
 	var text string
 	switch action.EventType {
 	case engine.EventSuccess:
-		text = successStyle.Render(message)
+		text = o.successStyle.Render(message)
 	case engine.EventStep:
-		text = stepStyle.Render(message)
+		text = o.stepStyle.Render(message)
 	case engine.EventWarn:
-		text = warnStyle.Render(message)
+		text = o.warnStyle.Render(message)
 	case engine.EventSkip:
-		text = skipStyle.Render(message)
+		text = o.skipStyle.Render(message)
 	case engine.EventUndo:
-		text = warnStyle.Render(message)
+		text = o.undoStyle.Render(message)
 	case engine.EventIgnore:
 		return
 	}
@@ -100,7 +88,7 @@ func (o *Output) PrintSummary(summary *engine.ExecuteResult) {
 	if summary.DryRun {
 		label = "[dryrun]"
 	}
-	if o.OutputLevel != Quiet {
+	if o.level != Quiet {
 		for _, action := range summary.Events {
 			o.PrintAction(action, label)
 		}
@@ -112,7 +100,7 @@ func (o *Output) printSummaryLine(summary *engine.OpsSummary) {
 	if summary == nil {
 		return
 	}
-	summaryFields := 7
+	summaryFields := 8
 	parts := make([]string, 0, summaryFields)
 	if summary.Stowed > 0 {
 		parts = append(parts, fmt.Sprintf("stowed: %d", summary.Stowed))
@@ -135,6 +123,9 @@ func (o *Output) printSummaryLine(summary *engine.OpsSummary) {
 	if summary.UpToDate > 0 {
 		parts = append(parts, fmt.Sprintf("up-to-date: %d", summary.UpToDate))
 	}
+	if summary.Reverted > 0 {
+		parts = append(parts, fmt.Sprintf("reverted: %d", summary.Reverted))
+	}
 	if len(parts) == 0 {
 		lipgloss.Println("no operations to execute")
 		return
@@ -144,26 +135,26 @@ func (o *Output) printSummaryLine(summary *engine.OpsSummary) {
 
 func (o *Output) PrintHint(hint string) {
 	message := "[hint] " + hint
-	lipgloss.Fprintln(os.Stderr, hintStyle.Render(message))
+	lipgloss.Fprintln(os.Stderr, o.hintStyle.Render(message))
 }
 
 func (o *Output) PrintConflict(conflicts []engine.DestinationConflict) {
-	lipgloss.Fprintln(os.Stderr, conflictDestStyle.Render("conflicts:"))
+	lipgloss.Fprintln(os.Stderr, o.errStyle.Render("conflicts:"))
 	for _, conflict := range conflicts {
-		lipgloss.Fprintln(os.Stderr, conflictDestStyle.Render(conflict.Destination))
+		lipgloss.Fprintln(os.Stderr, o.errStyle.Render(conflict.Destination))
 		for _, source := range conflict.Sources {
-			lipgloss.Fprintln(os.Stderr, conflictSrcStyle.Render("-", source))
+			lipgloss.Fprintln(os.Stderr, o.warnStyle.Render("-", source))
 		}
 	}
 }
 
 func (o *Output) PrintAggregatedError(err *engine.AggregatedError) {
-	lipgloss.Fprintln(os.Stderr, errStyle.Render(err.Msg))
+	lipgloss.Fprintln(os.Stderr, o.errStyle.Render(err.Msg))
 	for _, item := range err.Items {
-		lipgloss.Fprintln(os.Stderr, errStyle.Render(fmt.Sprintf("  %s", item.Error())))
+		lipgloss.Fprintln(os.Stderr, o.errStyle.Render(fmt.Sprintf("  %s", item.Error())))
 	}
 }
 
 func (o *Output) PrintCommandError(err error) {
-	lipgloss.Fprintln(os.Stderr, errStyle.Render(err.Error()))
+	lipgloss.Fprintln(os.Stderr, o.errStyle.Render(err.Error()))
 }
