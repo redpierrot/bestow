@@ -1,31 +1,66 @@
-package file_test
+package file
 
 import (
+	"errors"
 	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
-
-	"github.com/ThisaruGuruge/bestow/internal/file"
 )
 
-func TestGetExistingFileType(t *testing.T) {
+const noWritePerm = 0o555
+const writePerm = 0o755
+
+func TestHandler_Link(t *testing.T) {
 	tests := []struct {
 		name      string
-		setup     func(t *testing.T, src, dst string)
-		wantType  file.ExistingType
-		wantError bool
-		err       string
+		setup     func(t *testing.T, dir, src, dest string)
+		destFn    func(dir string) string
+		handler   *Handler
+		wantErr   bool
+		wantErrIs error
 	}{
 		{
-			name: "Managed Symlink",
-			setup: func(t *testing.T, src, dst string) {
-				if err := os.Symlink(src, dst); err != nil {
-					t.Fatal(err)
+			name:    "existing parent",
+			setup:   func(t *testing.T, dir, src, dest string) {},
+			handler: NewHandler(getLogger()),
+		},
+		{
+			name:    "non-existing parent",
+			setup:   func(t *testing.T, dir, src, dest string) {},
+			destFn:  func(dir string) string { return filepath.Join(dir, "sub_directory", "dest_file") },
+			handler: NewHandler(getLogger()),
+		},
+		{
+			name: "existing dest file",
+			setup: func(t *testing.T, dir, src, dest string) {
+				if err := os.WriteFile(dest, []byte("destination file content"), filePermissions); err != nil {
+					t.Fatalf("dest creation: %v", err)
 				}
 			},
-			wantType: file.ExistingManagedSymlink,
+			destFn:    func(dir string) string { return filepath.Join(dir, "dest_file") },
+			handler:   NewHandler(getLogger()),
+			wantErr:   true,
+			wantErrIs: os.ErrExist,
+		},
+		{
+			name: "parent not writable",
+			setup: func(t *testing.T, dir, src, dest string) {
+				if os.Getuid() == 0 {
+					t.Skip("root bypasses permission checks")
+				}
+				if err := os.Chmod(filepath.Dir(dest), noWritePerm); err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() { _ = os.Chmod(filepath.Dir(dest), writePerm) })
+			},
+			destFn:    func(dir string) string { return filepath.Join(dir, "dest_file") },
+			handler:   NewHandler(getLogger()),
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
 		},
 	}
 
@@ -33,24 +68,149 @@ func TestGetExistingFileType(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			dir := t.TempDir()
 			src := filepath.Join(dir, "src_file")
-			dst := filepath.Join(dir, "dst_file")
-			if err := os.WriteFile(src, []byte("src file"), 0o644); err != nil {
-				t.Fatal(err)
+			if err := os.WriteFile(src, []byte("Sample Config"), 0o644); err != nil {
+				t.Fatalf("source creation failed: %v", err)
 			}
-			if tc.setup != nil {
-				tc.setup(t, src, dst)
+
+			dest := filepath.Join(dir, "dest_file")
+			if tc.destFn != nil {
+				dest = tc.destFn(dir)
 			}
-			h := file.NewHandler(slog.New(slog.NewTextHandler(io.Discard, nil)))
-			actual, err := h.GetExistingFileType(src, dst)
-			if err != nil && tc.wantError && tc.err != err.Error() {
-				t.Fatalf("actual %s, expected %s", err.Error(), tc.err)
+			tc.setup(t, dir, src, dest)
+			err := tc.handler.Link(src, dest)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("err = %v, wantErr = %v", err, tc.wantErr)
 			}
-			if (err != nil) != tc.wantError {
-				t.Fatalf("err = %v, wantErr %v", err, tc.wantError)
+			if tc.wantErr {
+				if !errors.Is(err, tc.wantErrIs) {
+					t.Fatalf("errors.Is(%v), want %v", err, tc.wantErrIs)
+				}
+				return
 			}
-			if !tc.wantError && actual != tc.wantType {
-				t.Fatalf("actual %q, expected %q", actual, tc.wantType)
+			got, readErr := os.Readlink(dest)
+			if readErr != nil {
+				t.Fatalf("symlink missing: %v", readErr)
+			}
+			if got != src {
+				t.Fatalf("symlink target %q, want %q", got, src)
 			}
 		})
 	}
+}
+
+func TestHandler_CreateFile(t *testing.T) {
+	tests := []struct {
+		name      string
+		lines     []string
+		setup     func(t *testing.T, parent string)
+		wantErr   bool
+		wantErrIs error
+		handler   *Handler
+	}{
+		{
+			name:    "create file",
+			setup:   func(t *testing.T, parent string) {},
+			lines:   []string{"this is sample file content"},
+			handler: NewHandler(getLogger()),
+		},
+		{
+			name: "no perm parent",
+			setup: func(t *testing.T, parent string) {
+				if os.Getuid() == 0 {
+					t.Skip("root bypasses the permission checks")
+				}
+				if err := os.Chmod(parent, noWritePerm); err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() { _ = os.Chmod(parent, writePerm) })
+			},
+			lines:     []string{"this is sample file content"},
+			handler:   NewHandler(getLogger()),
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			path := filepath.Join(dir, "file_path")
+			tc.setup(t, dir)
+			err := tc.handler.CreateFile(path, strings.Join(tc.lines, "\n"))
+			if tc.wantErr {
+				if !errors.Is(err, tc.wantErrIs) {
+					t.Fatalf("errors.Is(%v), want %v", err, tc.wantErrIs)
+				}
+				return
+			}
+			result, err := tc.handler.ReadLines(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Equal(tc.lines, result) {
+				t.Fatalf("content mismatch read: %v, want: %v", result, tc.lines)
+			}
+
+		})
+	}
+}
+
+func TestHandler_IsEmptyDir(t *testing.T) {
+	tests := []struct {
+		name      string
+		setup     func(t *testing.T, dir string)
+		handler   Handler
+		want      bool
+		wantErr   bool
+		wantErrIs error
+	}{
+		{
+			name: "check empty dir",
+			setup: func(t *testing.T, dir string) {
+				if err := os.Mkdir(dir, writePerm); err != nil {
+					t.Fatal(err)
+				}
+			},
+			handler: *NewHandler(getLogger()),
+			want:    true,
+		},
+		{
+			name: "check non-empty dir",
+			setup: func(t *testing.T, dir string) {
+				if err := os.Mkdir(dir, writePerm); err != nil {
+					t.Fatal(err)
+				}
+				tmpFile := filepath.Join(dir, "source_file")
+				if err := os.WriteFile(tmpFile, []byte("Sample file content"), writePerm); err != nil {
+					t.Fatal(err)
+				}
+			},
+			handler: *NewHandler(getLogger()),
+			want:    false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			src := filepath.Join(dir, "source")
+			tc.setup(t, src)
+			isEmpty, err := tc.handler.IsEmptyDir(src)
+			if (err != nil) != tc.wantErr {
+				t.Fatalf("err = %v, want = %v", err, tc.wantErr)
+			}
+			if err != nil {
+				if errors.Is(err, tc.wantErrIs) {
+					return
+				}
+				t.Fatalf("errors.Is(%v), want %v", err, tc.wantErrIs)
+			}
+			if isEmpty != tc.want {
+				t.Fatalf("isEmpty: %v, want: %v", isEmpty, tc.want)
+			}
+		})
+	}
+}
+
+func getLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
