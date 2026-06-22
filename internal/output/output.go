@@ -80,23 +80,23 @@ func (o *Output) PrintAction(action engine.ActionEvent, label string) {
 	_, _ = lipgloss.Println(text)
 }
 
-func (o *Output) PrintSummary(summary *engine.ExecuteResult) {
-	if summary == nil {
+func (o *Output) PrintResult(result *engine.ExecuteResult) {
+	if result == nil {
 		return
 	}
 	var label string
-	if summary.DryRun {
+	if result.DryRun {
 		label = "[dryrun]"
 	}
 	if o.level != Quiet {
-		for _, action := range summary.Events {
+		for _, action := range result.Events {
 			o.PrintAction(action, label)
 		}
-		o.printSummaryLine(summary.Summary)
+		o.printSummaryLine(result.Summary)
 	}
 }
 
-func (o *Output) printSummaryLine(summary *engine.OpsSummary) {
+func (o *Output) printSummaryLine(summary *engine.Summary) {
 	if summary == nil {
 		return
 	}

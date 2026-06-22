@@ -17,21 +17,20 @@ import (
 	"github.com/spf13/viper"
 
 	"github.com/ThisaruGuruge/bestow/internal/config"
-	"github.com/ThisaruGuruge/bestow/internal/constant"
 	"github.com/ThisaruGuruge/bestow/internal/engine"
 	"github.com/ThisaruGuruge/bestow/internal/output"
 )
 
 const rootCmdName = "bestow"
+const configFileName = "config.yaml"
 
 var version = "dev"
 
-var cfgFile string
-
 var (
-	logHandler *charmlog.Logger
-	appLogger  *slog.Logger
-	appOutput  *output.Output
+	configFile  string
+	charmLogger *charmlog.Logger
+	appLogger   *slog.Logger
+	appOutput   *output.Output
 )
 
 // TODO: Add `config` subcommand (to override the init command)
@@ -74,8 +73,8 @@ func init() {
 		Level:           charmlog.InfoLevel,
 		ReportTimestamp: false,
 	}
-	logHandler = charmlog.NewWithOptions(os.Stderr, opts)
-	appLogger = slog.New(logHandler)
+	charmLogger = charmlog.NewWithOptions(os.Stderr, opts)
+	appLogger = slog.New(charmLogger)
 
 	appOutput = output.NewOutput(output.Normal)
 
@@ -88,7 +87,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolP(flagDryRun, "n", false, "run the command without actually making the file system changes")
 	rootCmd.PersistentFlags().BoolP(flagVerbose, "v", false, "print verbose logs")
 	rootCmd.PersistentFlags().BoolP(flagQuiet, "q", false, "quiet logs; only print the summary")
-	rootCmd.PersistentFlags().StringVar(&cfgFile, flagConfigFile, "", "provide custom config file")
+	rootCmd.PersistentFlags().StringVar(&configFile, flagConfigFile, "", "provide custom config file")
 	rootCmd.PersistentFlags().String(flagProfile, "default", "profile to run the command")
 
 	rootCmd.MarkFlagsMutuallyExclusive(flagQuiet, flagVerbose)
@@ -97,11 +96,11 @@ func init() {
 
 func initConfig() {
 	appLogger.Debug("initializing config")
-	if cfgFile != "" {
-		appLogger.Debug("custom config file provided", "path", cfgFile)
-		viper.SetConfigFile(cfgFile)
+	if configFile != "" {
+		appLogger.Debug("custom config file provided", "path", configFile)
+		viper.SetConfigFile(configFile)
 	} else {
-		configFilePath := filepath.Join(config.AppConfigHome(), constant.ConfigFile)
+		configFilePath := filepath.Join(config.AppConfigHome(), configFileName)
 		appLogger.Debug("no custom config file provided; using default", "path", configFilePath)
 		viper.SetConfigFile(configFilePath)
 	}

@@ -4,8 +4,8 @@ All Rights Reversed (ɔ)
 
 package cmd
 
-const rootCmdShort string = "Modern symlink manager for managing dotfiles and configs with ease"
-const rootCmdLong string = `A modern and fast symlink manager for managing dotfiles and configurations.
+const rootCmdShort = "Modern symlink manager for managing dotfiles and configs with ease"
+const rootCmdLong = `A modern and fast symlink manager for managing dotfiles and configurations.
 Bestow is the spiritual successor of the GNU stow.
 
 Bestow will create and manage symlinks between a given source and destination
@@ -18,7 +18,7 @@ structure inside the package.
 Bestow handles conflicts before execution, and provides multiple options and
 alternatives for handling conflicts.
 `
-const rootCmdExamples string = `# Initialize the configs
+const rootCmdExamples = `# Initialize the configs
 bestow init
 
 # Stow all the packages and files in the source
@@ -43,13 +43,13 @@ bestow unstow nvim
 bestow unstow nvim --dry-run
 `
 
-const initShort string = "Initializes the bestow configurations"
-const initLong string = `The init command will initialize the bestow configurations.
+const initShort = "Initializes the bestow configurations"
+const initLong = `The init command will initialize the bestow configurations.
 If the XDG_CONFIG_HOME is set, it will be treated as the config home directory.
 
 If it is not set, the default "$HOME/.config" directory will be used as the config home.
 `
-const initExamples string = `# Init with providing source
+const initExamples = `# Init with providing source
 bestow init --source ~/dotfiles
 
 # Initialize with source and destination
@@ -59,8 +59,8 @@ bestow init --source ~/dotfiles --destination ~/sandbox
 bestow init --source ~/dotfiles --destination ~/sandbox --ignore-list ".git, node_modules, README.md"
 `
 
-const stowShort string = "Stow creates symlinks between the source packages to destination"
-const stowLong string = `Stow creates symlinks between the source and the destination.
+const stowShort = "Stow creates symlinks between the source packages to destination"
+const stowLong = `Stow creates symlinks between the source and the destination.
 
 Each directory inside the source is considered a package. When creating
 symlinks, bestow keeps the directory structure inside the package.
@@ -73,15 +73,15 @@ directories and links only the files.
 
 If no packages are provided, all the packages will be stowed.
 `
-const stowExamples string = `# Stow only given packages
+const stowExamples = `# Stow only given packages
 bestow stow nvim git
 
 # Stow while replacing any existing file forcefully
 bestow stow --force
 `
 
-const unstowShort string = "Removes the stowed symlinks from the destination"
-const unstowLong string = `Removes the symlinks created by bestow.
+const unstowShort = "Removes the stowed symlinks from the destination"
+const unstowLong = `Removes the symlinks created by bestow.
 
 Unstow walks the source package tree and removes the corresponding symlinks
 from the destination.
@@ -91,7 +91,7 @@ If no packages are provided, all the packages will be unstowed.
 The unstow command will remove any empty directories it encounters.
 You can configure bestow to not remove empty directories while unstowing.
 `
-const unstowExamples string = `# Unstow only given packages
+const unstowExamples = `# Unstow only given packages
 bestow unstow nvim git
 
 # Unstow all the packages

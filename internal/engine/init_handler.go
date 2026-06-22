@@ -10,19 +10,23 @@ import (
 	"strings"
 
 	"github.com/ThisaruGuruge/bestow/internal/config"
-	"github.com/ThisaruGuruge/bestow/internal/constant"
 )
 
-type InitContext struct {
+const (
+	ignoreFileName = ".bestowignore"
+	configFileName = "config.yaml"
+)
+
+type InitConfig struct {
 	Force      bool
 	IgnoreList []string
 }
 
-func (e *Engine) Init(ctx *InitContext) (*ExecuteResult, error) {
+func (e *Engine) Init(cfg *InitConfig) (*ExecuteResult, error) {
 	e.logger.Debug("initializing bestow")
-	configFile := filepath.Join(e.configHome, constant.ConfigFile)
-	ignoreFile := filepath.Join(e.configHome, constant.IgnoreFile)
-	if err := e.checkExistingFiles(configFile, ignoreFile, ctx.Force); err != nil {
+	configFile := filepath.Join(e.configHome, configFileName)
+	ignoreFile := filepath.Join(e.configHome, ignoreFileName)
+	if err := e.checkExistingFiles(configFile, ignoreFile, cfg.Force); err != nil {
 		return nil, err
 	}
 	if err := e.fileSystem.CreateDir(e.configHome); err != nil {
@@ -32,7 +36,7 @@ func (e *Engine) Init(ctx *InitContext) (*ExecuteResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	ignoreAction, err := e.createIgnoreFile(ignoreFile, ctx.IgnoreList)
+	ignoreAction, err := e.createIgnoreFile(ignoreFile, cfg.IgnoreList)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +77,7 @@ func (e *Engine) checkExistingFiles(configFile, ignoreFile string, force bool) e
 func (e *Engine) createIgnoreFile(ignoreFile string, ignoreList []string) (*ActionEvent, error) {
 	e.logger.Debug("creating ignore file", "filepath", ignoreFile)
 	e.logger.Debug("initializing ignore list", "ignore-list", ignoreList)
-	if err := e.fileSystem.CreateFile(ignoreFile, getIgnoreFileContent(ignoreList)); err != nil {
+	if err := e.fileSystem.CreateFile(ignoreFile, buildIgnoreFile(ignoreList)); err != nil {
 		return nil, err
 	}
 	return &ActionEvent{
@@ -83,7 +87,7 @@ func (e *Engine) createIgnoreFile(ignoreFile string, ignoreList []string) (*Acti
 	}, nil
 }
 
-func getIgnoreFileContent(ignoreList []string) string {
+func buildIgnoreFile(ignoreList []string) string {
 	result := []string{"# Global Ignore List for Bestow"}
 	for _, item := range ignoreList {
 		result = append(result, strings.TrimSpace(item))
@@ -93,7 +97,7 @@ func getIgnoreFileContent(ignoreList []string) string {
 
 func (e *Engine) createConfigFile(source, destination, configFile string) (*ActionEvent, error) {
 	e.logger.Debug("creating the config file", "path", configFile)
-	cfg, err := config.GetDefaultConfigTemplate(source, destination)
+	cfg, err := config.DefaultTemplate(source, destination)
 	if err != nil {
 		return nil, fmt.Errorf("load config %s %s: %w", source, destination, err)
 	}

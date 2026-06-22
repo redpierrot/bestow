@@ -21,7 +21,7 @@ var unstowCmd = &cobra.Command{
 			return err
 		}
 		appLogger.Debug("running unstow command", "args", args)
-		dryrun, err := getBoolFlag(cmd.Flags(), flagDryRun)
+		dryRun, err := boolFlag(cmd.Flags(), flagDryRun)
 		if err != nil {
 			return err
 		}
@@ -30,16 +30,16 @@ var unstowCmd = &cobra.Command{
 			Destination: cfg.Destination,
 			ConfigHome:  config.AppConfigHome(),
 		}
-		eng, err := engine.NewEngine(&engineCfg, dryrun, appLogger)
+		eng, err := engine.NewEngine(&engineCfg, dryRun, appLogger)
 		if err != nil {
 			return err
 		}
-		commandCfg := engine.CommandConfig{
+		cmdCfg := engine.CommandConfig{
 			Action: engine.CommandUnstow,
 			Args:   args,
 		}
-		summary, err := eng.Execute(cmd.Context(), &commandCfg)
-		appOutput.PrintSummary(summary)
+		summary, err := eng.Execute(cmd.Context(), &cmdCfg)
+		appOutput.PrintResult(summary)
 		if err != nil {
 			return err
 		}

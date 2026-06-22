@@ -8,15 +8,15 @@ import "github.com/ThisaruGuruge/bestow/internal/file"
 
 // Type safety for File System Implementations
 var _ FileSystem = (*file.Handler)(nil)
-var _ FileSystem = (*file.NoWriteHandler)(nil)
+var _ FileSystem = (*file.DryRunHandler)(nil)
 
 type ExecuteResult struct {
 	Events  []ActionEvent
-	Summary *OpsSummary
+	Summary *Summary
 	DryRun  bool
 }
 
-type OpsSummary struct {
+type Summary struct {
 	Stowed   int
 	Unstowed int
 	Replaced int
@@ -62,10 +62,10 @@ type FileSystem interface {
 	// ReadLines reads the content of a file in the given path and returns the lines of text as a list of strings.
 	ReadLines(path string) ([]string, error)
 
-	// GetExistingFileType returns the type of the existing dst compared to the provided src. Possible values are:
-	//   - ExistingRegularFile: dst is a regular file
-	//   - ExistingManagedSymlink: dst is a symlink that is managed by bestow
-	//   - ExistingForeignSymlink: dst is a symlink that is not managed by bestow
-	//   - ExistingDir: dst is a directory
-	GetExistingFileType(src, dest string) (file.ExistingType, error)
+	// ExistingFileType returns the type of the existing dest compared to the provided src. Possible values are:
+	//   - ExistingRegularFile: dest is a regular file
+	//   - ExistingManagedSymlink: dest is a symlink that is managed by bestow
+	//   - ExistingForeignSymlink: dest is a symlink that is not managed by bestow
+	//   - ExistingDir: dest is a directory
+	ExistingFileType(src, dest string) (file.ExistingType, error)
 }

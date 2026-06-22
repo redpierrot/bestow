@@ -14,12 +14,12 @@ import (
 )
 
 //go:embed defaults/default-config.yaml
-var defaultConfigTemplate string
+var defaultTemplate string
 
 var DefaultIgnoreList = []string{".git", ".gitignore", "README.md", "LICENSE", "**/.bestowignore", "**/.stow-local-ignore"}
 
-func GetDefaultConfigTemplate(source, destination string) (string, error) {
-	tmpl, err := template.New("config").Parse(defaultConfigTemplate)
+func DefaultTemplate(source, destination string) (string, error) {
+	tmpl, err := template.New("config").Parse(defaultTemplate)
 	if err != nil {
 		return "", err
 	}
@@ -44,10 +44,10 @@ func GetDefaultConfigTemplate(source, destination string) (string, error) {
 	return buf.String(), nil
 }
 
-func setDefaultDestination(config *Config, l *slog.Logger) error {
+func setDefaultDestination(cfg *Config, l *slog.Logger) error {
 	l.Debug("checking destination config")
-	if config.Destination != "" {
-		l.Debug("destination is set by configs", "destination", config.Destination)
+	if cfg.Destination != "" {
+		l.Debug("destination is set by configs", "destination", cfg.Destination)
 		return nil
 	}
 	l.Debug("no destination provided, setting default destination")
@@ -55,7 +55,7 @@ func setDefaultDestination(config *Config, l *slog.Logger) error {
 	if err != nil {
 		return fmt.Errorf("home dir: %w", err)
 	}
-	config.Destination = home
-	l.Debug("default value is set for destination", "destination", config.Destination)
+	cfg.Destination = home
+	l.Debug("default value is set for destination", "destination", cfg.Destination)
 	return nil
 }

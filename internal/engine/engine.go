@@ -57,7 +57,7 @@ type EngineConfig struct {
 func NewEngine(cfg *EngineConfig, dryRun bool, l *slog.Logger) (*Engine, error) {
 	var handler FileSystem
 	if dryRun {
-		handler = file.NewNoWriteHandler(l)
+		handler = file.NewDryRunHandler(l)
 	} else {
 		handler = file.NewHandler(l)
 	}
@@ -78,7 +78,7 @@ func NewEngine(cfg *EngineConfig, dryRun bool, l *slog.Logger) (*Engine, error) 
 
 // Execute will execute the operation (stow, unstow) with the provided context.
 func (e *Engine) Execute(ctx context.Context, cfg *CommandConfig) (*ExecuteResult, error) {
-	actions, err := e.populateOperations(cfg)
+	actions, err := e.buildOperations(cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -91,7 +91,7 @@ func (e *Engine) Execute(ctx context.Context, cfg *CommandConfig) (*ExecuteResul
 }
 
 func (e *Engine) executeFileActions(ctx context.Context, actions []fileAction) (*ExecuteResult, error) {
-	summary := &OpsSummary{}
+	summary := &Summary{}
 	events := make([]ActionEvent, 0, len(actions))
 	completedActions := make([]fileAction, 0, len(actions))
 	for _, action := range actions {
@@ -119,7 +119,7 @@ func (e *Engine) executeFileActions(ctx context.Context, actions []fileAction) (
 			}, err
 		}
 		events = append(events, operationEvents...)
-		if kind := action.kind(); kind != Skip && kind != UpToDate {
+		if kind := action.kind(); kind != ActionSkip && kind != ActionUpToDate {
 			completedActions = append(completedActions, action)
 		}
 		e.logger.Debug("executed action", "action", action, "summary", summary)
@@ -131,7 +131,7 @@ func (e *Engine) executeFileActions(ctx context.Context, actions []fileAction) (
 	}, nil
 }
 
-func (e *Engine) undoFileActions(actions []fileAction, summary *OpsSummary, events []ActionEvent) (*ExecuteResult, error) {
+func (e *Engine) undoFileActions(actions []fileAction, summary *Summary, events []ActionEvent) (*ExecuteResult, error) {
 	// Undo the completed actions from the last action to the top
 	for _, action := range slices.Backward(actions) {
 		operationEvents, err := action.undo(e.fileSystem)
@@ -158,18 +158,18 @@ func (e *Engine) undoFileActions(actions []fileAction, summary *OpsSummary, even
 	}, nil
 }
 
-func (e *Engine) populatePackageList(args []string) ([]string, error) {
+func (e *Engine) buildPackageList(args []string) ([]string, error) {
 	e.logger.Debug("populating package list", "source", e.source)
 	var pkgCandidates []string
 	var err error
 	if len(args) == 0 {
 		e.logger.Debug("no packages provided; processing all packages")
-		pkgCandidates, err = e.getAllPackages()
+		pkgCandidates, err = e.allPackages()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		pkgCandidates, err = e.getPackagesFromArgs(args)
+		pkgCandidates, err = e.packagesFromArgs(args)
 		if err != nil {
 			return nil, err
 		}
@@ -182,7 +182,7 @@ func (e *Engine) populatePackageList(args []string) ([]string, error) {
 	return packages, nil
 }
 
-func (e *Engine) getAllPackages() ([]string, error) {
+func (e *Engine) allPackages() ([]string, error) {
 	dirs, err := e.fileSystem.ListDirs(e.source)
 	if err != nil {
 		return nil, err
@@ -198,7 +198,7 @@ func (e *Engine) getAllPackages() ([]string, error) {
 	return candidates, nil
 }
 
-func (e *Engine) getPackagesFromArgs(candidates []string) ([]string, error) {
+func (e *Engine) packagesFromArgs(candidates []string) ([]string, error) {
 	result := make([]string, 0, len(candidates))
 	for _, candidate := range candidates {
 		if candidate == "." {
@@ -229,7 +229,7 @@ func (e *Engine) filterPackages(candidates []string) ([]string, error) {
 	e.logger.Debug("filtering packages", "candidates", candidates, "filter", e.ignore.items)
 	result := make([]string, 0, len(candidates))
 	for _, candidate := range candidates {
-		shouldIgnore, err := e.ignore.shouldIgnorePkg(candidate)
+		shouldIgnore, err := e.ignore.isIgnored(candidate)
 		if err != nil {
 			return nil, err
 		}
@@ -243,26 +243,26 @@ func (e *Engine) filterPackages(candidates []string) ([]string, error) {
 	return result, nil
 }
 
-func (e *Engine) updateSummary(action fileAction, summary *OpsSummary, isUndo bool) error {
+func (e *Engine) updateSummary(action fileAction, summary *Summary, isUndo bool) error {
 	if isUndo {
 		summary.Reverted += 1
 		return nil
 	}
 	actionType := action.kind()
 	switch actionType {
-	case UpToDate:
+	case ActionUpToDate:
 		summary.UpToDate += 1
-	case Skip:
+	case ActionSkip:
 		summary.Skipped += 1
-	case Link:
+	case ActionLink:
 		summary.Stowed += 1
-	case Replace:
+	case ActionReplace:
 		summary.Replaced += 1
-	case Backup:
+	case ActionBackup:
 		summary.BackedUp += 1
-	case Adopt:
+	case ActionAdopt:
 		summary.Adopted += 1
-	case Remove:
+	case ActionRemove:
 		summary.Unstowed += 1
 	default:
 		return fmt.Errorf("undefined action %d", actionType)

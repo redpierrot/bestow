@@ -18,7 +18,7 @@ const (
 
 // Handler is the implementation of the System using io, os, and bufio go modules.
 type Handler struct {
-	baseHandler
+	readHandler
 	// Should use mutex here if migrate to go routines
 	createdDirs map[string]bool
 }
@@ -27,7 +27,7 @@ type Handler struct {
 func NewHandler(l *slog.Logger) *Handler {
 	return &Handler{
 		createdDirs: make(map[string]bool),
-		baseHandler: baseHandler{logger: l},
+		readHandler: readHandler{logger: l},
 	}
 }
 

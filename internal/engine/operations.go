@@ -37,31 +37,31 @@ func (r ResolveStrategy) String() string {
 	}
 }
 
-type OperationCandidate struct {
+type operationCandidate struct {
 	source      string
 	destination string
 }
 
-func (e *Engine) populateOperations(cfg *CommandConfig) ([]fileAction, error) {
+func (e *Engine) buildOperations(cfg *CommandConfig) ([]fileAction, error) {
 	e.logger.Debug("populating operations", "action", cfg.Action)
-	packageList, err := e.populatePackageList(cfg.Args)
+	packageList, err := e.buildPackageList(cfg.Args)
 	if err != nil {
 		return nil, err
 	}
-	candidates := make([]OperationCandidate, 0, len(packageList))
-	errorList := make([]error, 0, len(packageList))
+	candidates := make([]operationCandidate, 0, len(packageList))
+	errs := make([]error, 0, len(packageList))
 	for _, pkg := range packageList {
-		packageCandidates, err := e.getFileOperations(pkg)
+		packageCandidates, err := e.fileOperations(pkg)
 		if err != nil {
-			errorList = append(errorList, err)
+			errs = append(errs, err)
 			continue
 		}
 		candidates = append(candidates, packageCandidates...)
 	}
-	if len(errorList) > 0 {
+	if len(errs) > 0 {
 		return nil, &AggregatedError{
 			Msg:   "failed to calculate the operations",
-			Items: errorList,
+			Items: errs,
 		}
 	}
 	if err := e.validateDestinations(candidates); err != nil {
@@ -70,15 +70,15 @@ func (e *Engine) populateOperations(cfg *CommandConfig) ([]fileAction, error) {
 
 	switch cfg.Action {
 	case CommandStow:
-		return e.resolveStowOpts(candidates, cfg.ConflictStrategy)
+		return e.buildStowOperations(candidates, cfg.ConflictStrategy)
 	case CommandUnstow:
 		// TODO: Remove empty parents should be configurable and unstow should handle it
-		return e.resolveUnstowOpts(candidates)
+		return e.buildUnstowOperations(candidates)
 	}
 	return nil, fmt.Errorf("action %s: %w", cfg.Action, ErrUnsupportedAction)
 }
 
-func (e *Engine) validateDestinations(candidates []OperationCandidate) error {
+func (e *Engine) validateDestinations(candidates []operationCandidate) error {
 	destinations := make(map[string][]string)
 	for _, candidate := range candidates {
 		if candidate.destination != "" {
@@ -105,28 +105,28 @@ func (e *Engine) validateDestinations(candidates []OperationCandidate) error {
 	return nil
 }
 
-func (e *Engine) getFileOperations(pkg string) ([]OperationCandidate, error) {
+func (e *Engine) fileOperations(pkg string) ([]operationCandidate, error) {
 	pkgPath := filepath.Join(e.source, pkg)
 	fileList, err := e.fileSystem.ListAllFiles(pkgPath)
 	if err != nil {
 		return nil, err
 	}
-	candidates := make([]OperationCandidate, 0, len(fileList))
+	candidates := make([]operationCandidate, 0, len(fileList))
 	for _, filePath := range fileList {
 		relPath, err := filepath.Rel(pkgPath, filePath)
 		if err != nil {
 			return nil, err
 		}
-		doIgnore, err := e.ignore.shouldIgnorePkgFile(relPath, pkg)
+		shouldIgnore, err := e.ignore.isIgnoredFile(relPath, pkg)
 		if err != nil {
 			return nil, err
 		}
-		if doIgnore {
+		if shouldIgnore {
 			e.logger.Debug("ignoring the file due to ignore list", "file_name", filePath)
 			continue
 		}
 		destinationFile := filepath.Join(e.destination, relPath)
-		candidates = append(candidates, OperationCandidate{
+		candidates = append(candidates, operationCandidate{
 			source:      filePath,
 			destination: destinationFile,
 		})
@@ -135,47 +135,47 @@ func (e *Engine) getFileOperations(pkg string) ([]OperationCandidate, error) {
 	return candidates, nil
 }
 
-func (e *Engine) resolveStowOpts(candidates []OperationCandidate, strategy ResolveStrategy) ([]fileAction, error) {
+func (e *Engine) buildStowOperations(candidates []operationCandidate, strategy ResolveStrategy) ([]fileAction, error) {
 	actions := make([]fileAction, 0, len(candidates))
-	errorList := make([]error, 0, len(candidates))
+	errs := make([]error, 0, len(candidates))
 	for _, candidate := range candidates {
-		action, err := e.getStowFileAction(candidate, strategy)
+		action, err := e.stowFileAction(candidate, strategy)
 		if err != nil {
-			errorList = append(errorList, err)
+			errs = append(errs, err)
 			continue
 		}
 		actions = append(actions, action)
 	}
-	if len(errorList) > 0 {
+	if len(errs) > 0 {
 		return nil, &AggregatedError{
 			Msg:   "failed to resolve operations",
-			Items: errorList,
+			Items: errs,
 		}
 	}
 	return actions, nil
 }
 
-func (e *Engine) resolveUnstowOpts(candidates []OperationCandidate) ([]fileAction, error) {
+func (e *Engine) buildUnstowOperations(candidates []operationCandidate) ([]fileAction, error) {
 	actions := make([]fileAction, 0, len(candidates))
-	errorList := make([]error, 0, len(candidates))
+	errs := make([]error, 0, len(candidates))
 	for _, candidate := range candidates {
-		action, err := e.getUnstowFileAction(candidate)
+		action, err := e.unstowFileAction(candidate)
 		if err != nil {
-			errorList = append(errorList, err)
+			errs = append(errs, err)
 			continue
 		}
 		actions = append(actions, action)
 	}
-	if len(errorList) > 0 {
+	if len(errs) > 0 {
 		return nil, &AggregatedError{
 			Msg:   "failed to resolve operations",
-			Items: errorList,
+			Items: errs,
 		}
 	}
 	return actions, nil
 }
 
-func (e *Engine) getStowFileAction(candidate OperationCandidate, strategy ResolveStrategy) (fileAction, error) {
+func (e *Engine) stowFileAction(candidate operationCandidate, strategy ResolveStrategy) (fileAction, error) {
 	destExists, err := e.fileSystem.Exists(candidate.destination)
 	if err != nil {
 		return nil, err
@@ -183,7 +183,7 @@ func (e *Engine) getStowFileAction(candidate OperationCandidate, strategy Resolv
 	if !destExists {
 		return newFileActionLink(candidate.source, candidate.destination, e.logger), nil
 	}
-	existing, err := e.fileSystem.GetExistingFileType(candidate.source, candidate.destination)
+	existing, err := e.fileSystem.ExistingFileType(candidate.source, candidate.destination)
 	if err != nil {
 		return nil, err
 	}
@@ -228,15 +228,15 @@ func (e *Engine) getStowFileAction(candidate OperationCandidate, strategy Resolv
 	}
 }
 
-func (e *Engine) getUnstowFileAction(candidate OperationCandidate) (fileAction, error) {
-	exists, err := e.fileSystem.Exists(candidate.destination)
+func (e *Engine) unstowFileAction(candidate operationCandidate) (fileAction, error) {
+	destExists, err := e.fileSystem.Exists(candidate.destination)
 	if err != nil {
 		return nil, err
 	}
-	if !exists {
+	if !destExists {
 		return newFileActionUpToDate(candidate.source, candidate.destination, "destination does not exist", e.logger), nil
 	}
-	existing, err := e.fileSystem.GetExistingFileType(candidate.source, candidate.destination)
+	existing, err := e.fileSystem.ExistingFileType(candidate.source, candidate.destination)
 	if err != nil {
 		return nil, err
 	}

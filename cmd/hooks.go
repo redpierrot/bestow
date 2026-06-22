@@ -14,19 +14,19 @@ import (
 )
 
 func setupLogging(cmd *cobra.Command) error {
-	verbose, err := getBoolFlag(cmd.Flags(), flagVerbose)
+	verbose, err := boolFlag(cmd.Flags(), flagVerbose)
 	if err != nil {
 		return err
 	}
-	quiet, err := getBoolFlag(cmd.Flags(), flagQuiet)
+	quiet, err := boolFlag(cmd.Flags(), flagQuiet)
 	if err != nil {
 		return err
 	}
 	if verbose {
-		logHandler.SetLevel(charmlog.DebugLevel)
+		charmLogger.SetLevel(charmlog.DebugLevel)
 	}
 	if quiet {
-		logHandler.SetLevel(charmlog.ErrorLevel)
+		charmLogger.SetLevel(charmlog.ErrorLevel)
 		appOutput.SetLevel(output.Quiet)
 	}
 	return nil

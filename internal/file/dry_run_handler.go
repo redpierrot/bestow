@@ -9,29 +9,29 @@ import (
 	"path/filepath"
 )
 
-// NoWriteHandler is the implementation of the System using io, os, and bufio go modules.
-type NoWriteHandler struct {
-	baseHandler
+// DryRunHandler is an implementation of engine.FileSystem, without any actual write operations.
+type DryRunHandler struct {
+	readHandler
 	createdDirs map[string]bool
 }
 
-// NewNoWriteHandler returns a new NoWriteHandler with the provided logger l.
-func NewNoWriteHandler(l *slog.Logger) *NoWriteHandler {
-	return &NoWriteHandler{
+// NewDryRunHandler returns a new DryRunHandler with the provided logger l.
+func NewDryRunHandler(l *slog.Logger) *DryRunHandler {
+	return &DryRunHandler{
 		createdDirs: make(map[string]bool),
-		baseHandler: baseHandler{logger: l},
+		readHandler: readHandler{logger: l},
 	}
 }
 
 // CreateFile creates a file in the provided path and writes the provided content to the file.
-func (h *NoWriteHandler) CreateFile(path, content string) error {
+func (h *DryRunHandler) CreateFile(path, content string) error {
 	h.logger.Debug("writing to file", "file", path)
 	h.logger.Debug("successfully written to file", "path", path)
 	return nil
 }
 
 // CreateDir creates a directory on the provided path, including all the parent directories.
-func (h *NoWriteHandler) CreateDir(path string) error {
+func (h *DryRunHandler) CreateDir(path string) error {
 	h.logger.Debug("creating directory", "path", path)
 	if h.createdDirs[path] {
 		h.logger.Debug("directory already created", "path", path)
@@ -53,7 +53,7 @@ func (h *NoWriteHandler) CreateDir(path string) error {
 
 // Link creates a symlink of a provided src in the provided target.
 // If the target directory does not exist, link will create all the parent directories.
-func (h *NoWriteHandler) Link(src, target string) error {
+func (h *DryRunHandler) Link(src, target string) error {
 	h.logger.Debug("creating symlink", "source", src, "target", target)
 	destParent := filepath.Dir(target)
 	if err := h.CreateDir(destParent); err != nil {
@@ -65,7 +65,7 @@ func (h *NoWriteHandler) Link(src, target string) error {
 
 // Move moves a file from src to target
 // If the target directory does not exist, move will create all the parent directories.
-func (h *NoWriteHandler) Move(src, target string) error {
+func (h *DryRunHandler) Move(src, target string) error {
 	h.logger.Debug("moving file", "source", src, "target", target)
 	destParent := filepath.Dir(target)
 	if err := h.CreateDir(destParent); err != nil {
@@ -76,7 +76,7 @@ func (h *NoWriteHandler) Move(src, target string) error {
 }
 
 // Remove removes the file in the provided path.
-func (h *NoWriteHandler) Remove(path string) error {
+func (h *DryRunHandler) Remove(path string) error {
 	h.logger.Debug("removing the file", "path", path)
 	exists, err := h.Exists(path)
 	if err != nil {

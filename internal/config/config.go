@@ -10,14 +10,16 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/ThisaruGuruge/bestow/internal/constant"
 	"github.com/adrg/xdg"
 	"github.com/spf13/viper"
 )
 
 const (
-	ConfigDir        string = ".config"
-	EnvXdgConfigHome string = "XDG_CONFIG_HOME"
+	configDir        = ".config"
+	envXDGConfigHome = "XDG_CONFIG_HOME"
+	appName          = "bestow"
+	profileKey       = "profile"
+	defaultProfile   = "default"
 )
 
 type Profile struct {
@@ -25,7 +27,7 @@ type Profile struct {
 	Destination string `mapstructure:"destination"`
 }
 
-type rawConfig struct {
+type configFile struct {
 	Profiles map[string]Profile `mapstructure:"profiles"`
 }
 
@@ -35,37 +37,37 @@ type Config struct {
 }
 
 func AppConfigHome() string {
-	return filepath.Join(XdgConfigHome(), constant.AppName)
+	return filepath.Join(XDGConfigHome(), appName)
 }
 
-// XdgConfigHome returns the root directory of the configs.
+// XDGConfigHome returns the root directory of the configs.
 // NOTE: on macOS, if the `XDG_CONFIG_HOME` env. is not set,
 // it defaults to `/Library/Application Support/`.
 // This bypasses that and return the `~/.config` if the `XDG_CONFIG_HOME`
 // is not set
-func XdgConfigHome() string {
-	if dir := os.Getenv(EnvXdgConfigHome); dir != "" {
+func XDGConfigHome() string {
+	if dir := os.Getenv(envXDGConfigHome); dir != "" {
 		return dir
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return xdg.ConfigHome
 	}
-	return filepath.Join(home, ConfigDir)
+	return filepath.Join(home, configDir)
 }
 
-func NewConfig(viper *viper.Viper, l *slog.Logger) (*Config, error) {
+func NewConfig(v *viper.Viper, l *slog.Logger) (*Config, error) {
 	l.Debug("loading configs")
 
-	var raw rawConfig
-	if err := viper.Unmarshal(&raw); err != nil {
+	var raw configFile
+	if err := v.Unmarshal(&raw); err != nil {
 		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 	l.Debug("unmarshaled the configs", "raw", raw)
 
-	profileName := viper.GetString(constant.ProfileKey)
+	profileName := v.GetString(profileKey)
 	if profileName == "" {
-		profileName = constant.DefaultProfile
+		profileName = defaultProfile
 	}
 	profile, ok := raw.Profiles[profileName]
 	if !ok {

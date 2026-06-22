@@ -33,32 +33,32 @@ const (
 type ActionKind int
 
 const (
-	UpToDate ActionKind = iota
-	Skip
-	Link
-	Replace
-	Backup
-	Adopt
-	Remove
+	ActionUpToDate ActionKind = iota
+	ActionSkip
+	ActionLink
+	ActionReplace
+	ActionBackup
+	ActionAdopt
+	ActionRemove
 )
 
 const corruptedSystemErrMsg = "failed to undo; system is in a corrupted state; manual intervention needed"
 
 func (a ActionKind) String() string {
 	switch a {
-	case UpToDate:
+	case ActionUpToDate:
 		return "up-to-date"
-	case Skip:
+	case ActionSkip:
 		return "skip"
-	case Link:
+	case ActionLink:
 		return "link"
-	case Replace:
+	case ActionReplace:
 		return "replace"
-	case Backup:
+	case ActionBackup:
 		return "backup"
-	case Adopt:
+	case ActionAdopt:
 		return "adopt"
-	case Remove:
+	case ActionRemove:
 		return "remove"
 	default:
 		return fmt.Sprintf("Unknown %d", a)
@@ -80,20 +80,20 @@ type fileAction interface {
 	kind() ActionKind
 }
 
-type fileActionBase struct {
+type fileActionPaths struct {
 	source      string
 	destination string
 	logger      *slog.Logger
 }
 
 type fileActionUpToDate struct {
-	fileActionBase
+	fileActionPaths
 	reason string
 }
 
 func newFileActionUpToDate(source, destination, reason string, l *slog.Logger) *fileActionUpToDate {
 	return &fileActionUpToDate{
-		fileActionBase: fileActionBase{
+		fileActionPaths: fileActionPaths{
 			source:      source,
 			destination: destination,
 			logger:      l,
@@ -116,17 +116,17 @@ func (f *fileActionUpToDate) undo(_ FileSystem) ([]ActionEvent, error) {
 }
 
 func (f *fileActionUpToDate) kind() ActionKind {
-	return UpToDate
+	return ActionUpToDate
 }
 
 type fileActionSkip struct {
-	fileActionBase
+	fileActionPaths
 	reason string
 }
 
 func newFileActionSkip(source, destination, reason string, l *slog.Logger) *fileActionSkip {
 	return &fileActionSkip{
-		fileActionBase: fileActionBase{
+		fileActionPaths: fileActionPaths{
 			source:      source,
 			destination: destination,
 			logger:      l,
@@ -152,16 +152,16 @@ func (f *fileActionSkip) undo(_ FileSystem) ([]ActionEvent, error) {
 }
 
 func (f *fileActionSkip) kind() ActionKind {
-	return Skip
+	return ActionSkip
 }
 
 type fileActionLink struct {
-	fileActionBase
+	fileActionPaths
 }
 
 func newFileActionLink(source, destination string, l *slog.Logger) *fileActionLink {
 	return &fileActionLink{
-		fileActionBase: fileActionBase{
+		fileActionPaths: fileActionPaths{
 			source:      source,
 			destination: destination,
 			logger:      l,
@@ -197,16 +197,16 @@ func (f *fileActionLink) undo(fs FileSystem) ([]ActionEvent, error) {
 }
 
 func (f *fileActionLink) kind() ActionKind {
-	return Link
+	return ActionLink
 }
 
 type fileActionReplace struct {
-	fileActionBase
+	fileActionPaths
 }
 
 func newFileActionReplace(source, destination string, l *slog.Logger) *fileActionReplace {
 	return &fileActionReplace{
-		fileActionBase: fileActionBase{
+		fileActionPaths: fileActionPaths{
 			source:      source,
 			destination: destination,
 			logger:      l,
@@ -262,17 +262,17 @@ func (f *fileActionReplace) undo(fs FileSystem) ([]ActionEvent, error) {
 }
 
 func (f *fileActionReplace) kind() ActionKind {
-	return Replace
+	return ActionReplace
 }
 
 type fileActionBackup struct {
-	fileActionBase
+	fileActionPaths
 	backup string
 }
 
 func newFileActionBackup(source, destination, backup string, l *slog.Logger) *fileActionBackup {
 	return &fileActionBackup{
-		fileActionBase: fileActionBase{
+		fileActionPaths: fileActionPaths{
 			source:      source,
 			destination: destination,
 			logger:      l,
@@ -322,16 +322,16 @@ func (f *fileActionBackup) undo(fs FileSystem) ([]ActionEvent, error) {
 }
 
 func (f *fileActionBackup) kind() ActionKind {
-	return Backup
+	return ActionBackup
 }
 
 type fileActionAdopt struct {
-	fileActionBase
+	fileActionPaths
 }
 
 func newFileActionAdopt(source, destination string, l *slog.Logger) *fileActionAdopt {
 	return &fileActionAdopt{
-		fileActionBase: fileActionBase{
+		fileActionPaths: fileActionPaths{
 			source:      source,
 			destination: destination,
 			logger:      l,
@@ -389,16 +389,16 @@ func (f *fileActionAdopt) undo(fs FileSystem) ([]ActionEvent, error) {
 }
 
 func (f *fileActionAdopt) kind() ActionKind {
-	return Adopt
+	return ActionAdopt
 }
 
 type fileActionRemove struct {
-	fileActionBase
+	fileActionPaths
 }
 
 func newFileActionRemove(source, destination string, l *slog.Logger) *fileActionRemove {
 	return &fileActionRemove{
-		fileActionBase: fileActionBase{
+		fileActionPaths: fileActionPaths{
 			source:      source,
 			destination: destination,
 			logger:      l,
@@ -434,5 +434,5 @@ func (f *fileActionRemove) undo(fs FileSystem) ([]ActionEvent, error) {
 }
 
 func (f *fileActionRemove) kind() ActionKind {
-	return Remove
+	return ActionRemove
 }

@@ -22,15 +22,15 @@ var stowCmd = &cobra.Command{
 		}
 		appLogger.Debug("running stow command", "args", args)
 		var force, adopt, backup bool
-		force, err = getBoolFlag(cmd.Flags(), flagForce)
+		force, err = boolFlag(cmd.Flags(), flagForce)
 		if err != nil {
 			return err
 		}
-		adopt, err = getBoolFlag(cmd.Flags(), flagAdopt)
+		adopt, err = boolFlag(cmd.Flags(), flagAdopt)
 		if err != nil {
 			return err
 		}
-		backup, err = getBoolFlag(cmd.Flags(), flagBackup)
+		backup, err = boolFlag(cmd.Flags(), flagBackup)
 		if err != nil {
 			return err
 		}
@@ -45,7 +45,7 @@ var stowCmd = &cobra.Command{
 			strategy = engine.ResolveBackup
 		}
 
-		dryrun, err := getBoolFlag(cmd.Flags(), flagDryRun)
+		dryRun, err := boolFlag(cmd.Flags(), flagDryRun)
 		if err != nil {
 			return err
 		}
@@ -54,7 +54,7 @@ var stowCmd = &cobra.Command{
 			Destination: cfg.Destination,
 			ConfigHome:  config.AppConfigHome(),
 		}
-		eng, err := engine.NewEngine(&engineCfg, dryrun, appLogger)
+		eng, err := engine.NewEngine(&engineCfg, dryRun, appLogger)
 		if err != nil {
 			return err
 		}
@@ -66,7 +66,7 @@ var stowCmd = &cobra.Command{
 		summary, err := eng.Execute(cmd.Context(), &cmdCfg)
 
 		// TODO: Decide on "What to Print" when error occurrs
-		appOutput.PrintSummary(summary)
+		appOutput.PrintResult(summary)
 		if err != nil {
 			return err
 		}

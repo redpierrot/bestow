@@ -26,13 +26,13 @@ func TestHandler_Link(t *testing.T) {
 		{
 			name:    "existing parent",
 			setup:   func(t *testing.T, dir, src, dest string) {},
-			handler: NewHandler(getLogger()),
+			handler: NewHandler(newTestLogger()),
 		},
 		{
 			name:    "non-existing parent",
 			setup:   func(t *testing.T, dir, src, dest string) {},
 			destFn:  func(dir string) string { return filepath.Join(dir, "sub_directory", "dest_file") },
-			handler: NewHandler(getLogger()),
+			handler: NewHandler(newTestLogger()),
 		},
 		{
 			name: "existing dest file",
@@ -42,7 +42,7 @@ func TestHandler_Link(t *testing.T) {
 				}
 			},
 			destFn:    func(dir string) string { return filepath.Join(dir, "dest_file") },
-			handler:   NewHandler(getLogger()),
+			handler:   NewHandler(newTestLogger()),
 			wantErr:   true,
 			wantErrIs: os.ErrExist,
 		},
@@ -58,7 +58,7 @@ func TestHandler_Link(t *testing.T) {
 				t.Cleanup(func() { _ = os.Chmod(filepath.Dir(dest), writePerm) })
 			},
 			destFn:    func(dir string) string { return filepath.Join(dir, "dest_file") },
-			handler:   NewHandler(getLogger()),
+			handler:   NewHandler(newTestLogger()),
 			wantErr:   true,
 			wantErrIs: os.ErrPermission,
 		},
@@ -111,7 +111,7 @@ func TestHandler_CreateFile(t *testing.T) {
 			name:    "create file",
 			setup:   func(t *testing.T, parent string) {},
 			lines:   []string{"this is sample file content"},
-			handler: NewHandler(getLogger()),
+			handler: NewHandler(newTestLogger()),
 		},
 		{
 			name: "no perm parent",
@@ -125,7 +125,7 @@ func TestHandler_CreateFile(t *testing.T) {
 				t.Cleanup(func() { _ = os.Chmod(parent, writePerm) })
 			},
 			lines:     []string{"this is sample file content"},
-			handler:   NewHandler(getLogger()),
+			handler:   NewHandler(newTestLogger()),
 			wantErr:   true,
 			wantErrIs: os.ErrPermission,
 		},
@@ -171,7 +171,7 @@ func TestHandler_IsEmptyDir(t *testing.T) {
 					t.Fatal(err)
 				}
 			},
-			handler: *NewHandler(getLogger()),
+			handler: *NewHandler(newTestLogger()),
 			want:    true,
 		},
 		{
@@ -185,7 +185,7 @@ func TestHandler_IsEmptyDir(t *testing.T) {
 					t.Fatal(err)
 				}
 			},
-			handler: *NewHandler(getLogger()),
+			handler: *NewHandler(newTestLogger()),
 			want:    false,
 		},
 	}
@@ -211,6 +211,6 @@ func TestHandler_IsEmptyDir(t *testing.T) {
 	}
 }
 
-func getLogger() *slog.Logger {
+func newTestLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }

@@ -14,10 +14,10 @@ import (
 
 // These flags are defined seprately because semantically, the init flags are different than the common operation flags.
 const (
-	flagInitIgnoreList  string = "ignore-list"
-	flagInitSource      string = "source"
-	flagInitDestination string = "destination"
-	flagInitForce       string = "force"
+	flagInitIgnoreList  = "ignore-list"
+	flagInitSource      = "source"
+	flagInitDestination = "destination"
+	flagInitForce       = "force"
 )
 
 var initCmd = &cobra.Command{
@@ -26,15 +26,15 @@ var initCmd = &cobra.Command{
 	Long:    initLong,
 	Example: initExamples,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		source, err := getStringFlag(cmd.Flags(), flagInitSource)
+		source, err := stringFlag(cmd.Flags(), flagInitSource)
 		if err != nil {
 			return err
 		}
-		destination, err := getStringFlag(cmd.Flags(), flagInitDestination)
+		destination, err := stringFlag(cmd.Flags(), flagInitDestination)
 		if err != nil {
 			return err
 		}
-		force, err := getBoolFlag(cmd.Flags(), flagInitForce)
+		force, err := boolFlag(cmd.Flags(), flagInitForce)
 		if err != nil {
 			return err
 		}
@@ -43,7 +43,7 @@ var initCmd = &cobra.Command{
 			Destination: destination,
 			ConfigHome:  config.AppConfigHome(),
 		}
-		dryRun, err := getBoolFlag(cmd.Flags(), flagDryRun)
+		dryRun, err := boolFlag(cmd.Flags(), flagDryRun)
 		if err != nil {
 			return err
 		}
@@ -55,15 +55,15 @@ var initCmd = &cobra.Command{
 		if err != nil {
 			return fmt.Errorf("parse flag %s: %w", flagInitIgnoreList, err)
 		}
-		ctx := engine.InitContext{
+		cfg := engine.InitConfig{
 			Force:      force,
 			IgnoreList: ignoreList,
 		}
-		summary, err := eng.Init(&ctx)
+		summary, err := eng.Init(&cfg)
 		if err != nil {
 			return err
 		}
-		appOutput.PrintSummary(summary)
+		appOutput.PrintResult(summary)
 		return nil
 	},
 }

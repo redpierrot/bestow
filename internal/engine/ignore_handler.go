@@ -8,12 +8,10 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-
-	"github.com/ThisaruGuruge/bestow/internal/constant"
 )
 
 func readIgnoreFile(source string, reader IgnoreReader) ([]string, error) {
-	ignoreFile := filepath.Join(source, constant.IgnoreFile)
+	ignoreFile := filepath.Join(source, ignoreFileName)
 	exists, err := reader.Exists(ignoreFile)
 	if err != nil {
 		return nil, fmt.Errorf("read %s: %w", ignoreFile, err)

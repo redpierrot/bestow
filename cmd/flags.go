@@ -18,14 +18,14 @@ const (
 )
 
 const (
-	flagVerbose    string = "verbose"
-	flagQuiet      string = "quiet"
-	flagDryRun     string = "dry-run"
-	flagConfigFile string = "config-file"
-	flagProfile    string = "profile"
-	flagForce      string = "force"
-	flagAdopt      string = "adopt"
-	flagBackup     string = "backup"
+	flagVerbose    = "verbose"
+	flagQuiet      = "quiet"
+	flagDryRun     = "dry-run"
+	flagConfigFile = "config-file"
+	flagProfile    = "profile"
+	flagForce      = "force"
+	flagAdopt      = "adopt"
+	flagBackup     = "backup"
 )
 
 func addOperationFlags(fs *pflag.FlagSet) {
@@ -59,7 +59,7 @@ func addConflictResolutionFlags(cmd *cobra.Command) {
 	cmd.MarkFlagsMutuallyExclusive(flagForce, flagAdopt, flagBackup)
 }
 
-func getBoolFlag(fs *pflag.FlagSet, name string) (bool, error) {
+func boolFlag(fs *pflag.FlagSet, name string) (bool, error) {
 	val, err := fs.GetBool(name)
 	if err != nil {
 		return false, fmt.Errorf("parse flag %s: %w", name, err)
@@ -67,7 +67,7 @@ func getBoolFlag(fs *pflag.FlagSet, name string) (bool, error) {
 	return val, nil
 }
 
-func getStringFlag(fs *pflag.FlagSet, name string) (string, error) {
+func stringFlag(fs *pflag.FlagSet, name string) (string, error) {
 	val, err := fs.GetString(name)
 	if err != nil {
 		return "", fmt.Errorf("parse flag %s: %w", name, err)
