@@ -1,3 +1,7 @@
+/*
+All Rights Reversed (ɔ)
+*/
+
 package file
 
 import (
@@ -11,8 +15,136 @@ import (
 	"testing"
 )
 
-const noWritePerm = 0o555
-const writePerm = 0o755
+const (
+	permNone           = 0o000
+	permNonWritableDir = 0o500
+	permWritableDir    = 0o744
+)
+
+func TestHandler_CreateFile(t *testing.T) {
+	tests := []struct {
+		name      string
+		lines     []string
+		setup     func(t *testing.T, parent string)
+		wantErr   bool
+		wantErrIs error
+		handler   *Handler
+	}{
+		{
+			name:    "create file",
+			setup:   func(t *testing.T, parent string) {},
+			lines:   []string{"this is sample file content"},
+			handler: NewHandler(newTestLogger()),
+		},
+		{
+			name: "no perm parent",
+			setup: func(t *testing.T, parent string) {
+				if os.Getuid() == 0 {
+					t.Skip("root bypasses the permission checks")
+				}
+				if err := os.Chmod(parent, permNone); err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() { _ = os.Chmod(parent, permWritableDir) })
+			},
+			lines:     []string{"this is sample file content"},
+			handler:   NewHandler(newTestLogger()),
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			testRoot := t.TempDir()
+			path := filepath.Join(testRoot, "file_path")
+			tc.setup(t, testRoot)
+			err := tc.handler.CreateFile(path, strings.Join(tc.lines, "\n"))
+			if tc.wantErr {
+				if !errors.Is(err, tc.wantErrIs) {
+					t.Fatalf("got err %v, want %v", err, tc.wantErrIs)
+				}
+				return
+			}
+			result, err := tc.handler.ReadLines(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !slices.Equal(tc.lines, result) {
+				t.Fatalf("got lines: %v, want: %v", result, tc.lines)
+			}
+
+		})
+	}
+}
+
+func TestHandler_CreateDir(t *testing.T) {
+	tests := []struct {
+		name      string
+		setup     func(t *testing.T, path string)
+		pathsFn   func(parent string) []string
+		handler   *Handler
+		wantErr   bool
+		wantErrIs error
+	}{
+		{
+			name:    "create dir",
+			setup:   func(t *testing.T, path string) {},
+			handler: NewHandler(newTestLogger()),
+		},
+		{
+			name: "create dir on existing dir",
+			setup: func(t *testing.T, path string) {
+				if err := os.Mkdir(path, permWritableDir); err != nil {
+					t.Fatal(err)
+				}
+			},
+			handler: NewHandler(newTestLogger()),
+		},
+		{
+			name:    "create sub dirs on same path",
+			setup:   func(t *testing.T, path string) {},
+			handler: NewHandler(newTestLogger()),
+			pathsFn: func(parent string) []string {
+				return []string{filepath.Join(parent, "l1", "d1"), filepath.Join(parent, "l1", "d2"), filepath.Join(parent, "l1", "d1")}
+			},
+		},
+		{
+			name: "create dir with no perm",
+			setup: func(t *testing.T, path string) {
+				if os.Getuid() == 0 {
+					t.Skip("root bypasses permission checks")
+				}
+				if err := os.Chmod(filepath.Dir(path), permNone); err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() { _ = os.Chmod(filepath.Dir(path), permWritableDir) })
+			},
+			handler:   NewHandler(newTestLogger()),
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			testRoot := t.TempDir()
+			var paths []string
+			if tc.pathsFn != nil {
+				paths = tc.pathsFn(testRoot)
+			} else {
+				paths = []string{filepath.Join(testRoot, "dest")}
+			}
+			for _, path := range paths {
+				tc.setup(t, path)
+				t.Logf("creating dir: %s", path)
+				err := tc.handler.CreateDir(path)
+				if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+					return
+				}
+			}
+		})
+	}
+}
 
 func TestHandler_Link(t *testing.T) {
 	tests := []struct {
@@ -37,8 +169,8 @@ func TestHandler_Link(t *testing.T) {
 		{
 			name: "existing dest file",
 			setup: func(t *testing.T, dir, src, dest string) {
-				if err := os.WriteFile(dest, []byte("destination file content"), filePermissions); err != nil {
-					t.Fatalf("dest creation: %v", err)
+				if err := os.WriteFile(dest, []byte("destination file content"), permFileWrite); err != nil {
+					t.Fatal(err)
 				}
 			},
 			destFn:    func(dir string) string { return filepath.Join(dir, "dest_file") },
@@ -52,10 +184,10 @@ func TestHandler_Link(t *testing.T) {
 				if os.Getuid() == 0 {
 					t.Skip("root bypasses permission checks")
 				}
-				if err := os.Chmod(filepath.Dir(dest), noWritePerm); err != nil {
+				if err := os.Chmod(filepath.Dir(dest), permNone); err != nil {
 					t.Fatal(err)
 				}
-				t.Cleanup(func() { _ = os.Chmod(filepath.Dir(dest), writePerm) })
+				t.Cleanup(func() { _ = os.Chmod(filepath.Dir(dest), permWritableDir) })
 			},
 			destFn:    func(dir string) string { return filepath.Join(dir, "dest_file") },
 			handler:   NewHandler(newTestLogger()),
@@ -66,91 +198,28 @@ func TestHandler_Link(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			dir := t.TempDir()
-			src := filepath.Join(dir, "src_file")
+			testRoot := t.TempDir()
+			src := filepath.Join(testRoot, "src_file")
 			if err := os.WriteFile(src, []byte("Sample Config"), 0o644); err != nil {
-				t.Fatalf("source creation failed: %v", err)
+				t.Fatal(err)
 			}
 
-			dest := filepath.Join(dir, "dest_file")
+			dest := filepath.Join(testRoot, "dest_file")
 			if tc.destFn != nil {
-				dest = tc.destFn(dir)
+				dest = tc.destFn(testRoot)
 			}
-			tc.setup(t, dir, src, dest)
+			tc.setup(t, testRoot, src, dest)
 			err := tc.handler.Link(src, dest)
-			if (err != nil) != tc.wantErr {
-				t.Fatalf("err = %v, wantErr = %v", err, tc.wantErr)
-			}
-			if tc.wantErr {
-				if !errors.Is(err, tc.wantErrIs) {
-					t.Fatalf("errors.Is(%v), want %v", err, tc.wantErrIs)
-				}
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}
 			got, readErr := os.Readlink(dest)
 			if readErr != nil {
-				t.Fatalf("symlink missing: %v", readErr)
+				t.Fatal(readErr)
 			}
 			if got != src {
-				t.Fatalf("symlink target %q, want %q", got, src)
+				t.Fatalf("got symlink target %q, want %q", got, src)
 			}
-		})
-	}
-}
-
-func TestHandler_CreateFile(t *testing.T) {
-	tests := []struct {
-		name      string
-		lines     []string
-		setup     func(t *testing.T, parent string)
-		wantErr   bool
-		wantErrIs error
-		handler   *Handler
-	}{
-		{
-			name:    "create file",
-			setup:   func(t *testing.T, parent string) {},
-			lines:   []string{"this is sample file content"},
-			handler: NewHandler(newTestLogger()),
-		},
-		{
-			name: "no perm parent",
-			setup: func(t *testing.T, parent string) {
-				if os.Getuid() == 0 {
-					t.Skip("root bypasses the permission checks")
-				}
-				if err := os.Chmod(parent, noWritePerm); err != nil {
-					t.Fatal(err)
-				}
-				t.Cleanup(func() { _ = os.Chmod(parent, writePerm) })
-			},
-			lines:     []string{"this is sample file content"},
-			handler:   NewHandler(newTestLogger()),
-			wantErr:   true,
-			wantErrIs: os.ErrPermission,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			dir := t.TempDir()
-			path := filepath.Join(dir, "file_path")
-			tc.setup(t, dir)
-			err := tc.handler.CreateFile(path, strings.Join(tc.lines, "\n"))
-			if tc.wantErr {
-				if !errors.Is(err, tc.wantErrIs) {
-					t.Fatalf("errors.Is(%v), want %v", err, tc.wantErrIs)
-				}
-				return
-			}
-			result, err := tc.handler.ReadLines(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-			if !slices.Equal(tc.lines, result) {
-				t.Fatalf("content mismatch read: %v, want: %v", result, tc.lines)
-			}
-
 		})
 	}
 }
@@ -159,7 +228,7 @@ func TestHandler_IsEmptyDir(t *testing.T) {
 	tests := []struct {
 		name      string
 		setup     func(t *testing.T, dir string)
-		handler   Handler
+		handler   *Handler
 		want      bool
 		wantErr   bool
 		wantErrIs error
@@ -167,45 +236,47 @@ func TestHandler_IsEmptyDir(t *testing.T) {
 		{
 			name: "check empty dir",
 			setup: func(t *testing.T, dir string) {
-				if err := os.Mkdir(dir, writePerm); err != nil {
+				if err := os.Mkdir(dir, permWritableDir); err != nil {
 					t.Fatal(err)
 				}
 			},
-			handler: *NewHandler(newTestLogger()),
+			handler: NewHandler(newTestLogger()),
 			want:    true,
 		},
 		{
 			name: "check non-empty dir",
 			setup: func(t *testing.T, dir string) {
-				if err := os.Mkdir(dir, writePerm); err != nil {
+				if err := os.Mkdir(dir, permWritableDir); err != nil {
 					t.Fatal(err)
 				}
 				tmpFile := filepath.Join(dir, "source_file")
-				if err := os.WriteFile(tmpFile, []byte("Sample file content"), writePerm); err != nil {
+				if err := os.WriteFile(tmpFile, []byte("Sample file content"), permFileWrite); err != nil {
 					t.Fatal(err)
 				}
 			},
-			handler: *NewHandler(newTestLogger()),
+			handler: NewHandler(newTestLogger()),
 			want:    false,
+		},
+		{
+			name:      "check non-existent dir",
+			setup:     func(t *testing.T, dir string) {},
+			handler:   NewHandler(newTestLogger()),
+			want:      false,
+			wantErr:   true,
+			wantErrIs: ErrNotDir,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			dir := t.TempDir()
-			src := filepath.Join(dir, "source")
+			testRoot := t.TempDir()
+			src := filepath.Join(testRoot, "source")
 			tc.setup(t, src)
 			isEmpty, err := tc.handler.IsEmptyDir(src)
-			if (err != nil) != tc.wantErr {
-				t.Fatalf("err = %v, want = %v", err, tc.wantErr)
-			}
-			if err != nil {
-				if errors.Is(err, tc.wantErrIs) {
-					return
-				}
-				t.Fatalf("errors.Is(%v), want %v", err, tc.wantErrIs)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
 			}
 			if isEmpty != tc.want {
-				t.Fatalf("isEmpty: %v, want: %v", isEmpty, tc.want)
+				t.Fatalf("got isEmpty %v, want %v", isEmpty, tc.want)
 			}
 		})
 	}
@@ -218,51 +289,54 @@ func TestHandler_Remove(t *testing.T) {
 		setup     func(t *testing.T, dir string)
 		wantErr   bool
 		wantErrIs error
-		handler   Handler
+		handler   *Handler
 	}{
 		{
 			name: "remove file",
 			path: "src_file",
 			setup: func(t *testing.T, path string) {
-				if err := os.WriteFile(path, []byte("test file content"), writePerm); err != nil {
+				if err := os.WriteFile(path, []byte("test file content"), permFileWrite); err != nil {
 					t.Fatal(err)
 				}
 			},
-			handler: *NewHandler(newTestLogger()),
+			handler: NewHandler(newTestLogger()),
 		},
 		{
 			name: "remove dir",
 			path: "src_dir",
 			setup: func(t *testing.T, path string) {
-				if err := os.Mkdir(path, writePerm); err != nil {
+				if err := os.Mkdir(path, permWritableDir); err != nil {
 					t.Fatal(err)
 				}
 			},
-			handler: *NewHandler(newTestLogger()),
+			handler: NewHandler(newTestLogger()),
 		},
 		{
 			name:    "remove non-existing",
 			path:    "src_dir",
 			setup:   func(t *testing.T, path string) {},
-			handler: *NewHandler(newTestLogger()),
+			handler: NewHandler(newTestLogger()),
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			dir := t.TempDir()
-			path := filepath.Join(dir, tc.path)
+			testRoot := t.TempDir()
+			path := filepath.Join(testRoot, tc.path)
 			tc.setup(t, path)
 			err := tc.handler.Remove(path)
-			if (err != nil) != tc.wantErr {
-				t.Fatalf("err = %v, want %v", err, tc.wantErr)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
 			}
+			// TODO: Check and fix
+			_, err = os.Stat(path)
 			if err != nil {
-				if errors.Is(err, tc.wantErrIs) {
-					return
+				if !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("got err %v, want %v", err, os.ErrNotExist)
 				}
-				t.Fatalf("errors.Is(%v), want: %v", err, tc.wantErrIs)
+				return
 			}
+			t.Fatalf("file not removed %s", path)
 		})
 	}
 }
@@ -273,57 +347,70 @@ func TestHandler_Move(t *testing.T) {
 		setup     func(t *testing.T, src, dest string)
 		wantErr   bool
 		wantErrIs error
-		handler   Handler
+		handler   *Handler
 	}{
 		{
 			name: "move file",
 			setup: func(t *testing.T, src, _ string) {
-				if err := os.WriteFile(src, []byte("test file content"), writePerm); err != nil {
+				if err := os.WriteFile(src, []byte("test file content"), permFileWrite); err != nil {
 					t.Fatal(err)
 				}
 			},
-			handler: *NewHandler(newTestLogger()),
+			handler: NewHandler(newTestLogger()),
 		},
 		{
 			name: "move no perm",
 			setup: func(t *testing.T, src, dest string) {
-				if err := os.WriteFile(src, []byte("test file content"), writePerm); err != nil {
+				if err := os.WriteFile(src, []byte("test file content"), permFileWrite); err != nil {
 					t.Fatal(err)
 				}
-				if err := os.Chmod(filepath.Dir(dest), noWritePerm); err != nil {
+				if err := os.Chmod(filepath.Dir(dest), permNone); err != nil {
 					t.Fatal(err)
 				}
-				t.Cleanup(func() { _ = os.Chmod(filepath.Dir(dest), writePerm) })
+				t.Cleanup(func() { _ = os.Chmod(filepath.Dir(dest), permWritableDir) })
 			},
-			handler:   *NewHandler(newTestLogger()),
+			handler:   NewHandler(newTestLogger()),
 			wantErr:   true,
 			wantErrIs: os.ErrPermission,
 		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			dir := t.TempDir()
-			src := filepath.Join(dir, "src")
-			dest := filepath.Join(dir, "dest")
+			testRoot := t.TempDir()
+			src := filepath.Join(testRoot, "src")
+			dest := filepath.Join(testRoot, "dest")
 			tc.setup(t, src, dest)
 			err := tc.handler.Move(src, dest)
-			if (err != nil) != tc.wantErr {
-				t.Fatalf("err = %v, want %v", err, tc.wantErr)
-			}
-			if err != nil {
-				if errors.Is(err, tc.wantErrIs) {
-					return
-				}
-				t.Fatalf("errors.Is(%v), want: %v", err, tc.wantErrIs)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
 			}
 			_, err = os.Stat(dest)
 			if err != nil {
 				t.Fatal(err)
 			}
+			_, err = os.Stat(src)
+			if err != nil {
+				if !errors.Is(err, os.ErrNotExist) {
+					t.Fatalf("got error %v, want %v", err, os.ErrNotExist)
+				}
+				return
+			}
+			t.Fatalf("src not removed %s", src)
 		})
 	}
 }
 
 func newTestLogger() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
+
+func validateErrScenario(t *testing.T, wantErr bool, err, wantErrIs error) bool {
+	t.Helper()
+	if (err != nil) != wantErr {
+		t.Fatalf("got error %v, want %v", err, wantErr)
+	}
+	if wantErr && !errors.Is(err, wantErrIs) {
+		t.Fatalf("error got %v, want %v", err, wantErrIs)
+	}
+	return wantErr
 }
