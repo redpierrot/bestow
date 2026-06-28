@@ -26,6 +26,9 @@ func NewDryRunHandler(l *slog.Logger) *DryRunHandler {
 // CreateFile creates a file in the provided path and writes the provided content to the file.
 func (h *DryRunHandler) CreateFile(path, content string) error {
 	h.logger.Debug("writing to file", "file", path)
+	if err := isWritable(path); err != nil {
+		return err
+	}
 	h.logger.Debug("successfully written to file", "path", path)
 	return nil
 }
@@ -45,6 +48,10 @@ func (h *DryRunHandler) CreateDir(path string) error {
 		h.logger.Debug("directory already exists", "path", path)
 		h.createdDirs[path] = true
 		return nil
+	} else {
+		if err := isWritable(path); err != nil {
+			return err
+		}
 	}
 	h.createdDirs[path] = true
 	h.logger.Debug("created directory", "path", path)
@@ -56,7 +63,7 @@ func (h *DryRunHandler) CreateDir(path string) error {
 func (h *DryRunHandler) Link(src, target string) error {
 	h.logger.Debug("creating symlink", "source", src, "target", target)
 	destParent := filepath.Dir(target)
-	if err := h.CreateDir(destParent); err != nil {
+	if err := isWritable(destParent); err != nil {
 		return err
 	}
 	h.logger.Debug("link created", "source", src, "target", target)
@@ -68,7 +75,7 @@ func (h *DryRunHandler) Link(src, target string) error {
 func (h *DryRunHandler) Move(src, target string) error {
 	h.logger.Debug("moving file", "source", src, "target", target)
 	destParent := filepath.Dir(target)
-	if err := h.CreateDir(destParent); err != nil {
+	if err := isWritable(destParent); err != nil {
 		return err
 	}
 	h.logger.Debug("moved file", "from", src, "to", target)
@@ -85,6 +92,9 @@ func (h *DryRunHandler) Remove(path string) error {
 	if !exists {
 		h.logger.Warn("file does not exist", "operation", "remove", "file", path)
 		return nil
+	}
+	if err := isWritable(path); err != nil {
+		return err
 	}
 	h.logger.Debug("successfully removed the file", "file_name", path)
 	return nil

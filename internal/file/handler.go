@@ -12,8 +12,8 @@ import (
 
 // TODO: Make this configurable or make it passable as a parameter
 const (
-	dirPermissions  = 0o755
-	filePermissions = 0o644
+	permDirWrite  = 0o755
+	permFileWrite = 0o644
 )
 
 // Handler is the implementation of the System using io, os, and bufio go modules.
@@ -34,7 +34,7 @@ func NewHandler(l *slog.Logger) *Handler {
 // CreateFile creates a file in the provided path and writes the provided content to the file.
 func (h *Handler) CreateFile(path, content string) error {
 	h.logger.Debug("writing to file", "file", path)
-	if err := os.WriteFile(path, []byte(content), filePermissions); err != nil {
+	if err := os.WriteFile(path, []byte(content), permFileWrite); err != nil {
 		return err
 	}
 	h.logger.Debug("successfully written to file", "path", path)
@@ -57,7 +57,7 @@ func (h *Handler) CreateDir(path string) error {
 		h.createdDirs[path] = true
 		return nil
 	}
-	if err := os.MkdirAll(path, dirPermissions); err != nil {
+	if err := os.MkdirAll(path, permDirWrite); err != nil {
 		return err
 	}
 	h.createdDirs[path] = true

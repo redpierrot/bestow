@@ -7,11 +7,11 @@ package file
 type ExistingType int
 
 const (
-	ExistingManagedSymlink ExistingType = iota
+	ExistingUnknown ExistingType = iota
+	ExistingManagedSymlink
 	ExistingForeignSymlink
 	ExistingRegularFile
 	ExistingDir
-	ExistingUnknown
 )
 
 func (e ExistingType) String() string {

@@ -174,13 +174,9 @@ func (h *readHandler) ExistingFileType(src, dest string) (ExistingType, error) {
 		h.logger.Debug("found directory", "path", dest)
 		return ExistingDir, nil
 	}
-
 	h.logger.Debug("found symlink", "path", dest)
 	srcInfo, err := os.Stat(src)
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return ExistingForeignSymlink, nil
-		}
 		return ExistingUnknown, err
 	}
 	destInfo, err := os.Stat(dest)
