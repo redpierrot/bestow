@@ -48,10 +48,9 @@ func (h *DryRunHandler) CreateDir(path string) error {
 		h.logger.Debug("directory already exists", "path", path)
 		h.createdDirs[path] = true
 		return nil
-	} else {
-		if err := isWritable(path); err != nil {
-			return err
-		}
+	}
+	if err := isWritable(path); err != nil {
+		return err
 	}
 	h.createdDirs[path] = true
 	h.logger.Debug("created directory", "path", path)
