@@ -16,9 +16,11 @@ import (
 //go:embed defaults/default-config.yaml
 var defaultTemplate string
 
+// DefaultIgnoreList stores the most commonly used ignore patterns
 var DefaultIgnoreList = []string{".git", ".gitignore", "README.md", "LICENSE", "**/.bestowignore", "**/.stow-local-ignore"}
 
-func DefaultTemplate(source, destination string) (string, error) {
+// FromTemplate populates and returns the default template with the provided source and destination
+func FromTemplate(source, destination string) (string, error) {
 	tmpl, err := template.New("config").Parse(defaultTemplate)
 	if err != nil {
 		return "", err

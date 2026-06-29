@@ -10,23 +10,37 @@ import "github.com/ThisaruGuruge/bestow/internal/file"
 var _ FileSystem = (*file.Handler)(nil)
 var _ FileSystem = (*file.DryRunHandler)(nil)
 
+// ExecuteResult stores the result of a given execution
 type ExecuteResult struct {
-	Events  []ActionEvent
+	// Events is the list of events (file operations) performed in the execution
+	Events []ActionEvent
+	// Summary is the summary of each operation
 	Summary *Summary
-	DryRun  bool
+	// DryRun whether the operation is a dry run
+	DryRun bool
 }
 
+// Summary stores a summary of all the operations performed during an execution
 type Summary struct {
-	Stowed   int
+	// Stowed number of stowed files
+	Stowed int
+	// Unstowed number of unstowed files
 	Unstowed int
+	// Replaced number of replaced files
 	Replaced int
+	// BackedUp number of backed up files
 	BackedUp int
-	Adopted  int
-	Skipped  int
+	// Adopted number of adopted files
+	Adopted int
+	// Skipped number of skipped files
+	Skipped int
+	// UpToDate number of up-to-date files
 	UpToDate int
+	// Reverted number of reverted files, in case of a failure or interrupt
 	Reverted int
 }
 
+// FileSystem defines the operations needed for the engine to perform file operations
 type FileSystem interface {
 	// ListDirs lists all the subdirectories in a given parent directory.
 	ListDirs(parent string) ([]string, error)

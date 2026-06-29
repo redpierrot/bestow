@@ -15,13 +15,17 @@ import (
 
 const actionStringLength = 7
 
+// Level defines the output level
 type Level int
 
 const (
+	// Normal is the normal output level
 	Normal Level = iota
+	// Quiet silences all the outputs
 	Quiet
 )
 
+// Output is used to print output to stdout and stderr
 type Output struct {
 	level        Level
 	successStyle lipgloss.Style
@@ -34,6 +38,7 @@ type Output struct {
 	actionStyle  lipgloss.Style
 }
 
+// NewOutput returns an Output value, that can be used to print output
 func NewOutput(l Level) *Output {
 	hasDarkBg := lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
 	lightDark := lipgloss.LightDark(hasDarkBg)
@@ -50,10 +55,12 @@ func NewOutput(l Level) *Output {
 	}
 }
 
+// SetLevel sets the output level
 func (o *Output) SetLevel(level Level) {
 	o.level = level
 }
 
+// PrintAction prints the information of an action executed by the Engine, with the provided label
 func (o *Output) PrintAction(action engine.ActionEvent, label string) {
 	var message string
 	formattedAction := o.actionStyle.Render(action.Action)
@@ -68,8 +75,6 @@ func (o *Output) PrintAction(action engine.ActionEvent, label string) {
 		text = o.successStyle.Render(message)
 	case engine.EventStep:
 		text = o.stepStyle.Render(message)
-	case engine.EventWarn:
-		text = o.warnStyle.Render(message)
 	case engine.EventSkip:
 		text = o.skipStyle.Render(message)
 	case engine.EventUndo:
@@ -80,6 +85,7 @@ func (o *Output) PrintAction(action engine.ActionEvent, label string) {
 	_, _ = lipgloss.Println(text)
 }
 
+// PrintResult prints the provided result in a defined manner
 func (o *Output) PrintResult(result *engine.ExecuteResult) {
 	if result == nil {
 		return
@@ -133,11 +139,13 @@ func (o *Output) printSummaryLine(summary *engine.Summary) {
 	_, _ = lipgloss.Println(strings.Join(parts, "   "))
 }
 
+// PrintHint prints any hints to stderr
 func (o *Output) PrintHint(hint string) {
 	message := "[hint] " + hint
 	_, _ = lipgloss.Fprintln(os.Stderr, o.hintStyle.Render(message))
 }
 
+// PrintConflict prints the provided conflicts to stderr
 func (o *Output) PrintConflict(conflicts []engine.DestinationConflict) {
 	_, _ = lipgloss.Fprintln(os.Stderr, o.errStyle.Render("conflicts:"))
 	for _, conflict := range conflicts {
@@ -148,6 +156,7 @@ func (o *Output) PrintConflict(conflicts []engine.DestinationConflict) {
 	}
 }
 
+// PrintAggregatedError prints the information of the provided AggregatedError
 func (o *Output) PrintAggregatedError(err *engine.AggregatedError) {
 	_, _ = lipgloss.Fprintln(os.Stderr, o.errStyle.Render(err.Msg))
 	for _, item := range err.Items {
@@ -155,6 +164,7 @@ func (o *Output) PrintAggregatedError(err *engine.AggregatedError) {
 	}
 }
 
+// PrintCommandError prints a command error to stderr
 func (o *Output) PrintCommandError(err error) {
 	_, _ = lipgloss.Fprintln(os.Stderr, o.errStyle.Render(err.Error()))
 }

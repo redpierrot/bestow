@@ -19,26 +19,39 @@ const (
 	actionRestore = "restore"
 )
 
+// EventType defines the type of event that a file action performs
 type EventType int
 
 const (
+	// EventSuccess is the event type emitted when the operation succeeds
 	EventSuccess EventType = iota
+	// EventStep is the event type emitted when the operation is a multistep operation and the step is completed
 	EventStep
+	// EventSkip is the event type emitted when the operation is skipped
 	EventSkip
-	EventWarn
+	// EventIgnore is the event type emitted when the operation is ignored
 	EventIgnore
+	// EventUndo is the event type emitted when the operation is undone
 	EventUndo
 )
 
+// ActionKind defines the kind of file action that needs to be performed
 type ActionKind int
 
 const (
+	// ActionUpToDate when the action is up-to-date (no operations needed)
 	ActionUpToDate ActionKind = iota
+	// ActionSkip when the action is to skip the operation
 	ActionSkip
+	// ActionLink when the action is to link a source to destination
 	ActionLink
+	// ActionReplace when the action is to replace an existing file
 	ActionReplace
+	// ActionBackup when the action is to back up the existing file
 	ActionBackup
+	// ActionAdopt when the action is to copy the destination file into source before linking
 	ActionAdopt
+	// ActionRemove when the action is to remove the file
 	ActionRemove
 )
 
@@ -65,6 +78,7 @@ func (a ActionKind) String() string {
 	}
 }
 
+// ActionEvent stores the event that occurred while performing an action
 type ActionEvent struct {
 	Action    string
 	Msg       string

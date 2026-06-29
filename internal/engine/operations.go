@@ -11,12 +11,17 @@ import (
 	"github.com/ThisaruGuruge/bestow/internal/file"
 )
 
+// ResolveStrategy defines the file action resolving strategy when the destination exist
 type ResolveStrategy int
 
 const (
+	// ResolveSkip skips the operation when destination exists
 	ResolveSkip ResolveStrategy = iota
+	// ResolveForce forcefully replaces the destination file
 	ResolveForce
+	// ResolveAdopt copies the file from the destination to source before linking
 	ResolveAdopt
+	// ResolveBackup backs up the destination file before linking
 	ResolveBackup
 )
 

@@ -39,7 +39,7 @@ func AppConfigHome() string {
 
 // XDGConfigHome returns the root directory of the configs.
 // NOTE: on macOS, if the `XDG_CONFIG_HOME` env. is not set, it defaults to `/Library/Application Support/`.
-// This bypasses that and return the `~/.config` if the `XDG_CONFIG_HOME` is not set
+// This bypasses that and returns the `~/.config` if the `XDG_CONFIG_HOME` is not set
 func XDGConfigHome() string {
 	if dir := os.Getenv(envXDGConfigHome); dir != "" {
 		return dir

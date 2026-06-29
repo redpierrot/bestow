@@ -16,12 +16,15 @@ const (
 	ignoreFileName = ".bestowignore"
 )
 
+// InitConfig stores the configuration options for the `init` command
 type InitConfig struct {
 	Force      bool
 	IgnoreList []string
 	ConfigFile string
 }
 
+// Init initializes the bestow command.
+// If the existing files ($CONFIG_HOME/bestow/config.yaml, $CONFIG_HOME/bestow/.bestowignore) are there the command will fail unless the `--force` flag is set
 func (e *Engine) Init(cfg *InitConfig) (*ExecuteResult, error) {
 	e.logger.Debug("initializing bestow")
 	configFile := filepath.Join(e.configHome, cfg.ConfigFile)
@@ -88,16 +91,19 @@ func (e *Engine) createIgnoreFile(ignoreFile string, ignoreList []string) (*Acti
 }
 
 func buildIgnoreFile(ignoreList []string) string {
-	result := []string{"# Global Ignore List for Bestow"}
+	var sb strings.Builder
+	sb.WriteString("# Global Ignore List for Bestow")
+	sb.WriteByte('\n')
 	for _, item := range ignoreList {
-		result = append(result, strings.TrimSpace(item))
+		sb.WriteString(strings.TrimSpace(item))
+		sb.WriteByte('\n')
 	}
-	return strings.Join(result, "\n") + "\n"
+	return sb.String()
 }
 
 func (e *Engine) createConfigFile(source, destination, configFile string) (*ActionEvent, error) {
 	e.logger.Debug("creating the config file", "path", configFile)
-	cfg, err := config.DefaultTemplate(source, destination)
+	cfg, err := config.FromTemplate(source, destination)
 	if err != nil {
 		return nil, fmt.Errorf("load config %s %s: %w", source, destination, err)
 	}

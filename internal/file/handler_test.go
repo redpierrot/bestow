@@ -328,7 +328,6 @@ func TestHandler_Remove(t *testing.T) {
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}
-			// TODO: Check and fix
 			_, err = os.Stat(path)
 			if err != nil {
 				if !errors.Is(err, os.ErrNotExist) {
