@@ -14,17 +14,17 @@ import (
 
 const (
 	ignoreFileName = ".bestowignore"
-	configFileName = "config.yaml"
 )
 
 type InitConfig struct {
 	Force      bool
 	IgnoreList []string
+	ConfigFile string
 }
 
 func (e *Engine) Init(cfg *InitConfig) (*ExecuteResult, error) {
 	e.logger.Debug("initializing bestow")
-	configFile := filepath.Join(e.configHome, configFileName)
+	configFile := filepath.Join(e.configHome, cfg.ConfigFile)
 	ignoreFile := filepath.Join(e.configHome, ignoreFileName)
 	if err := e.checkExistingFiles(configFile, ignoreFile, cfg.Force); err != nil {
 		return nil, err

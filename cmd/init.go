@@ -58,6 +58,7 @@ var initCmd = &cobra.Command{
 		cfg := engine.InitConfig{
 			Force:      force,
 			IgnoreList: ignoreList,
+			ConfigFile: configFileName,
 		}
 		summary, err := eng.Init(&cfg)
 		if err != nil {
