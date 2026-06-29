@@ -34,7 +34,7 @@ var stowCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		var strategy engine.ResolveStrategy
+		var strategy = engine.ResolveSkip
 		if force {
 			strategy = engine.ResolveForce
 		}
