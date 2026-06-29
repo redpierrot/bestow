@@ -1,0 +1,27 @@
+name: "Pull Request Build"
+on: pull_request
+jobs:
+  ubuntu-build:
+    name: "Build on Ubuntu"
+    runs-on: ubuntu-latest
+    steps:
+      - name: "Checkout Repository"
+        uses: actions/checkout@v5
+
+      - name: "Setup GoLang"
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache: true
+
+      - name: "Setup Task"
+        uses: go-task/setup-task@v2
+
+      - name: "Lint"
+        uses: golangci/golangci-lint-action@v9
+
+      - name: "Build"
+        run: task build
+
+      - name: "Coverage"
+        run: task coverage
