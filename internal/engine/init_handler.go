@@ -92,7 +92,7 @@ func buildIgnoreFile(ignoreList []string) string {
 	for _, item := range ignoreList {
 		result = append(result, strings.TrimSpace(item))
 	}
-	return strings.Join(result, "\n")
+	return strings.Join(result, "\n") + "\n"
 }
 
 func (e *Engine) createConfigFile(source, destination, configFile string) (*ActionEvent, error) {
