@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"charm.land/lipgloss/v2"
-	"github.com/ThisaruGuruge/bestow/internal/engine"
+	"github.com/redpierrot/bestow/internal/engine"
 )
 
 const actionStringLength = 7

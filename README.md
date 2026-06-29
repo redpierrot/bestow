@@ -7,13 +7,13 @@ Bestow creates and manages symlinks between a source directory (your dotfiles re
 ## Installation
 
 ```sh
-go install github.com/ThisaruGuruge/bestow@latest
+go install github.com/redpierrot/bestow@latest
 ```
 
 Or build from source:
 
 ```sh
-git clone https://github.com/ThisaruGuruge/bestow.git
+git clone https://github.com/redpierrot/bestow.git
 cd bestow
 task build          # requires Task (taskfile.dev)
 # or: go build -o bin/bestow .

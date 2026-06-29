@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/ThisaruGuruge/bestow/internal/config"
+	"github.com/redpierrot/bestow/internal/config"
 )
 
 const (

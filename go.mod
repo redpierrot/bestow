@@ -1,4 +1,4 @@
-module github.com/ThisaruGuruge/bestow
+module github.com/redpierrot/bestow
 
 go 1.25.0
 

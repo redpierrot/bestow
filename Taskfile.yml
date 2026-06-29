@@ -2,7 +2,7 @@ version: "3"
 
 vars:
   BINARY: bestow
-  MODULE: github.com/ThisaruGuruge/bestow
+  MODULE: github.com/redpierrot/bestow
   VERSION:
     sh: git describe --tags --always --dirty 2>/dev/null || echo "dev"
   COMMIT:

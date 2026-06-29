@@ -16,9 +16,9 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 
-	"github.com/ThisaruGuruge/bestow/internal/config"
-	"github.com/ThisaruGuruge/bestow/internal/engine"
-	"github.com/ThisaruGuruge/bestow/internal/output"
+	"github.com/redpierrot/bestow/internal/config"
+	"github.com/redpierrot/bestow/internal/engine"
+	"github.com/redpierrot/bestow/internal/output"
 )
 
 const rootCmdName = "bestow"

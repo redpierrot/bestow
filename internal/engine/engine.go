@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"slices"
 
-	"github.com/ThisaruGuruge/bestow/internal/file"
+	"github.com/redpierrot/bestow/internal/file"
 )
 
 // CommandAction defines the different actions in Bestow

@@ -10,7 +10,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/ThisaruGuruge/bestow/cmd"
+	"github.com/redpierrot/bestow/cmd"
 )
 
 func main() {

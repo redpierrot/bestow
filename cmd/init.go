@@ -7,8 +7,8 @@ package cmd
 import (
 	"fmt"
 
-	"github.com/ThisaruGuruge/bestow/internal/config"
-	"github.com/ThisaruGuruge/bestow/internal/engine"
+	"github.com/redpierrot/bestow/internal/config"
+	"github.com/redpierrot/bestow/internal/engine"
 	"github.com/spf13/cobra"
 )
 

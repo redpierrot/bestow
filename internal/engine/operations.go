@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/ThisaruGuruge/bestow/internal/file"
+	"github.com/redpierrot/bestow/internal/file"
 )
 
 // ResolveStrategy defines the file action resolving strategy when the destination exist
