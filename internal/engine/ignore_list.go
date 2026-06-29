@@ -51,8 +51,8 @@ func (i *IgnoreList) forPackage(pkg string) ([]string, error) {
 	if pkg == "" {
 		return i.items, nil
 	}
-	if i.packageLists[pkg] != nil {
-		return i.packageLists[pkg], nil
+	if list, ok := i.packageLists[pkg]; ok {
+		return list, nil
 	}
 	pkgPath := filepath.Join(i.src, pkg)
 	i.logger.Debug("read package ignore file", "path", pkgPath)
