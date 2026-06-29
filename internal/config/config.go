@@ -22,29 +22,24 @@ const (
 	defaultProfile   = "default"
 )
 
-type Profile struct {
+// Config stores the configurations for a given profile
+type Config struct {
 	Source      string `mapstructure:"source"`
 	Destination string `mapstructure:"destination"`
 }
 
 type configFile struct {
-	Profiles map[string]Profile `mapstructure:"profiles"`
+	Configs map[string]Config `mapstructure:"profiles"`
 }
 
-type Config struct {
-	Source      string
-	Destination string
-}
-
+// AppConfigHome returns the directory where the bestow configs are stored
 func AppConfigHome() string {
 	return filepath.Join(XDGConfigHome(), appName)
 }
 
 // XDGConfigHome returns the root directory of the configs.
-// NOTE: on macOS, if the `XDG_CONFIG_HOME` env. is not set,
-// it defaults to `/Library/Application Support/`.
-// This bypasses that and return the `~/.config` if the `XDG_CONFIG_HOME`
-// is not set
+// NOTE: on macOS, if the `XDG_CONFIG_HOME` env. is not set, it defaults to `/Library/Application Support/`.
+// This bypasses that and return the `~/.config` if the `XDG_CONFIG_HOME` is not set
 func XDGConfigHome() string {
 	if dir := os.Getenv(envXDGConfigHome); dir != "" {
 		return dir
@@ -56,6 +51,7 @@ func XDGConfigHome() string {
 	return filepath.Join(home, configDir)
 }
 
+// NewConfig returns a new Config for a given profile
 func NewConfig(v *viper.Viper, l *slog.Logger) (*Config, error) {
 	l.Debug("loading configs")
 
@@ -69,7 +65,8 @@ func NewConfig(v *viper.Viper, l *slog.Logger) (*Config, error) {
 	if profileName == "" {
 		profileName = defaultProfile
 	}
-	profile, ok := raw.Profiles[profileName]
+	// TODO: Check what happens when profile does not exist
+	profile, ok := raw.Configs[profileName]
 	if !ok {
 		return nil, fmt.Errorf("profile %s: %w", profileName, ErrNotFound)
 	}
