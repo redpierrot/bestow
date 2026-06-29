@@ -19,7 +19,7 @@ const (
 // Handler is the implementation of the System using io, os, and bufio go modules.
 type Handler struct {
 	readHandler
-	// Should use mutex here if migrate to go routines
+	// Should use mutex here if migrate to goroutines
 	createdDirs map[string]bool
 }
 

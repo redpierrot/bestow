@@ -14,6 +14,7 @@ import (
 	"github.com/ThisaruGuruge/bestow/internal/file"
 )
 
+// CommandAction defines the different actions in Bestow
 type CommandAction int
 
 const (
@@ -32,12 +33,14 @@ func (a CommandAction) String() string {
 	}
 }
 
+// CommandConfig stores the configurations for a given command execution
 type CommandConfig struct {
 	Action           CommandAction
 	Args             []string
 	ConflictStrategy ResolveStrategy
 }
 
+// Engine is the brain of Bestow. It keeps the state of a given execution and handles all the file system calls
 type Engine struct {
 	source      string
 	destination string
@@ -48,12 +51,14 @@ type Engine struct {
 	dryRun      bool
 }
 
+// EngineConfig is used to pass the configurations of the engine for a given execution
 type EngineConfig struct {
 	ConfigHome  string
 	Source      string
 	Destination string
 }
 
+// NewEngine returns an Engine value with the provided configs
 func NewEngine(cfg *EngineConfig, dryRun bool, l *slog.Logger) (*Engine, error) {
 	var handler FileSystem
 	if dryRun {
@@ -76,18 +81,13 @@ func NewEngine(cfg *EngineConfig, dryRun bool, l *slog.Logger) (*Engine, error) 
 	}, nil
 }
 
-// Execute will execute the operation (stow, unstow) with the provided context.
+// Execute executes the given operation with the provided configs
 func (e *Engine) Execute(ctx context.Context, cfg *CommandConfig) (*ExecuteResult, error) {
 	actions, err := e.buildOperations(cfg)
 	if err != nil {
 		return nil, err
 	}
-	summary, err := e.executeFileActions(ctx, actions)
-	if err != nil {
-		// Return the partial result to print
-		return summary, err
-	}
-	return summary, nil
+	return e.executeFileActions(ctx, actions)
 }
 
 func (e *Engine) executeFileActions(ctx context.Context, actions []fileAction) (*ExecuteResult, error) {
