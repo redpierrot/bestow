@@ -56,7 +56,7 @@ func (e *Engine) buildOperations(cfg *CommandConfig) ([]fileAction, error) {
 	candidates := make([]operationCandidate, 0, len(packageList))
 	errs := make([]error, 0, len(packageList))
 	for _, pkg := range packageList {
-		packageCandidates, err := e.fileOperations(pkg)
+		packageCandidates, err := e.buildOperationCandidates(pkg)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -110,7 +110,7 @@ func (e *Engine) validateDestinations(candidates []operationCandidate) error {
 	return nil
 }
 
-func (e *Engine) fileOperations(pkg string) ([]operationCandidate, error) {
+func (e *Engine) buildOperationCandidates(pkg string) ([]operationCandidate, error) {
 	pkgPath := filepath.Join(e.source, pkg)
 	fileList, err := e.fileSystem.ListAllFiles(pkgPath)
 	if err != nil {
