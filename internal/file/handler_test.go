@@ -10,8 +10,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"slices"
-	"strings"
 	"testing"
 )
 
@@ -24,7 +22,7 @@ const (
 func TestHandler_CreateFile(t *testing.T) {
 	tests := []struct {
 		name      string
-		lines     []string
+		content   string
 		setup     func(t *testing.T, parent string)
 		wantErr   bool
 		wantErrIs error
@@ -33,7 +31,7 @@ func TestHandler_CreateFile(t *testing.T) {
 		{
 			name:    "create file",
 			setup:   func(t *testing.T, parent string) {},
-			lines:   []string{"this is sample file content"},
+			content: "this is sample file content",
 			handler: NewHandler(newTestLogger()),
 		},
 		{
@@ -47,7 +45,7 @@ func TestHandler_CreateFile(t *testing.T) {
 				}
 				t.Cleanup(func() { _ = os.Chmod(parent, permWritableDir) })
 			},
-			lines:     []string{"this is sample file content"},
+			content:   "this is sample file content",
 			handler:   NewHandler(newTestLogger()),
 			wantErr:   true,
 			wantErrIs: os.ErrPermission,
@@ -59,21 +57,20 @@ func TestHandler_CreateFile(t *testing.T) {
 			testRoot := t.TempDir()
 			path := filepath.Join(testRoot, "file_path")
 			tc.setup(t, testRoot)
-			err := tc.handler.CreateFile(path, strings.Join(tc.lines, "\n"))
+			err := tc.handler.CreateFile(path, tc.content)
 			if tc.wantErr {
 				if !errors.Is(err, tc.wantErrIs) {
 					t.Fatalf("got err %v, want %v", err, tc.wantErrIs)
 				}
 				return
 			}
-			result, err := tc.handler.ReadLines(path)
+			content, err := os.ReadFile(path)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if !slices.Equal(tc.lines, result) {
-				t.Fatalf("got lines: %v, want: %v", result, tc.lines)
+			if string(content) != tc.content {
+				t.Fatalf("got %v, want %v", string(content), tc.content)
 			}
-
 		})
 	}
 }

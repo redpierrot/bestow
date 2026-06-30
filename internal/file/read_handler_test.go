@@ -349,3 +349,61 @@ func TestReadHandler_ListDirs(t *testing.T) {
 		})
 	}
 }
+
+func TestReadHandler_ReadLines(t *testing.T) {
+	tests := []struct {
+		name      string
+		handler   *Handler
+		setup     func(t *testing.T, path, content string)
+		want      []string
+		content   string
+		wantErr   bool
+		wantErrIs error
+	}{
+		{
+			name:    "read lines",
+			handler: NewHandler(newTestLogger()),
+			setup: func(t *testing.T, path, content string) {
+				if err := os.WriteFile(path, []byte(content), permFileWrite); err != nil {
+					t.Fatal(err)
+				}
+			},
+			content: "sample file content\nwith lines",
+			want:    []string{"sample file content", "with lines"},
+		},
+		{
+			name:      "read lines - non existing file",
+			handler:   NewHandler(newTestLogger()),
+			setup:     func(t *testing.T, path, content string) {},
+			content:   "",
+			wantErr:   true,
+			wantErrIs: os.ErrNotExist,
+		},
+		{
+			name:    "read lines - no perm",
+			handler: NewHandler(newTestLogger()),
+			setup: func(t *testing.T, path, content string) {
+				if err := os.WriteFile(path, []byte(content), permNone); err != nil {
+					t.Fatal(err)
+				}
+			},
+			content:   "",
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			testRoot := t.TempDir()
+			path := filepath.Join(testRoot, "file")
+			tc.setup(t, path, tc.content)
+			content, err := tc.handler.ReadLines(path)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			if !slices.Equal(content, tc.want) {
+				t.Fatalf("got %v, want %v", content, tc.want)
+			}
+		})
+	}
+}
