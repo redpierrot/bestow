@@ -15,12 +15,95 @@ import (
 
 func TestPackageOperations_buildPackageList(t *testing.T) {
 	tests := []struct {
-		name  string
-		setup func()
-		args  []string
-	}{}
+		name      string
+		setup     func() *Engine
+		args      []string
+		want      []string
+		wantErr   bool
+		wantErrIs error
+	}{
+		{
+			name: "build package list",
+			setup: func() *Engine {
+				src := filepath.Join("home", "user", "dotfiles")
+				dest := filepath.Join("home", "user")
+				packageList := getSamplePackageList(src)
+				fs := &MockFileSystem{
+					listDirFn: func(parent string) ([]string, error) {
+						return packageList, nil
+					},
+				}
+				return newTestEngine(src, dest, fs, nil)
+			},
+			want: []string{"pkg1", "pkg2", "pkg3"},
+		},
+		{
+			name: "build package list - with args",
+			setup: func() *Engine {
+				src := filepath.Join("home", "user", "dotfiles")
+				dest := filepath.Join("home", "user")
+				packageList := getSamplePackageList(src)
+				fs := &MockFileSystem{
+					listDirFn: func(parent string) ([]string, error) {
+						return packageList, nil
+					},
+					isDirFn: func(path string) (bool, error) {
+						return true, nil
+					},
+				}
+				return newTestEngine(src, dest, fs, nil)
+			},
+			args: []string{"pkg2"},
+			want: []string{"pkg2"},
+		},
+		{
+			name: "build package list - list dirs error",
+			setup: func() *Engine {
+				src := filepath.Join("home", "user", "dotfiles")
+				dest := filepath.Join("home", "user")
+				fs := &MockFileSystem{
+					listDirFn: func(parent string) ([]string, error) {
+						return nil, os.ErrNotExist
+					},
+					isDirFn: func(path string) (bool, error) {
+						return false, os.ErrNotExist
+					},
+				}
+				return newTestEngine(src, dest, fs, nil)
+			},
+			wantErr:   true,
+			wantErrIs: os.ErrNotExist,
+		},
+		{
+			name: "build package list - list dirs error with args",
+			setup: func() *Engine {
+				src := filepath.Join("home", "user", "dotfiles")
+				dest := filepath.Join("home", "user")
+				fs := &MockFileSystem{
+					listDirFn: func(parent string) ([]string, error) {
+						return nil, os.ErrNotExist
+					},
+					isDirFn: func(path string) (bool, error) {
+						return false, os.ErrNotExist
+					},
+				}
+				return newTestEngine(src, dest, fs, nil)
+			},
+			args:      []string{"pkg2"},
+			wantErr:   true,
+			wantErrIs: os.ErrNotExist,
+		},
+	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
+			engine := tc.setup()
+			packageList, err := engine.buildPackageList(tc.args)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			if !slices.Equal(packageList, tc.want) {
+				t.Fatalf("got %v, want %v", packageList, tc.want)
+			}
 		})
 	}
 }

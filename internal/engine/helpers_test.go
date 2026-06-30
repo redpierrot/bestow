@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"path/filepath"
 	"testing"
 
 	"github.com/redpierrot/bestow/internal/file"
@@ -49,6 +50,10 @@ func validateErrScenario(t *testing.T, wantErr bool, err, wantErrIs error) bool 
 		t.Fatalf("error got %v, want %v", err, wantErrIs)
 	}
 	return wantErr
+}
+
+func getSamplePackageList(parent string) []string {
+	return []string{filepath.Join(parent, "pkg1"), filepath.Join(parent, "pkg2"), filepath.Join(parent, "pkg3")}
 }
 
 type MockFileSystem struct {
