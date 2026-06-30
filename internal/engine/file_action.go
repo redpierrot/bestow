@@ -392,7 +392,7 @@ func (f *fileActionAdopt) undo(fs FileSystem) ([]ActionEvent, error) {
 	}
 	if err := fs.Move(f.source, f.destination); err != nil {
 		f.logger.Warn(corruptedSystemErrMsg, "action", "move", "source", f.source, "destination", f.destination)
-		return nil, err
+		return []ActionEvent{removeStep}, err
 	}
 	moveStep := ActionEvent{
 		Action:    actionRestore,
