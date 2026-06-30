@@ -72,15 +72,7 @@ func (e *Engine) buildOperations(cfg *CommandConfig) ([]fileAction, error) {
 	if err := e.validateDestinations(candidates); err != nil {
 		return nil, err
 	}
-
-	switch cfg.Action {
-	case CommandStow:
-		return e.buildStowOperations(candidates, cfg.ConflictStrategy)
-	case CommandUnstow:
-		// TODO: Remove empty parents should be configurable and unstow should handle it
-		return e.buildUnstowOperations(candidates)
-	}
-	return nil, fmt.Errorf("action %s: %w", cfg.Action, ErrUnsupportedAction)
+	return e.buildFileActions(candidates, cfg.ConflictStrategy, cfg.Action)
 }
 
 func (e *Engine) validateDestinations(candidates []operationCandidate) error {
@@ -140,11 +132,18 @@ func (e *Engine) buildOperationCandidates(pkg string) ([]operationCandidate, err
 	return candidates, nil
 }
 
-func (e *Engine) buildStowOperations(candidates []operationCandidate, strategy ResolveStrategy) ([]fileAction, error) {
+func (e *Engine) buildFileActions(candidates []operationCandidate, strategy ResolveStrategy, cmdAction CommandAction) ([]fileAction, error) {
 	actions := make([]fileAction, 0, len(candidates))
 	errs := make([]error, 0, len(candidates))
 	for _, candidate := range candidates {
-		action, err := e.stowFileAction(candidate, strategy)
+		var action fileAction
+		var err error
+		switch cmdAction {
+		case CommandStow:
+			action, err = e.stowFileAction(candidate, strategy)
+		case CommandUnstow:
+			action, err = e.unstowFileAction(candidate)
+		}
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -153,27 +152,7 @@ func (e *Engine) buildStowOperations(candidates []operationCandidate, strategy R
 	}
 	if len(errs) > 0 {
 		return nil, &AggregatedError{
-			Msg:   "failed to resolve operations",
-			Items: errs,
-		}
-	}
-	return actions, nil
-}
-
-func (e *Engine) buildUnstowOperations(candidates []operationCandidate) ([]fileAction, error) {
-	actions := make([]fileAction, 0, len(candidates))
-	errs := make([]error, 0, len(candidates))
-	for _, candidate := range candidates {
-		action, err := e.unstowFileAction(candidate)
-		if err != nil {
-			errs = append(errs, err)
-			continue
-		}
-		actions = append(actions, action)
-	}
-	if len(errs) > 0 {
-		return nil, &AggregatedError{
-			Msg:   "failed to resolve operations",
+			Msg:   "resolve operations",
 			Items: errs,
 		}
 	}
