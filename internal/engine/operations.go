@@ -181,35 +181,7 @@ func (e *Engine) stowFileAction(candidate operationCandidate, strategy ResolveSt
 	if existing == file.ExistingManagedSymlink {
 		return newFileActionUpToDate(candidate.source, candidate.destination, "file already stowed", e.logger), nil
 	}
-	switch strategy {
-	case ResolveForce:
-		e.logger.Debug("existing destination will be replaced", "destination", candidate.destination, "strategy", strategy)
-		return newFileActionReplace(candidate.source, candidate.destination, e.logger), nil
-	case ResolveSkip:
-		e.logger.Debug("skipping the existing file at the destination", "destination", candidate.destination, "strategy", strategy)
-		return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("%s: %s", existing.String(), strategy), e.logger), nil
-	case ResolveBackup:
-		e.logger.Debug("existing file at the destination will be backed up and replaced", "destination", candidate.destination, "strategy", strategy)
-		backupPath, err := e.calculateBackupPath(candidate.destination)
-		if err != nil {
-			return nil, err
-		}
-		return newFileActionBackup(candidate.source, candidate.destination, backupPath, e.logger), nil
-	case ResolveAdopt:
-		switch existing {
-		case file.ExistingForeignSymlink:
-			e.logger.Warn("cannot adopt the existing symlink at destination", "destination", candidate.destination)
-			return newFileActionSkip(candidate.source, candidate.destination, "adopt foreign symlink", e.logger), nil
-		case file.ExistingRegularFile:
-			e.logger.Debug("existing destination will be adopted to source", "destination", candidate.destination, "strategy", strategy)
-			return newFileActionAdopt(candidate.source, candidate.destination, e.logger), nil
-		default:
-			return nil, fmt.Errorf("unsupported existing file type %s", existing)
-		}
-	default:
-		e.logger.Warn("unsupported resolution strategy", "strategy", strategy, "destination", candidate.destination)
-		return nil, fmt.Errorf("unsupported strategy %s: %w", strategy, ErrUnsupportedAction)
-	}
+	return e.calculateStowActionByStrategy(candidate, strategy, existing)
 }
 
 func (e *Engine) unstowFileAction(candidate operationCandidate) (fileAction, error) {
@@ -259,5 +231,37 @@ func (e *Engine) calculateBackupPath(dest string) (string, error) {
 		Op:   fmt.Sprintf("backup %s", dest),
 		Err:  fmt.Errorf("exceeds maximum backup count %d", maxBackupFileCount),
 		Hint: fmt.Sprintf("remove existing backups %s.*.bestow.backup", dest),
+	}
+}
+
+func (e *Engine) calculateStowActionByStrategy(candidate operationCandidate, strategy ResolveStrategy, existing file.ExistingType) (fileAction, error) {
+	switch strategy {
+	case ResolveForce:
+		e.logger.Debug("existing destination will be replaced", "destination", candidate.destination, "strategy", strategy)
+		return newFileActionReplace(candidate.source, candidate.destination, e.logger), nil
+	case ResolveSkip:
+		e.logger.Debug("skipping the existing file at the destination", "destination", candidate.destination, "strategy", strategy)
+		return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("%s: %s", existing.String(), strategy), e.logger), nil
+	case ResolveBackup:
+		e.logger.Debug("existing file at the destination will be backed up and replaced", "destination", candidate.destination, "strategy", strategy)
+		backupPath, err := e.calculateBackupPath(candidate.destination)
+		if err != nil {
+			return nil, err
+		}
+		return newFileActionBackup(candidate.source, candidate.destination, backupPath, e.logger), nil
+	case ResolveAdopt:
+		switch existing {
+		case file.ExistingForeignSymlink:
+			e.logger.Warn("cannot adopt the existing symlink at destination", "destination", candidate.destination)
+			return newFileActionSkip(candidate.source, candidate.destination, "adopt foreign symlink", e.logger), nil
+		case file.ExistingRegularFile:
+			e.logger.Debug("existing destination will be adopted to source", "destination", candidate.destination, "strategy", strategy)
+			return newFileActionAdopt(candidate.source, candidate.destination, e.logger), nil
+		default:
+			return nil, fmt.Errorf("unsupported existing file type %s", existing)
+		}
+	default:
+		e.logger.Warn("unsupported resolution strategy", "strategy", strategy, "destination", candidate.destination)
+		return nil, fmt.Errorf("unsupported strategy %s: %w", strategy, ErrUnsupportedAction)
 	}
 }
