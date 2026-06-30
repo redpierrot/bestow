@@ -117,8 +117,8 @@ func (e *Engine) fileOperations(pkg string) ([]operationCandidate, error) {
 		return nil, err
 	}
 	candidates := make([]operationCandidate, 0, len(fileList))
-	for _, filePath := range fileList {
-		relPath, err := filepath.Rel(pkgPath, filePath)
+	for _, path := range fileList {
+		relPath, err := filepath.Rel(pkgPath, path)
 		if err != nil {
 			return nil, err
 		}
@@ -127,15 +127,15 @@ func (e *Engine) fileOperations(pkg string) ([]operationCandidate, error) {
 			return nil, err
 		}
 		if shouldIgnore {
-			e.logger.Debug("ignoring the file due to ignore list", "file_name", filePath)
+			e.logger.Debug("ignoring the file due to ignore list", "file_name", path)
 			continue
 		}
 		destinationFile := filepath.Join(e.destination, relPath)
 		candidates = append(candidates, operationCandidate{
-			source:      filePath,
+			source:      path,
 			destination: destinationFile,
 		})
-		e.logger.Debug("adding candidate file", "file_name", filePath)
+		e.logger.Debug("adding candidate file", "file_name", path)
 	}
 	return candidates, nil
 }
