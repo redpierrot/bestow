@@ -8,3 +8,6 @@ coverage.html
 # Generated Files
 **/__*
 
+# Debug
+
+debug.*
