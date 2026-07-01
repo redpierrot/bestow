@@ -147,8 +147,8 @@ func TestPackageOperations_retrieveAllPackages(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			engine := tc.setup()
-			pkgCandidates, err := engine.retrieveAllPackages()
+			eng := tc.setup()
+			pkgCandidates, err := eng.retrieveAllPackages()
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}
@@ -226,8 +226,8 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			engine := tc.setup()
-			pkgCandidates, err := engine.retrievePackagesFromArgs(tc.args)
+			eng := tc.setup()
+			pkgCandidates, err := eng.retrievePackagesFromArgs(tc.args)
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}
@@ -260,8 +260,8 @@ func TestPackageOperations_filterPackages(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			engine := tc.setup()
-			filtered, err := engine.filterPackages(tc.candidates)
+			eng := tc.setup()
+			filtered, err := eng.filterPackages(tc.candidates)
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}
