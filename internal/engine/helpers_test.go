@@ -15,7 +15,7 @@ import (
 )
 
 func newTestEngine(src, dest string, fs *MockFileSystem, ignoreList *IgnoreList) *Engine {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := newTestLogger()
 	if ignoreList == nil {
 		ignoreList = newTestIgnoreList(fs, logger, nil)
 	}
@@ -54,6 +54,21 @@ func validateErrScenario(t *testing.T, wantErr bool, err, wantErrIs error) bool 
 
 func getSamplePackageList(parent string) []string {
 	return []string{filepath.Join(parent, "pkg1"), filepath.Join(parent, "pkg2"), filepath.Join(parent, "pkg3")}
+}
+
+func candidate(src, dest string) operationCandidate {
+	return operationCandidate{
+		source:      src,
+		destination: dest,
+	}
+}
+
+func newTestLogger() *slog.Logger {
+	return slog.New(slog.NewTextHandler(io.Discard, nil))
+}
+
+func isSameAction(f1, f2 fileAction) bool {
+	return f1.kind() == f2.kind()
 }
 
 type MockFileSystem struct {

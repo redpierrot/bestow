@@ -5,8 +5,6 @@ All Rights Reversed (ɔ)
 package engine
 
 import (
-	"io"
-	"log/slog"
 	"os"
 	"path/filepath"
 	"slices"
@@ -248,10 +246,10 @@ func TestPackageOperations_filterPackages(t *testing.T) {
 		wantErrIs  error
 	}{
 		{
-			name: "filter pacakges",
+			name: "filter packages",
 			setup: func() *Engine {
 				fs := &MockFileSystem{}
-				ignoreList := newTestIgnoreList(fs, slog.New(slog.NewTextHandler(io.Discard, nil)), []string{"docs"})
+				ignoreList := newTestIgnoreList(fs, newTestLogger(), []string{"docs"})
 				return newTestEngine("", "", fs, ignoreList)
 			},
 			candidates: []string{"nvim", "zsh", "docs", "mydocs"},
