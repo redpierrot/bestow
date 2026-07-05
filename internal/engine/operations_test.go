@@ -6,18 +6,16 @@ package engine
 
 import (
 	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"slices"
 	"testing"
+
+	"github.com/redpierrot/bestow/internal/file"
 )
 
 func TestOperations_validateDestinations(t *testing.T) {
-	cand := func(src, dest string) operationCandidate {
-		return operationCandidate{
-			source:      src,
-			destination: dest,
-		}
-	}
 	tests := []struct {
 		name       string
 		setup      func() *Engine
@@ -31,9 +29,9 @@ func TestOperations_validateDestinations(t *testing.T) {
 				return newTestEngine("", "", mf, nil)
 			},
 			candidates: []operationCandidate{
-				cand("dotfiles/nvim/.config/nvim/init.lua", "home/.config/nvim/init.lua"),
-				cand("dotfiles/nvim/.config/nvim/plugins.lua", "home/.config/nvim/plugins.lua"),
-				cand("dotfiles/bestow/.config/bestow/config.yaml", "home/.config/bestow/config.yaml"),
+				candidate("dotfiles/nvim/.config/nvim/init.lua", "home/.config/nvim/init.lua"),
+				candidate("dotfiles/nvim/.config/nvim/plugins.lua", "home/.config/nvim/plugins.lua"),
+				candidate("dotfiles/bestow/.config/bestow/config.yaml", "home/.config/bestow/config.yaml"),
 			},
 		},
 		{
@@ -43,9 +41,9 @@ func TestOperations_validateDestinations(t *testing.T) {
 				return newTestEngine("", "", mf, nil)
 			},
 			candidates: []operationCandidate{
-				cand("dotfiles/nvim/init.lua", "home/.config/init.lua"),
-				cand("dotfiles/yazi/config.yaml", "home/.config/config.yaml"),
-				cand("dotfiles/bestow/config.yaml", "home/.config/config.yaml"),
+				candidate("dotfiles/nvim/init.lua", "home/.config/init.lua"),
+				candidate("dotfiles/yazi/config.yaml", "home/.config/config.yaml"),
+				candidate("dotfiles/bestow/config.yaml", "home/.config/config.yaml"),
 			},
 			wantErrAs: func(t *testing.T, err error) {
 				var conflictError *ConflictError
@@ -70,27 +68,169 @@ func TestOperations_buildOperationCandidates(t *testing.T) {
 	tests := []struct {
 		name      string
 		setup     func() *Engine
-		args      []string
-		want      []string
+		pkg       string
+		want      []operationCandidate
 		wantErr   bool
 		wantErrIs error
-	}{}
+	}{
+		{
+			name: "build operation candidates",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					listAllFilesFn: func(parent string) ([]string, error) {
+						files := make([]string, 0)
+						for i := range 5 {
+							fileName := fmt.Sprintf("file_%d", i)
+							files = append(files, filepath.Join(parent, fileName))
+						}
+						return files, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			want: []operationCandidate{candidate("file_0", "file_0"), candidate("file_1", "file_1"), candidate("file_2", "file_2"), candidate("file_3", "file_3"), candidate("file_4", "file_4")},
+		},
+		{
+			name: "build operation candidates - with ignore files",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					listAllFilesFn: func(parent string) ([]string, error) {
+						files := make([]string, 0)
+						for i := range 5 {
+							fileName := fmt.Sprintf("file_%d", i)
+							files = append(files, filepath.Join(parent, fileName))
+						}
+						return files, nil
+					},
+				}
+				ignoreList := newTestIgnoreList(mf, newTestLogger(), []string{"*0*"})
+				return newTestEngine("", "", mf, ignoreList)
+			},
+			want: []operationCandidate{candidate("file_1", "file_1"), candidate("file_2", "file_2"), candidate("file_3", "file_3"), candidate("file_4", "file_4")},
+		},
+		{
+			name: "build operation candidates - no files list",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					listAllFilesFn: func(parent string) ([]string, error) {
+						return nil, nil
+					},
+				}
+				ignoreList := newTestIgnoreList(mf, newTestLogger(), []string{"*0*"})
+				return newTestEngine("", "", mf, ignoreList)
+			},
+			want: make([]operationCandidate, 0),
+		},
+	}
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {})
+		t.Run(tc.name, func(t *testing.T) {
+			e := tc.setup()
+			candidates, err := e.buildOperationCandidates(tc.pkg)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			if !slices.Equal(candidates, tc.want) {
+				t.Fatalf("got candidates %v, want %v", candidates, tc.want)
+			}
+		})
 	}
 }
 
 func TestOperations_buildFileActions(t *testing.T) {
 	tests := []struct {
-		name      string
-		setup     func() *Engine
-		args      []string
-		want      []string
-		wantErr   bool
-		wantErrIs error
-	}{}
+		name       string
+		setup      func() *Engine
+		candidates []operationCandidate
+		strategy   ResolveStrategy
+		cmdAction  CommandAction
+		want       []fileAction
+		wantErr    bool
+		wantErrIs  error
+		wantErrAs  func(*testing.T, error)
+	}{
+		{
+			name: "build operations - stow all",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return false, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
+			strategy:   ResolveSkip,
+			cmdAction:  CommandStow,
+			want: []fileAction{
+				newFileActionLink("file1", "file1", newTestLogger()),
+				newFileActionLink("file2", "file2", newTestLogger()),
+				newFileActionLink("file3", "file3", newTestLogger()),
+			},
+		},
+		{
+			name: "build operations - unstow all",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingManagedSymlink, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
+			strategy:   ResolveSkip,
+			cmdAction:  CommandUnstow,
+			want: []fileAction{
+				newFileActionRemove("file1", "file1", newTestLogger()),
+				newFileActionRemove("file2", "file2", newTestLogger()),
+				newFileActionRemove("file3", "file3", newTestLogger()),
+			},
+		},
+		{
+			name: "build operations - collect errors",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return false, os.ErrPermission
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
+			strategy:   ResolveSkip,
+			cmdAction:  CommandStow,
+			wantErr:    true,
+			wantErrAs: func(t *testing.T, err error) {
+				var aggregatedErr *AggregatedError
+				if !errors.As(err, &aggregatedErr) {
+					t.Fatalf("got %v, want aggregatedErr", err)
+				}
+			},
+		},
+	}
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {})
+		t.Run(tc.name, func(t *testing.T) {
+			e := tc.setup()
+			fileActions, err := e.buildFileActions(tc.candidates, tc.strategy, tc.cmdAction)
+			if tc.wantErrAs != nil {
+				tc.wantErrAs(t, err)
+				return
+			}
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			if len(fileActions) != len(tc.want) {
+				t.Fatalf("got file actions %d, want %d", len(fileActions), len(tc.want))
+			}
+			for i := range len(fileActions) {
+				if !isSameAction(fileActions[i], tc.want[i]) {
+					t.Fatalf("got %v, want %v", fileActions[i], tc.want[i])
+				}
+			}
+		})
 	}
 }
 
