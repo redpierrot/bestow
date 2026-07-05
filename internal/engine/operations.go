@@ -172,11 +172,7 @@ func (e *Engine) stowFileAction(candidate operationCandidate, strategy ResolveSt
 		return nil, err
 	}
 	if existing == file.ExistingDir {
-		return nil, &HintedError{
-			Op:   fmt.Sprintf("stow %s %s", candidate.source, candidate.destination),
-			Hint: fmt.Sprintf("remove the directory %s", candidate.destination),
-			Err:  errDestIsDir,
-		}
+		return nil, fmt.Errorf("stow %s: %w", candidate.destination, errDestIsDir)
 	}
 	if existing == file.ExistingManagedSymlink {
 		return newFileActionUpToDate(candidate.source, candidate.destination, "file already stowed", e.logger), nil
@@ -198,11 +194,7 @@ func (e *Engine) unstowFileAction(candidate operationCandidate) (fileAction, err
 	}
 	switch existing {
 	case file.ExistingDir:
-		return nil, &HintedError{
-			Op:   fmt.Sprintf("unstow %s %s", candidate.source, candidate.destination),
-			Hint: fmt.Sprintf("remove the directory %s", candidate.destination),
-			Err:  errDestIsDir,
-		}
+		return nil, fmt.Errorf("unstow %s: %w", candidate.destination, errDestIsDir)
 	case file.ExistingRegularFile:
 		return newFileActionSkip(candidate.source, candidate.destination, "regular file", e.logger), nil
 	case file.ExistingManagedSymlink:
