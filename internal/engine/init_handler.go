@@ -71,7 +71,7 @@ func (e *Engine) checkExistingFiles(configFile, ignoreFile string, force bool) e
 		return &HintedError{
 			Op:   fmt.Sprintf("exists %s", fileString),
 			Hint: "remove the existing files or use --force",
-			Err:  ErrFileExists,
+			Err:  errFileExists,
 		}
 	}
 	return nil

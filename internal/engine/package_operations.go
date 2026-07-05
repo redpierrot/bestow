@@ -56,7 +56,7 @@ func (e *Engine) retrievePackagesFromArgs(candidates []string) ([]string, error)
 			return nil, &HintedError{
 				Op:   fmt.Sprintf("read package %s", candidate),
 				Hint: "move root files to suitable directory (`zsh/`, `bash/`, etc.)",
-				Err:  ErrRootIsNotPkg,
+				Err:  errRootIsNotPkg,
 			}
 		}
 		pkgPath := filepath.Clean(candidate)
@@ -68,7 +68,7 @@ func (e *Engine) retrievePackagesFromArgs(candidates []string) ([]string, error)
 			return nil, &HintedError{
 				Op:   fmt.Sprintf("read package %s", candidate),
 				Hint: fmt.Sprintf("make sure the %s is a directory", candidate),
-				Err:  ErrPkgIsNotDir,
+				Err:  errPkgIsNotDir,
 			}
 		}
 		result = append(result, pkgPath)

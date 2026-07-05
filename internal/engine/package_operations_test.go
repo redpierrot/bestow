@@ -191,7 +191,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 			},
 			args:      []string{"pkg1", ".", "pkg3"},
 			wantErr:   true,
-			wantErrIs: ErrRootIsNotPkg,
+			wantErrIs: errRootIsNotPkg,
 		},
 		{
 			name: "retrieve packages from args - not dir",
@@ -205,7 +205,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 			},
 			args:      []string{"pkg1", "pkg3"},
 			wantErr:   true,
-			wantErrIs: ErrPkgIsNotDir,
+			wantErrIs: errPkgIsNotDir,
 		},
 		{
 			name: "retrieve packages from args - dir checking fail",

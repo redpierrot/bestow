@@ -70,16 +70,16 @@ func (e *ConflictError) Error() string {
 func (e *ConflictError) Unwrap() error { return e.Err }
 
 var (
-	// ErrDestIsDir is returned when the destination file path is actually a directory
-	ErrDestIsDir = errors.New("destination is a directory")
-	// ErrPkgIsNotDir is returned when the provided package path is not a directory
-	ErrPkgIsNotDir = errors.New("package is not a directory")
-	// ErrRootIsNotPkg is returned when the root is provided as a package path
-	ErrRootIsNotPkg = errors.New("root (.) is not a package")
-	// ErrFileExists is returned when the provided destination is an existing file
-	ErrFileExists = errors.New("file already exists")
-	// ErrMultiFile is returned when multiple source files compete for the same destination
-	ErrMultiFile = errors.New("multiple files competing for the same destination")
-	// ErrUnsupportedAction is returned when the provided action is unsupported
-	ErrUnsupportedAction = errors.New("unsupported action")
+	// errDestIsDir is returned when the destination file path is actually a directory
+	errDestIsDir = errors.New("destination is a directory")
+	// errPkgIsNotDir is returned when the provided package path is not a directory
+	errPkgIsNotDir = errors.New("package is not a directory")
+	// errRootIsNotPkg is returned when the root is provided as a package path
+	errRootIsNotPkg = errors.New("root (.) is not a package")
+	// errFileExists is returned when the provided destination is an existing file
+	errFileExists = errors.New("file already exists")
+	// errMultiFile is returned when multiple source files compete for the same destination
+	errMultiFile = errors.New("multiple files competing for the same destination")
+	// errUnsupportedAction is returned when the provided action is unsupported
+	errUnsupportedAction = errors.New("unsupported action")
 )
