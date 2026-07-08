@@ -21,11 +21,11 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name: "build package list",
+			name: "no args",
 			setup: func() *Engine {
 				src := filepath.Join("home", "user", "dotfiles")
 				dest := filepath.Join("home", "user")
-				packageList := getSamplePackageList(src)
+				packageList := testPackageList(src)
 				fs := &MockFileSystem{
 					listDirFn: func(parent string) ([]string, error) {
 						return packageList, nil
@@ -36,11 +36,11 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 			want: []string{"pkg1", "pkg2", "pkg3"},
 		},
 		{
-			name: "build package list - with args",
+			name: "with args",
 			setup: func() *Engine {
 				src := filepath.Join("home", "user", "dotfiles")
 				dest := filepath.Join("home", "user")
-				packageList := getSamplePackageList(src)
+				packageList := testPackageList(src)
 				fs := &MockFileSystem{
 					listDirFn: func(parent string) ([]string, error) {
 						return packageList, nil
@@ -55,7 +55,7 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 			want: []string{"pkg2"},
 		},
 		{
-			name: "build package list - list dirs error",
+			name: "list dirs error",
 			setup: func() *Engine {
 				src := filepath.Join("home", "user", "dotfiles")
 				dest := filepath.Join("home", "user")
@@ -73,14 +73,11 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 			wantErrIs: os.ErrNotExist,
 		},
 		{
-			name: "build package list - list dirs error with args",
+			name: "list dirs error with args",
 			setup: func() *Engine {
 				src := filepath.Join("home", "user", "dotfiles")
 				dest := filepath.Join("home", "user")
 				fs := &MockFileSystem{
-					listDirFn: func(parent string) ([]string, error) {
-						return nil, os.ErrNotExist
-					},
 					isDirFn: func(path string) (bool, error) {
 						return false, os.ErrNotExist
 					},
@@ -94,8 +91,8 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			engine := tc.setup()
-			packageList, err := engine.buildPackageList(tc.args)
+			e := tc.setup()
+			packageList, err := e.buildPackageList(tc.args)
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}
@@ -115,7 +112,7 @@ func TestPackageOperations_retrieveAllPackages(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name: "retrieve all packages",
+			name: "with multiple packages",
 			setup: func() *Engine {
 				src := filepath.Join("home", "user", "dotfiles")
 				dest := filepath.Join("home", "user")
@@ -130,7 +127,7 @@ func TestPackageOperations_retrieveAllPackages(t *testing.T) {
 			want: []string{"pkg1", "pkg2", "pkg3"},
 		},
 		{
-			name: "retrieve all packages - list dir error",
+			name: "list dir error",
 			setup: func() *Engine {
 				fs := &MockFileSystem{
 					listDirFn: func(parent string) ([]string, error) {
@@ -167,7 +164,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name: "retrieve packages from args",
+			name: "existing packages",
 			setup: func() *Engine {
 				fs := &MockFileSystem{
 					isDirFn: func(path string) (bool, error) {
@@ -180,7 +177,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 			args: []string{"pkg1", "pkg2", "pkg3"},
 		},
 		{
-			name: "retrieve packages from args - root package",
+			name: "root package",
 			setup: func() *Engine {
 				fs := &MockFileSystem{
 					isDirFn: func(path string) (bool, error) {
@@ -194,7 +191,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 			wantErrIs: errRootIsNotPkg,
 		},
 		{
-			name: "retrieve packages from args - not dir",
+			name: "not dir",
 			setup: func() *Engine {
 				fs := &MockFileSystem{
 					isDirFn: func(path string) (bool, error) {
@@ -208,7 +205,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 			wantErrIs: errPkgIsNotDir,
 		},
 		{
-			name: "retrieve packages from args - dir checking fail",
+			name: "dir checking fail",
 			setup: func() *Engine {
 				fs := &MockFileSystem{
 					isDirFn: func(path string) (bool, error) {
@@ -246,7 +243,7 @@ func TestPackageOperations_filterPackages(t *testing.T) {
 		wantErrIs  error
 	}{
 		{
-			name: "filter packages",
+			name: "filter with ignore",
 			setup: func() *Engine {
 				fs := &MockFileSystem{}
 				ignoreList := newTestIgnoreList(fs, newTestLogger(), []string{"docs"})
@@ -254,6 +251,25 @@ func TestPackageOperations_filterPackages(t *testing.T) {
 			},
 			candidates: []string{"nvim", "zsh", "docs", "mydocs"},
 			want:       []string{"nvim", "zsh", "mydocs"},
+		},
+		{
+			name: "no candidates",
+			setup: func() *Engine {
+				fs := &MockFileSystem{}
+				return newTestEngine("", "", fs, nil)
+			},
+			candidates: []string{},
+			want:       []string{},
+		},
+		{
+			name: "all filtered out",
+			setup: func() *Engine {
+				fs := &MockFileSystem{}
+				ignoreList := newTestIgnoreList(fs, newTestLogger(), []string{"pkg*"})
+				return newTestEngine("", "", fs, ignoreList)
+			},
+			candidates: []string{"pkg1", "pkg2", "pkg3"},
+			want:       []string{},
 		},
 	}
 	for _, tc := range tests {

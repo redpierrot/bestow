@@ -1,5 +1,5 @@
 /*
-All Rights Reversed (t *testing.T)
+All Rights Reversed (ɔ)
 */
 
 package engine
@@ -10,20 +10,74 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/redpierrot/bestow/internal/file"
 )
+
+func TestOperations_buildOperations(t *testing.T) {
+	tests := []struct {
+		name      string
+		setup     func() *Engine
+		cfg       *CommandConfig
+		want      []fileAction
+		wantErr   bool
+		wantErrIs error
+	}{
+		{
+			name: "stow link",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					listAllFilesFn: func(parent string) ([]string, error) {
+						return []string{"src_file_1", "src_file_2"}, nil
+					},
+					isDirFn: func(path string) (bool, error) {
+						return true, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			cfg: &CommandConfig{
+				Action: CommandStow,
+				Args:   []string{"bestow"},
+			},
+			want: []fileAction{
+				newFileActionLink("src_file_1", "src_file_1", newTestLogger()),
+				newFileActionLink("src_file_2", "src_file_2", newTestLogger()),
+			},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			e := tc.setup()
+			actions, err := e.buildOperations(tc.cfg)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			if len(actions) != len(tc.want) {
+				t.Fatalf("got actions %d, want %d", len(actions), len(tc.want))
+			}
+			for i := range len(actions) {
+				if actions[i].kind() != tc.want[i].kind() {
+					t.Fatalf("got action %v, want %v", actions[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
 
 func TestOperations_validateDestinations(t *testing.T) {
 	tests := []struct {
 		name       string
 		setup      func() *Engine
 		candidates []operationCandidate
+		wantErr    bool
 		wantErrAs  func(*testing.T, error)
 	}{
 		{
-			name: "validate destinations",
+			name: "no conflict",
 			setup: func() *Engine {
 				mf := &MockFileSystem{}
 				return newTestEngine("", "", mf, nil)
@@ -35,7 +89,7 @@ func TestOperations_validateDestinations(t *testing.T) {
 			},
 		},
 		{
-			name: "validate destinations - conflicts",
+			name: "conflict",
 			setup: func() *Engine {
 				mf := &MockFileSystem{}
 				return newTestEngine("", "", mf, nil)
@@ -45,6 +99,7 @@ func TestOperations_validateDestinations(t *testing.T) {
 				candidate("dotfiles/yazi/config.yaml", "home/.config/config.yaml"),
 				candidate("dotfiles/bestow/config.yaml", "home/.config/config.yaml"),
 			},
+			wantErr: true,
 			wantErrAs: func(t *testing.T, err error) {
 				var conflictError *ConflictError
 				if !errors.As(err, &conflictError) {
@@ -57,8 +112,11 @@ func TestOperations_validateDestinations(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			e := tc.setup()
 			err := e.validateDestinations(tc.candidates)
-			if tc.wantErrAs != nil {
-				tc.wantErrAs(t, err)
+			if validateErrScenario(t, tc.wantErr, err, nil) {
+				if tc.wantErrAs != nil {
+					tc.wantErrAs(t, err)
+				}
+				return
 			}
 		})
 	}
@@ -74,7 +132,7 @@ func TestOperations_buildOperationCandidates(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name: "build operation candidates",
+			name: "no ignore list",
 			setup: func() *Engine {
 				mf := &MockFileSystem{
 					listAllFilesFn: func(parent string) ([]string, error) {
@@ -88,10 +146,16 @@ func TestOperations_buildOperationCandidates(t *testing.T) {
 				}
 				return newTestEngine("", "", mf, nil)
 			},
-			want: []operationCandidate{candidate("file_0", "file_0"), candidate("file_1", "file_1"), candidate("file_2", "file_2"), candidate("file_3", "file_3"), candidate("file_4", "file_4")},
+			want: []operationCandidate{
+				candidate("file_0", "file_0"),
+				candidate("file_1", "file_1"),
+				candidate("file_2", "file_2"),
+				candidate("file_3", "file_3"),
+				candidate("file_4", "file_4"),
+			},
 		},
 		{
-			name: "build operation candidates - with ignore files",
+			name: "with ignore list",
 			setup: func() *Engine {
 				mf := &MockFileSystem{
 					listAllFilesFn: func(parent string) ([]string, error) {
@@ -109,7 +173,7 @@ func TestOperations_buildOperationCandidates(t *testing.T) {
 			want: []operationCandidate{candidate("file_1", "file_1"), candidate("file_2", "file_2"), candidate("file_3", "file_3"), candidate("file_4", "file_4")},
 		},
 		{
-			name: "build operation candidates - no files list",
+			name: "empty files list",
 			setup: func() *Engine {
 				mf := &MockFileSystem{
 					listAllFilesFn: func(parent string) ([]string, error) {
@@ -149,7 +213,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 		wantErrAs  func(*testing.T, error)
 	}{
 		{
-			name: "build operations - stow all",
+			name: "stow all",
 			setup: func() *Engine {
 				mf := &MockFileSystem{
 					existsFn: func(path string) (bool, error) {
@@ -168,7 +232,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 			},
 		},
 		{
-			name: "build operations - unstow all",
+			name: "unstow all",
 			setup: func() *Engine {
 				mf := &MockFileSystem{
 					existsFn: func(path string) (bool, error) {
@@ -190,7 +254,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 			},
 		},
 		{
-			name: "build operations - collect errors",
+			name: "collect errors",
 			setup: func() *Engine {
 				mf := &MockFileSystem{
 					existsFn: func(path string) (bool, error) {
@@ -215,11 +279,10 @@ func TestOperations_buildFileActions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			e := tc.setup()
 			fileActions, err := e.buildFileActions(tc.candidates, tc.strategy, tc.cmdAction)
-			if tc.wantErrAs != nil {
-				tc.wantErrAs(t, err)
-				return
-			}
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				if tc.wantErrAs != nil {
+					tc.wantErrAs(t, err)
+				}
 				return
 			}
 			if len(fileActions) != len(tc.want) {
@@ -238,13 +301,303 @@ func TestOperations_stowFileAction(t *testing.T) {
 	tests := []struct {
 		name      string
 		setup     func() *Engine
-		args      []string
-		want      []string
+		strategy  ResolveStrategy
+		want      ActionKind
 		wantErr   bool
 		wantErrIs error
-	}{}
+	}{
+		{
+			name: "non existing destination",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return false, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy: ResolveSkip,
+			want:     ActionLink,
+		},
+		{
+			name: "existing dir: skip",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingDir, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy:  ResolveSkip,
+			wantErr:   true,
+			wantErrIs: errDestIsDir,
+		},
+		{
+			name: "existing dir: force",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingDir, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy:  ResolveForce,
+			wantErr:   true,
+			wantErrIs: errDestIsDir,
+		},
+		{
+			name: "existing dir: adopt",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingDir, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy:  ResolveAdopt,
+			wantErr:   true,
+			wantErrIs: errDestIsDir,
+		},
+		{
+			name: "existing dir: backup",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingDir, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy:  ResolveBackup,
+			wantErr:   true,
+			wantErrIs: errDestIsDir,
+		},
+		{
+			name: "existing managed symlink: skip",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingManagedSymlink, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy: ResolveSkip,
+			want:     ActionUpToDate,
+		},
+		{
+			name: "existing managed symlink: force",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingManagedSymlink, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy: ResolveForce,
+			want:     ActionUpToDate,
+		},
+		{
+			name: "existing managed symlink: adopt",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingManagedSymlink, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy: ResolveAdopt,
+			want:     ActionUpToDate,
+		},
+		{
+			name: "existing managed symlink: backup",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingManagedSymlink, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy: ResolveBackup,
+			want:     ActionUpToDate,
+		},
+		{
+			name: "existing foreign symlink: skip",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingForeignSymlink, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy: ResolveSkip,
+			want:     ActionSkip,
+		},
+		{
+			name: "existing foreign symlink: force",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingForeignSymlink, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy: ResolveForce,
+			want:     ActionReplace,
+		},
+		{
+			name: "existing foreign symlink: adopt",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingForeignSymlink, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy: ResolveAdopt,
+			want:     ActionSkip,
+		},
+		{
+			name: "existing foreign symlink: backup",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						if strings.Contains(path, "backup") {
+							return false, nil
+						}
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingForeignSymlink, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy: ResolveBackup,
+			want:     ActionBackup,
+		},
+		{
+			name: "existing regular file: skip",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingRegularFile, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy: ResolveSkip,
+			want:     ActionSkip,
+		},
+		{
+			name: "existing regular file: force",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingRegularFile, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy: ResolveForce,
+			want:     ActionReplace,
+		},
+		{
+			name: "existing regular file: adopt",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingRegularFile, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy: ResolveAdopt,
+			want:     ActionAdopt,
+		},
+		{
+			name: "existing regular file: backup",
+			setup: func() *Engine {
+				mf := &MockFileSystem{
+					existsFn: func(path string) (bool, error) {
+						if strings.Contains(path, "backup") {
+							return false, nil
+						}
+						return true, nil
+					},
+					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+						return file.ExistingRegularFile, nil
+					},
+				}
+				return newTestEngine("", "", mf, nil)
+			},
+			strategy: ResolveBackup,
+			want:     ActionBackup,
+		},
+	}
 	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {})
+		t.Run(tc.name, func(t *testing.T) {
+			e := tc.setup()
+			cand := candidate("", "") // Dummy candidate since we don't care about paths here.
+			fa, err := e.stowFileAction(cand, tc.strategy)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			if fa.kind() != tc.want {
+				t.Fatalf("got %v, want %v", fa.kind(), tc.want)
+			}
+		})
 	}
 }
 
@@ -253,12 +606,12 @@ func TestOperations_unstowFileAction(t *testing.T) {
 		name      string
 		setup     func() *Engine
 		candidate operationCandidate
-		want      fileAction
+		want      ActionKind
 		wantErr   bool
 		wantErrIs error
 	}{
 		{
-			name: "unstow file action - existing managed symlink",
+			name: "existing managed symlink",
 			setup: func() *Engine {
 				mf := &MockFileSystem{
 					existsFn: func(path string) (bool, error) {
@@ -271,10 +624,10 @@ func TestOperations_unstowFileAction(t *testing.T) {
 				return newTestEngine("", "", mf, nil)
 			},
 			candidate: candidate("src_file", "dest_file"),
-			want:      newFileActionRemove("src_file", "dest_file", newTestLogger()),
+			want:      ActionRemove,
 		},
 		{
-			name: "unstow file action - existing foreign symlink",
+			name: "existing foreign symlink",
 			setup: func() *Engine {
 				mf := &MockFileSystem{
 					existsFn: func(path string) (bool, error) {
@@ -287,10 +640,10 @@ func TestOperations_unstowFileAction(t *testing.T) {
 				return newTestEngine("", "", mf, nil)
 			},
 			candidate: candidate("src_file", "dest_file"),
-			want:      newFileActionSkip("src_file", "dest_file", "", newTestLogger()),
+			want:      ActionSkip,
 		},
 		{
-			name: "unstow file action - existing regular file",
+			name: "existing regular file",
 			setup: func() *Engine {
 				mf := &MockFileSystem{
 					existsFn: func(path string) (bool, error) {
@@ -303,10 +656,10 @@ func TestOperations_unstowFileAction(t *testing.T) {
 				return newTestEngine("", "", mf, nil)
 			},
 			candidate: candidate("src_file", "dest_file"),
-			want:      newFileActionSkip("src_file", "dest_file", "", newTestLogger()),
+			want:      ActionSkip,
 		},
 		{
-			name: "unstow file action - existing dir",
+			name: "existing dir",
 			setup: func() *Engine {
 				mf := &MockFileSystem{
 					existsFn: func(path string) (bool, error) {
@@ -323,7 +676,7 @@ func TestOperations_unstowFileAction(t *testing.T) {
 			wantErrIs: errDestIsDir,
 		},
 		{
-			name: "unstow file action - dest not exist",
+			name: "dest not exist",
 			setup: func() *Engine {
 				mf := &MockFileSystem{
 					existsFn: func(path string) (bool, error) {
@@ -336,7 +689,7 @@ func TestOperations_unstowFileAction(t *testing.T) {
 				return newTestEngine("", "", mf, nil)
 			},
 			candidate: candidate("src_file", "dest_file"),
-			want:      newFileActionUpToDate("src_file", "dest_file", "dest not exist", newTestLogger()),
+			want:      ActionUpToDate,
 		},
 	}
 	for _, tc := range tests {
@@ -346,8 +699,8 @@ func TestOperations_unstowFileAction(t *testing.T) {
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}
-			if fa.kind() != tc.want.kind() {
-				t.Fatalf("got %v, want %v", fa, tc.want)
+			if fa.kind() != tc.want {
+				t.Fatalf("got %v, want %v", fa.kind(), tc.want)
 			}
 		})
 	}
@@ -356,7 +709,7 @@ func TestOperations_unstowFileAction(t *testing.T) {
 func TestOperations_calculateBackupPath(t *testing.T) {
 	tests := []struct {
 		name          string
-		setup         func(path string, existingFiles []string) *Engine
+		setup         func(existingFiles []string) *Engine
 		existingFiles []string
 		want          string
 		wantErr       bool
@@ -364,8 +717,8 @@ func TestOperations_calculateBackupPath(t *testing.T) {
 		wantErrAs     func(*testing.T, error)
 	}{
 		{
-			name: "calculate backup path",
-			setup: func(path string, _ []string) *Engine {
+			name: "no existing backup",
+			setup: func(_ []string) *Engine {
 				mf := &MockFileSystem{
 					existsFn: func(path string) (bool, error) {
 						return false, nil
@@ -376,8 +729,8 @@ func TestOperations_calculateBackupPath(t *testing.T) {
 			want: "dest_file.0.bestow.backup",
 		},
 		{
-			name: "calculate backup path - existing backed up files",
-			setup: func(path string, existingFiles []string) *Engine {
+			name: "existing backed up files",
+			setup: func(existingFiles []string) *Engine {
 				mf := &MockFileSystem{
 					existsFn: func(path string) (bool, error) {
 						if slices.Contains(existingFiles, path) {
@@ -392,8 +745,8 @@ func TestOperations_calculateBackupPath(t *testing.T) {
 			want:          "dest_file.3.bestow.backup",
 		},
 		{
-			name: "calculate backup path -  existing return err",
-			setup: func(path string, existingFiles []string) *Engine {
+			name: "existing return err",
+			setup: func(existingFiles []string) *Engine {
 				mf := &MockFileSystem{
 					existsFn: func(path string) (bool, error) {
 						return false, os.ErrPermission
@@ -406,8 +759,8 @@ func TestOperations_calculateBackupPath(t *testing.T) {
 			wantErrIs:     os.ErrPermission,
 		},
 		{
-			name: "calculate backup path - existing backed up files",
-			setup: func(path string, existingFiles []string) *Engine {
+			name: "exceeds maximum backups",
+			setup: func(existingFiles []string) *Engine {
 				mf := &MockFileSystem{
 					existsFn: func(path string) (bool, error) {
 						if slices.Contains(existingFiles, path) {
@@ -427,6 +780,7 @@ func TestOperations_calculateBackupPath(t *testing.T) {
 				"dest_file.5.bestow.backup",
 				"dest_file.6.bestow.backup",
 			},
+			wantErr: true,
 			wantErrAs: func(t *testing.T, err error) {
 				var hintedErr *HintedError
 				if !errors.As(err, &hintedErr) {
@@ -438,32 +792,17 @@ func TestOperations_calculateBackupPath(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			path := "dest_file"
-			eng := tc.setup(path, tc.existingFiles)
+			eng := tc.setup(tc.existingFiles)
 			backupPath, err := eng.calculateBackupPath(path)
-			if tc.wantErrAs != nil {
-				tc.wantErrAs(t, err)
-				return
-			}
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				if tc.wantErrAs != nil {
+					tc.wantErrAs(t, err)
+				}
 				return
 			}
 			if backupPath != tc.want {
 				t.Fatalf("got %v, want %v", backupPath, tc.want)
 			}
 		})
-	}
-}
-
-func TestOperations_calculateStowActionByStrategy(t *testing.T) {
-	tests := []struct {
-		name      string
-		setup     func() *Engine
-		args      []string
-		want      []string
-		wantErr   bool
-		wantErrIs error
-	}{}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {})
 	}
 }

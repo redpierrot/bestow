@@ -29,7 +29,7 @@ func TestHandler_CreateFile(t *testing.T) {
 		handler   *Handler
 	}{
 		{
-			name:    "create file",
+			name:    "no error",
 			setup:   func(t *testing.T, parent string) {},
 			content: "this is sample file content",
 			handler: NewHandler(newTestLogger()),
@@ -50,6 +50,20 @@ func TestHandler_CreateFile(t *testing.T) {
 			wantErr:   true,
 			wantErrIs: os.ErrPermission,
 		},
+		{
+			name: "existing path",
+			setup: func(t *testing.T, parent string) {
+				if err := os.Chmod(parent, permWritableDir); err != nil {
+					t.Fatal(err)
+				}
+				_, err := os.Create(filepath.Join(parent, "file_path"))
+				if err != nil {
+					t.Fatal(err)
+				}
+			},
+			content: "this is sample file content",
+			handler: NewHandler(newTestLogger()),
+		},
 	}
 
 	for _, tc := range tests {
@@ -58,10 +72,7 @@ func TestHandler_CreateFile(t *testing.T) {
 			path := filepath.Join(testRoot, "file_path")
 			tc.setup(t, testRoot)
 			err := tc.handler.CreateFile(path, tc.content)
-			if tc.wantErr {
-				if !errors.Is(err, tc.wantErrIs) {
-					t.Fatalf("got err %v, want %v", err, tc.wantErrIs)
-				}
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}
 			content, err := os.ReadFile(path)
@@ -85,12 +96,12 @@ func TestHandler_CreateDir(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name:    "create dir",
+			name:    "non existing path",
 			setup:   func(t *testing.T, path string) {},
 			handler: NewHandler(newTestLogger()),
 		},
 		{
-			name: "create dir on existing dir",
+			name: "existing dir",
 			setup: func(t *testing.T, path string) {
 				if err := os.Mkdir(path, permWritableDir); err != nil {
 					t.Fatal(err)
@@ -107,7 +118,7 @@ func TestHandler_CreateDir(t *testing.T) {
 			},
 		},
 		{
-			name: "create dir with no perm",
+			name: "no perm",
 			setup: func(t *testing.T, path string) {
 				if os.Getuid() == 0 {
 					t.Skip("root bypasses permission checks")
@@ -197,7 +208,7 @@ func TestHandler_Link(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			testRoot := t.TempDir()
 			src := filepath.Join(testRoot, "src_file")
-			if err := os.WriteFile(src, []byte("Sample Config"), 0o644); err != nil {
+			if err := os.WriteFile(src, []byte("Sample Config"), permFileWrite); err != nil {
 				t.Fatal(err)
 			}
 
@@ -231,7 +242,7 @@ func TestHandler_IsEmptyDir(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name: "check empty dir",
+			name: "empty dir",
 			setup: func(t *testing.T, dir string) {
 				if err := os.Mkdir(dir, permWritableDir); err != nil {
 					t.Fatal(err)
@@ -241,7 +252,7 @@ func TestHandler_IsEmptyDir(t *testing.T) {
 			want:    true,
 		},
 		{
-			name: "check non-empty dir",
+			name: "non-empty dir",
 			setup: func(t *testing.T, dir string) {
 				if err := os.Mkdir(dir, permWritableDir); err != nil {
 					t.Fatal(err)
@@ -255,7 +266,7 @@ func TestHandler_IsEmptyDir(t *testing.T) {
 			want:    false,
 		},
 		{
-			name:      "check non-existent dir",
+			name:      "non-existent dir",
 			setup:     func(t *testing.T, dir string) {},
 			handler:   NewHandler(newTestLogger()),
 			want:      false,
@@ -289,7 +300,7 @@ func TestHandler_Remove(t *testing.T) {
 		handler   *Handler
 	}{
 		{
-			name: "remove file",
+			name: "file",
 			path: "src_file",
 			setup: func(t *testing.T, path string) {
 				if err := os.WriteFile(path, []byte("test file content"), permFileWrite); err != nil {
@@ -299,7 +310,7 @@ func TestHandler_Remove(t *testing.T) {
 			handler: NewHandler(newTestLogger()),
 		},
 		{
-			name: "remove dir",
+			name: "dir",
 			path: "src_dir",
 			setup: func(t *testing.T, path string) {
 				if err := os.Mkdir(path, permWritableDir); err != nil {
@@ -309,7 +320,7 @@ func TestHandler_Remove(t *testing.T) {
 			handler: NewHandler(newTestLogger()),
 		},
 		{
-			name:    "remove non-existing",
+			name:    "non-existing",
 			path:    "src_dir",
 			setup:   func(t *testing.T, path string) {},
 			handler: NewHandler(newTestLogger()),
@@ -326,13 +337,9 @@ func TestHandler_Remove(t *testing.T) {
 				return
 			}
 			_, err = os.Stat(path)
-			if err != nil {
-				if !errors.Is(err, os.ErrNotExist) {
-					t.Fatalf("got err %v, want %v", err, os.ErrNotExist)
-				}
-				return
+			if !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("got err %v, want %v", err, os.ErrNotExist)
 			}
-			t.Fatalf("file not removed %s", path)
 		})
 	}
 }
@@ -346,7 +353,7 @@ func TestHandler_Move(t *testing.T) {
 		handler   *Handler
 	}{
 		{
-			name: "move file",
+			name: "existing file",
 			setup: func(t *testing.T, src, _ string) {
 				if err := os.WriteFile(src, []byte("test file content"), permFileWrite); err != nil {
 					t.Fatal(err)
@@ -355,7 +362,7 @@ func TestHandler_Move(t *testing.T) {
 			handler: NewHandler(newTestLogger()),
 		},
 		{
-			name: "move no perm",
+			name: "no perm",
 			setup: func(t *testing.T, src, dest string) {
 				if err := os.WriteFile(src, []byte("test file content"), permFileWrite); err != nil {
 					t.Fatal(err)
@@ -385,13 +392,9 @@ func TestHandler_Move(t *testing.T) {
 				t.Fatal(err)
 			}
 			_, err = os.Stat(src)
-			if err != nil {
-				if !errors.Is(err, os.ErrNotExist) {
-					t.Fatalf("got error %v, want %v", err, os.ErrNotExist)
-				}
-				return
+			if !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("got error %v, want %v", err, os.ErrNotExist)
 			}
-			t.Fatalf("src not removed %s", src)
 		})
 	}
 }
@@ -405,7 +408,7 @@ func validateErrScenario(t *testing.T, wantErr bool, err, wantErrIs error) bool 
 	if (err != nil) != wantErr {
 		t.Fatalf("got error %v, want %v", err, wantErr)
 	}
-	if wantErr && !errors.Is(err, wantErrIs) {
+	if wantErr && wantErrIs != nil && !errors.Is(err, wantErrIs) {
 		t.Fatalf("error got %v, want %v", err, wantErrIs)
 	}
 	return wantErr

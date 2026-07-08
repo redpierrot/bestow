@@ -46,13 +46,13 @@ func validateErrScenario(t *testing.T, wantErr bool, err, wantErrIs error) bool 
 	if (err != nil) != wantErr {
 		t.Fatalf("got error %v, want %v", err, wantErr)
 	}
-	if wantErr && !errors.Is(err, wantErrIs) {
+	if wantErr && wantErrIs != nil && !errors.Is(err, wantErrIs) {
 		t.Fatalf("error got %v, want %v", err, wantErrIs)
 	}
 	return wantErr
 }
 
-func getSamplePackageList(parent string) []string {
+func testPackageList(parent string) []string {
 	return []string{filepath.Join(parent, "pkg1"), filepath.Join(parent, "pkg2"), filepath.Join(parent, "pkg3")}
 }
 
@@ -80,6 +80,7 @@ type MockFileSystem struct {
 	moveFn             func(src, target string) error
 	removeFn           func(path string) error
 	isDirFn            func(path string) (bool, error)
+	isEmptyDirFn       func(path string) (bool, error)
 	existsFn           func(path string) (bool, error)
 	readLinesFn        func(path string) ([]string, error)
 	existingFileTypeFn func(src, dest string) (file.ExistingType, error)
@@ -142,6 +143,9 @@ func (mf *MockFileSystem) IsDir(path string) (bool, error) {
 }
 
 func (mf *MockFileSystem) IsEmptyDir(path string) (bool, error) {
+	if mf.isEmptyDirFn != nil {
+		return mf.isEmptyDirFn(path)
+	}
 	return true, nil
 }
 

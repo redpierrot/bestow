@@ -23,7 +23,7 @@ func TestReadHandler_ListAllFiles(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name: "list files",
+			name: "existing files",
 			setup: func(t *testing.T, dir string) {
 				for i := range 5 {
 					filePath := filepath.Join(dir, fmt.Sprintf("file_%d", i))
@@ -36,12 +36,12 @@ func TestReadHandler_ListAllFiles(t *testing.T) {
 			want:    []string{"file_0", "file_1", "file_2", "file_3", "file_4"},
 		},
 		{
-			name:    "list files - empty dir",
+			name:    "empty dir",
 			setup:   func(t *testing.T, dir string) {},
 			handler: NewHandler(newTestLogger()),
 		},
 		{
-			name: "list files - with sub dirs",
+			name: "with sub dirs",
 			setup: func(t *testing.T, dir string) {
 				paths := make([]string, 0, 3)
 				for i := range 3 {
@@ -61,7 +61,7 @@ func TestReadHandler_ListAllFiles(t *testing.T) {
 			want:    []string{filepath.Join("subdir_0", "file"), filepath.Join("subdir_1", "file"), filepath.Join("subdir_2", "file")},
 		},
 		{
-			name: "list files - with sub dirs as symlinks",
+			name: "with sub dirs as symlinks",
 			setup: func(t *testing.T, dir string) {
 				paths := make([]string, 0, 3)
 				for i := range 3 {
@@ -84,7 +84,7 @@ func TestReadHandler_ListAllFiles(t *testing.T) {
 			want:    []string{filepath.Join("subdir_0", "file"), filepath.Join("subdir_1", "file"), filepath.Join("subdir_2", "file")},
 		},
 		{
-			name:  "list files - non existent path",
+			name:  "non existent path",
 			setup: func(t *testing.T, dir string) {},
 			dirFn: func(t *testing.T, dir string) string {
 				return filepath.Join(dir, "subdir")
@@ -129,7 +129,7 @@ func TestReadHandler_ExistingFileType(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name: "existing file type dir",
+			name: "dir",
 			setup: func(t *testing.T, src, dest string) (string, string) {
 				if err := os.Mkdir(dest, permNone); err != nil {
 					t.Fatal(err)
@@ -140,7 +140,7 @@ func TestReadHandler_ExistingFileType(t *testing.T) {
 			want:    ExistingDir,
 		},
 		{
-			name: "existing file type regular file",
+			name: "regular file",
 			setup: func(t *testing.T, src, dest string) (string, string) {
 				if err := os.WriteFile(dest, []byte("file content"), permNone); err != nil {
 					t.Fatal(err)
@@ -151,7 +151,7 @@ func TestReadHandler_ExistingFileType(t *testing.T) {
 			want:    ExistingRegularFile,
 		},
 		{
-			name: "existing file type non existing dest",
+			name: "non existing dest",
 			setup: func(t *testing.T, src, dest string) (string, string) {
 				return src, dest
 			},
@@ -160,7 +160,7 @@ func TestReadHandler_ExistingFileType(t *testing.T) {
 			wantErrIs: os.ErrNotExist,
 		},
 		{
-			name: "existing file type non existing src",
+			name: "non existing src",
 			setup: func(t *testing.T, src, dest string) (string, string) {
 				if err := os.Mkdir(src, permWritableDir); err != nil {
 					t.Fatal(err)
@@ -184,7 +184,7 @@ func TestReadHandler_ExistingFileType(t *testing.T) {
 			wantErrIs: os.ErrNotExist,
 		},
 		{
-			name: "existing file type dest link missing",
+			name: "dest link missing",
 			setup: func(t *testing.T, src, dest string) (string, string) {
 				if err := os.Mkdir(src, permWritableDir); err != nil {
 					t.Fatal(err)
@@ -213,7 +213,7 @@ func TestReadHandler_ExistingFileType(t *testing.T) {
 			want:    ExistingForeignSymlink,
 		},
 		{
-			name: "existing file type managed symlink",
+			name: "managed symlink",
 			setup: func(t *testing.T, src, dest string) (string, string) {
 				if err := os.Mkdir(src, permWritableDir); err != nil {
 					t.Fatal(err)
@@ -235,7 +235,7 @@ func TestReadHandler_ExistingFileType(t *testing.T) {
 			want:    ExistingManagedSymlink,
 		},
 		{
-			name: "existing file type foreign symlink - different target",
+			name: "foreign symlink - different target",
 			setup: func(t *testing.T, src, dest string) (string, string) {
 				if err := os.Mkdir(src, permWritableDir); err != nil {
 					t.Fatal(err)
@@ -289,7 +289,7 @@ func TestReadHandler_ListDirs(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name: "list dirs",
+			name: "existing dirs",
 			setup: func(t *testing.T, parent string) {
 				if err := os.Mkdir(parent, permWritableDir); err != nil {
 					t.Fatal(err)
@@ -299,14 +299,13 @@ func TestReadHandler_ListDirs(t *testing.T) {
 					if err := os.Mkdir(subDir, permWritableDir); err != nil {
 						t.Fatal(err)
 					}
-					t.Logf("created: %s", subDir)
 				}
 			},
 			handler: NewHandler(newTestLogger()),
 			want:    []string{"subdir_0", "subdir_1", "subdir_2", "subdir_3", "subdir_4"},
 		},
 		{
-			name: "list dirs - empty dir",
+			name: "empty dir",
 			setup: func(t *testing.T, parent string) {
 				if err := os.Mkdir(parent, permWritableDir); err != nil {
 					t.Fatal(err)
@@ -316,7 +315,7 @@ func TestReadHandler_ListDirs(t *testing.T) {
 			want:    make([]string, 0),
 		},
 		{
-			name: "list dirs - non dir path",
+			name: "non dir path",
 			setup: func(t *testing.T, parent string) {
 				if err := os.WriteFile(parent, []byte("sample file content"), permFileWrite); err != nil {
 					t.Fatal(err)
@@ -325,6 +324,27 @@ func TestReadHandler_ListDirs(t *testing.T) {
 			handler:   NewHandler(newTestLogger()),
 			wantErr:   true,
 			wantErrIs: ErrNotDir,
+		},
+		{
+			name: "dir with files and subdirs",
+			setup: func(t *testing.T, parent string) {
+				if err := os.Mkdir(parent, permWritableDir); err != nil {
+					t.Fatal(err)
+				}
+				for i := range 5 {
+					subDir := filepath.Join(parent, fmt.Sprintf("subdir_%d", i))
+					if err := os.Mkdir(subDir, permWritableDir); err != nil {
+						t.Fatal(err)
+					}
+					filePath := filepath.Join(subDir, "file")
+					_, err := os.Create(filePath)
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
+			},
+			handler: NewHandler(newTestLogger()),
+			want:    []string{"subdir_0", "subdir_1", "subdir_2", "subdir_3", "subdir_4"},
 		},
 	}
 
@@ -361,7 +381,7 @@ func TestReadHandler_ReadLines(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name:    "read lines",
+			name:    "existing file",
 			handler: NewHandler(newTestLogger()),
 			setup: func(t *testing.T, path, content string) {
 				if err := os.WriteFile(path, []byte(content), permFileWrite); err != nil {
@@ -372,7 +392,7 @@ func TestReadHandler_ReadLines(t *testing.T) {
 			want:    []string{"sample file content", "with lines"},
 		},
 		{
-			name:      "read lines - non existing file",
+			name:      "non existing file",
 			handler:   NewHandler(newTestLogger()),
 			setup:     func(t *testing.T, path, content string) {},
 			content:   "",
@@ -380,7 +400,7 @@ func TestReadHandler_ReadLines(t *testing.T) {
 			wantErrIs: os.ErrNotExist,
 		},
 		{
-			name:    "read lines - no perm",
+			name:    "no perm",
 			handler: NewHandler(newTestLogger()),
 			setup: func(t *testing.T, path, content string) {
 				if err := os.WriteFile(path, []byte(content), permNone); err != nil {

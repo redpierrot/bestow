@@ -20,12 +20,12 @@ func TestDryRunHandler_CreateFile(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name:    "create file",
+			name:    "non existing",
 			setup:   func(t *testing.T, dir string) {},
 			handler: NewDryRunHandler(newTestLogger()),
 		},
 		{
-			name: "create file - unwritable dir",
+			name: "unwritable dir",
 			setup: func(t *testing.T, dir string) {
 				if err := os.Mkdir(dir, permNonWritableDir); err != nil {
 					t.Fatal(err)
@@ -48,11 +48,11 @@ func TestDryRunHandler_CreateFile(t *testing.T) {
 				return
 			}
 			_, err = os.Stat(path)
-			if err != nil {
-				if !errors.Is(err, os.ErrNotExist) {
-					t.Fatalf("got error %v, want %v", err, os.ErrNotExist)
-				}
-				return
+			if err == nil {
+				t.Fatalf("file actually created %s", path)
+			}
+			if !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("got error %v, want %v", err, os.ErrNotExist)
 			}
 		})
 	}
@@ -60,15 +60,16 @@ func TestDryRunHandler_CreateFile(t *testing.T) {
 
 func TestDryRunHandler_CreateDir(t *testing.T) {
 	tests := []struct {
-		name      string
-		setup     func(t *testing.T, dir string)
-		dir       func(dir string) string
-		handler   *DryRunHandler
-		wantErr   bool
-		wantErrIs error
+		name               string
+		setup              func(t *testing.T, dir string)
+		dirFn              func(dir string) string
+		skipPostValidation bool
+		handler            *DryRunHandler
+		wantErr            bool
+		wantErrIs          error
 	}{
 		{
-			name:    "create dir",
+			name:    "non existing",
 			setup:   func(t *testing.T, dir string) {},
 			handler: NewDryRunHandler(newTestLogger()),
 		},
@@ -79,7 +80,8 @@ func TestDryRunHandler_CreateDir(t *testing.T) {
 					t.Fatal(err)
 				}
 			},
-			handler: NewDryRunHandler(newTestLogger()),
+			skipPostValidation: true,
+			handler:            NewDryRunHandler(newTestLogger()),
 		},
 		{
 			name: "non writable dir",
@@ -88,7 +90,7 @@ func TestDryRunHandler_CreateDir(t *testing.T) {
 					t.Fatal(err)
 				}
 			},
-			dir: func(dir string) string {
+			dirFn: func(dir string) string {
 				return filepath.Join(dir, "subdir")
 			},
 			handler:   NewDryRunHandler(newTestLogger()),
@@ -101,12 +103,22 @@ func TestDryRunHandler_CreateDir(t *testing.T) {
 			testRoot := t.TempDir()
 			dir := filepath.Join(testRoot, "dir")
 			tc.setup(t, dir)
-			if tc.dir != nil {
-				dir = tc.dir(dir)
+			if tc.dirFn != nil {
+				dir = tc.dirFn(dir)
 			}
 			err := tc.handler.CreateDir(dir)
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
+			}
+			if tc.skipPostValidation {
+				return
+			}
+			_, err = os.Stat(dir)
+			if err == nil {
+				t.Fatalf("directory created %s", dir)
+			}
+			if !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("got %v, want %v", err, os.ErrNotExist)
 			}
 		})
 	}
@@ -121,12 +133,12 @@ func TestDryRunHandler_Link(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name:    "link",
+			name:    "non existing dest",
 			setup:   func(t *testing.T, src, dest string) {},
 			handler: NewDryRunHandler(newTestLogger()),
 		},
 		{
-			name: "link - non writable dir",
+			name: "non writable dir",
 			setup: func(t *testing.T, src, dest string) {
 				destDir := filepath.Dir(dest)
 				if err := os.Mkdir(destDir, permNonWritableDir); err != nil {
@@ -148,6 +160,13 @@ func TestDryRunHandler_Link(t *testing.T) {
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}
+			_, err = os.Stat(dest)
+			if err == nil {
+				t.Fatalf("link exists %s", dest)
+			}
+			if !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("got %v, want %v", err, os.ErrNotExist)
+			}
 		})
 	}
 }
@@ -161,7 +180,7 @@ func TestDryRunHandler_Move(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name: "move",
+			name: "existing",
 			setup: func(t *testing.T, src, dest string) {
 				destDir := filepath.Dir(dest)
 				if err := os.Mkdir(destDir, permWritableDir); err != nil {
@@ -171,7 +190,7 @@ func TestDryRunHandler_Move(t *testing.T) {
 			handler: NewDryRunHandler(newTestLogger()),
 		},
 		{
-			name: "move - unwritable dest dir",
+			name: "unwritable dest dir",
 			setup: func(t *testing.T, src, dest string) {
 				destDir := filepath.Dir(dest)
 				if err := os.Mkdir(destDir, permNonWritableDir); err != nil {
@@ -193,20 +212,28 @@ func TestDryRunHandler_Move(t *testing.T) {
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}
+			_, err = os.Stat(dest)
+			if err == nil {
+				t.Fatalf("got nil, want %v", os.ErrNotExist)
+			}
+			if !errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("got %v, want %v", err, os.ErrNotExist)
+			}
 		})
 	}
 }
 
 func TestDryRunHandler_Remove(t *testing.T) {
 	tests := []struct {
-		name      string
-		setup     func(t *testing.T, path string)
-		handler   *DryRunHandler
-		wantErr   bool
-		wantErrIs error
+		name               string
+		setup              func(t *testing.T, path string)
+		handler            *DryRunHandler
+		skipPostValidation bool
+		wantErr            bool
+		wantErrIs          error
 	}{
 		{
-			name: "file remove",
+			name: "existing file",
 			setup: func(t *testing.T, path string) {
 				dir := filepath.Dir(path)
 				if err := os.Mkdir(dir, permWritableDir); err != nil {
@@ -219,7 +246,7 @@ func TestDryRunHandler_Remove(t *testing.T) {
 			handler: NewDryRunHandler(newTestLogger()),
 		},
 		{
-			name: "file remove - unwritable dir",
+			name: "no perm file",
 			setup: func(t *testing.T, path string) {
 				dir := filepath.Dir(path)
 				if err := os.Mkdir(dir, permWritableDir); err != nil {
@@ -235,14 +262,15 @@ func TestDryRunHandler_Remove(t *testing.T) {
 			wantErrIs: os.ErrPermission,
 		},
 		{
-			name: "file remove - non existing file",
+			name: "non existing file",
 			setup: func(t *testing.T, path string) {
 				dir := filepath.Dir(path)
 				if err := os.Mkdir(dir, permWritableDir); err != nil {
 					t.Fatal(err)
 				}
 			},
-			handler: NewDryRunHandler(newTestLogger()),
+			handler:            NewDryRunHandler(newTestLogger()),
+			skipPostValidation: true,
 		},
 	}
 	for _, tc := range tests {
@@ -253,6 +281,12 @@ func TestDryRunHandler_Remove(t *testing.T) {
 			err := tc.handler.Remove(path)
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
+			}
+			if tc.skipPostValidation {
+				return
+			}
+			if _, err = os.Stat(path); errors.Is(err, os.ErrNotExist) {
+				t.Fatalf("file %s is removed by dry run handler", path)
 			}
 		})
 	}
