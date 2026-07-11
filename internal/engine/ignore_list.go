@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"strings"
 
 	"github.com/bmatcuk/doublestar/v4"
 )
@@ -56,14 +57,16 @@ func (i *IgnoreList) forPackage(pkg string) ([]string, error) {
 	}
 	pkgPath := filepath.Join(i.src, pkg)
 	i.logger.Debug("read package ignore file", "path", pkgPath)
-	result, err := readIgnoreFile(pkgPath, i.reader)
+	pkgItems, err := readIgnoreFile(pkgPath, i.reader)
 	if err != nil {
 		return nil, err
 	}
 	// Avoid mutating i.items
-	packageList := append(append([]string(nil), i.items...), result...)
-	i.packageLists[pkg] = packageList
-	return packageList, nil
+	pkgIgnoreList := make([]string, 0, len(i.items)+len(pkgItems))
+	pkgIgnoreList = append(pkgIgnoreList, i.items...)
+	pkgIgnoreList = append(pkgIgnoreList, pkgItems...)
+	i.packageLists[pkg] = pkgIgnoreList
+	return pkgIgnoreList, nil
 }
 
 func (i *IgnoreList) isIgnoredFile(name, pkg string) (bool, error) {
@@ -95,4 +98,28 @@ func (i *IgnoreList) isIgnored(pkg string) (bool, error) {
 		}
 	}
 	return false, nil
+}
+
+func readIgnoreFile(source string, reader IgnoreReader) ([]string, error) {
+	ignoreFile := filepath.Join(source, ignoreFileName)
+	exists, err := reader.Exists(ignoreFile)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", ignoreFile, err)
+	}
+	if !exists {
+		return nil, nil
+	}
+	lines, err := reader.ReadLines(ignoreFile)
+	if err != nil {
+		return nil, fmt.Errorf("read %s: %w", ignoreFile, err)
+	}
+	patterns := make([]string, 0, len(lines))
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
+			continue
+		}
+		patterns = append(patterns, trimmed)
+	}
+	return patterns, nil
 }

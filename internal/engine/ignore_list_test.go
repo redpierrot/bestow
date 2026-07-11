@@ -1,5 +1,5 @@
 /*
-All Rights Reversed (ɔ)
+All Rights Reversed (t *testing.T)
 */
 
 package engine
@@ -7,6 +7,7 @@ package engine
 import (
 	"os"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -27,6 +28,68 @@ func (m *mockIgnoreReader) ReadLines(path string) ([]string, error) {
 		return m.readLinesFn(path)
 	}
 	return nil, nil
+}
+
+func Test_newIgnoreList(t *testing.T) {
+	tests := []struct {
+		name       string
+		src        string
+		configHome string
+		reader     *mockIgnoreReader
+		wantErr    bool
+		wantErrIs  error
+	}{
+		{
+			name:   "no errors",
+			reader: &mockIgnoreReader{},
+		},
+		{
+			name:       "global file error",
+			configHome: "config_home",
+			reader: &mockIgnoreReader{
+				existsFn: func(path string) (bool, error) {
+					if strings.Contains(path, "config_home") {
+						return false, os.ErrPermission
+					}
+					return true, nil
+				},
+			},
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
+		},
+		{
+			name: "source file error",
+			src:  "src",
+			reader: &mockIgnoreReader{
+				existsFn: func(path string) (bool, error) {
+					if strings.Contains(path, "src") {
+						return false, os.ErrPermission
+					}
+					return true, nil
+				},
+			},
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			l := newTestLogger()
+			_, err := newIgnoreList(tc.src, tc.configHome, tc.reader, l)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+		})
+	}
+}
+
+func Test_forPackage(t *testing.T) {
+}
+
+func Test_isIgnoredFile(t *testing.T) {
+}
+
+func Test_isIgnored(t *testing.T) {
 }
 
 func TestReadIgnoreFile(t *testing.T) {
