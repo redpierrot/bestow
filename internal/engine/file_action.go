@@ -19,7 +19,7 @@ const (
 	actionRestore = "restore"
 )
 
-// EventType defines the type of event that a file action performs
+// EventType defines the type of event that a file action has performed
 type EventType int
 
 const (
@@ -33,6 +33,8 @@ const (
 	EventIgnore
 	// EventUndo is the event type emitted when the operation is undone
 	EventUndo
+	// EventFailure is the event type emitted when the operation is failed
+	EventFailure
 )
 
 // ActionKind defines the kind of file action that needs to be performed
@@ -234,29 +236,36 @@ func (f *fileActionReplace) execute(fs FileSystem) ([]ActionEvent, error) {
 	if err := fs.Move(f.destination, tmp); err != nil {
 		return nil, err
 	}
-	removeStep := ActionEvent{
+	moveStep := ActionEvent{
 		Action:    actionRemove,
 		Msg:       f.destination,
 		EventType: EventStep,
 	}
-	events = append(events, removeStep)
+	events = append(events, moveStep)
 	if err := fs.Link(f.source, f.destination); err != nil {
 		if err := fs.Move(tmp, f.destination); err != nil {
 			f.logger.Warn("failed to restore the tmp; manual recovery needed", "tmp_file", tmp, "original_file", f.destination)
-			return nil, fmt.Errorf("recover %s %s: %w", tmp, f.destination, err)
+			return events, fmt.Errorf("recover %s %s: %w", tmp, f.destination, err)
 		}
+		// Return no event since technically no changes are done after reverting temp
 		return nil, err
-	}
-	if err := fs.Remove(tmp); err != nil {
-		f.logger.Warn("failed to remove the tmp", "tmp_file", tmp)
-		return nil, fmt.Errorf("remove %s: %w", tmp, err)
 	}
 	linkStep := ActionEvent{
 		Action:    actionLink,
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
-		EventType: EventSuccess,
+		EventType: EventStep,
 	}
 	events = append(events, linkStep)
+	if err := fs.Remove(tmp); err != nil {
+		f.logger.Warn("failed to remove the tmp", "tmp_file", tmp)
+		return events, fmt.Errorf("remove %s: %w", tmp, err)
+	}
+	removeStep := ActionEvent{
+		Action:    actionRemove,
+		Msg:       tmp,
+		EventType: EventSuccess,
+	}
+	events = append(events, removeStep)
 	return events, nil
 }
 
@@ -309,8 +318,9 @@ func (f *fileActionBackup) execute(fs FileSystem) ([]ActionEvent, error) {
 	if err := fs.Link(f.source, f.destination); err != nil {
 		if err := fs.Move(f.backup, f.destination); err != nil {
 			f.logger.Warn("failed to restore the backup", "backup_file", f.backup, "original_file", f.destination)
-			return nil, fmt.Errorf("recover %s %s: %w", f.backup, f.destination, err)
+			return events, fmt.Errorf("recover %s %s: %w", f.backup, f.destination, err)
 		}
+		// No events emitted since technically nothing happened
 		return nil, err
 	}
 	linkStep := ActionEvent{
@@ -367,7 +377,7 @@ func (f *fileActionAdopt) execute(fs FileSystem) ([]ActionEvent, error) {
 	if err := fs.Link(f.source, f.destination); err != nil {
 		if err := fs.Move(f.source, f.destination); err != nil {
 			f.logger.Warn("failed to restore the original", "new_file", f.source, "original_file", f.destination)
-			return nil, fmt.Errorf("recover %s %s: %w", f.source, f.destination, err)
+			return events, fmt.Errorf("recover %s %s: %w", f.source, f.destination, err)
 		}
 		return nil, err
 	}

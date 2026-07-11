@@ -103,6 +103,7 @@ func (e *Engine) executeFileActions(ctx context.Context, actions []fileAction) (
 			return undoResult, fmt.Errorf("operation interrupted; reverted changes: %w", err)
 		}
 		operationEvents, executeErr := action.execute(e.fileSystem)
+		events = append(events, operationEvents...)
 		if executeErr != nil {
 			undoResult, undoErr := e.undoFileActions(completedActions, summary, events)
 			if undoErr != nil {
@@ -117,7 +118,6 @@ func (e *Engine) executeFileActions(ctx context.Context, actions []fileAction) (
 				DryRun:  e.dryRun,
 			}, err
 		}
-		events = append(events, operationEvents...)
 		if kind := action.kind(); kind != ActionSkip && kind != ActionUpToDate {
 			completedActions = append(completedActions, action)
 		}
