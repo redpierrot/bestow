@@ -1,5 +1,5 @@
 /*
-All Rights Reversed (t *testing.T)
+All Rights Reversed (ɔ)
 */
 
 package engine

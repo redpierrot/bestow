@@ -26,7 +26,7 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 				src := filepath.Join("home", "user", "dotfiles")
 				dest := filepath.Join("home", "user")
 				packageList := testPackageList(src)
-				fs := &MockFileSystem{
+				fs := &mockFileSystem{
 					listDirFn: func(parent string) ([]string, error) {
 						return packageList, nil
 					},
@@ -41,7 +41,7 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 				src := filepath.Join("home", "user", "dotfiles")
 				dest := filepath.Join("home", "user")
 				packageList := testPackageList(src)
-				fs := &MockFileSystem{
+				fs := &mockFileSystem{
 					listDirFn: func(parent string) ([]string, error) {
 						return packageList, nil
 					},
@@ -59,7 +59,7 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 			setup: func() *Engine {
 				src := filepath.Join("home", "user", "dotfiles")
 				dest := filepath.Join("home", "user")
-				fs := &MockFileSystem{
+				fs := &mockFileSystem{
 					listDirFn: func(parent string) ([]string, error) {
 						return nil, os.ErrNotExist
 					},
@@ -77,7 +77,7 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 			setup: func() *Engine {
 				src := filepath.Join("home", "user", "dotfiles")
 				dest := filepath.Join("home", "user")
-				fs := &MockFileSystem{
+				fs := &mockFileSystem{
 					isDirFn: func(path string) (bool, error) {
 						return false, os.ErrNotExist
 					},
@@ -117,7 +117,7 @@ func TestPackageOperations_retrieveAllPackages(t *testing.T) {
 				src := filepath.Join("home", "user", "dotfiles")
 				dest := filepath.Join("home", "user")
 				dirs := []string{filepath.Join(src, "pkg1"), filepath.Join(src, "pkg2"), filepath.Join(src, "pkg3")}
-				fs := &MockFileSystem{
+				fs := &mockFileSystem{
 					listDirFn: func(parent string) ([]string, error) {
 						return dirs, nil
 					},
@@ -129,7 +129,7 @@ func TestPackageOperations_retrieveAllPackages(t *testing.T) {
 		{
 			name: "list dir error",
 			setup: func() *Engine {
-				fs := &MockFileSystem{
+				fs := &mockFileSystem{
 					listDirFn: func(parent string) ([]string, error) {
 						return nil, os.ErrNotExist
 					},
@@ -166,7 +166,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 		{
 			name: "existing packages",
 			setup: func() *Engine {
-				fs := &MockFileSystem{
+				fs := &mockFileSystem{
 					isDirFn: func(path string) (bool, error) {
 						return true, nil
 					},
@@ -179,7 +179,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 		{
 			name: "root package",
 			setup: func() *Engine {
-				fs := &MockFileSystem{
+				fs := &mockFileSystem{
 					isDirFn: func(path string) (bool, error) {
 						return true, nil
 					},
@@ -193,7 +193,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 		{
 			name: "not dir",
 			setup: func() *Engine {
-				fs := &MockFileSystem{
+				fs := &mockFileSystem{
 					isDirFn: func(path string) (bool, error) {
 						return false, nil
 					},
@@ -207,7 +207,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 		{
 			name: "dir checking fail",
 			setup: func() *Engine {
-				fs := &MockFileSystem{
+				fs := &mockFileSystem{
 					isDirFn: func(path string) (bool, error) {
 						return false, os.ErrPermission
 					},
@@ -245,7 +245,7 @@ func TestPackageOperations_filterPackages(t *testing.T) {
 		{
 			name: "filter with ignore",
 			setup: func() *Engine {
-				fs := &MockFileSystem{}
+				fs := &mockFileSystem{}
 				ignoreList := newTestIgnoreList(fs, newTestLogger(), []string{"docs"})
 				return newTestEngine("", "", fs, ignoreList)
 			},
@@ -255,7 +255,7 @@ func TestPackageOperations_filterPackages(t *testing.T) {
 		{
 			name: "no candidates",
 			setup: func() *Engine {
-				fs := &MockFileSystem{}
+				fs := &mockFileSystem{}
 				return newTestEngine("", "", fs, nil)
 			},
 			candidates: []string{},
@@ -264,7 +264,7 @@ func TestPackageOperations_filterPackages(t *testing.T) {
 		{
 			name: "all filtered out",
 			setup: func() *Engine {
-				fs := &MockFileSystem{}
+				fs := &mockFileSystem{}
 				ignoreList := newTestIgnoreList(fs, newTestLogger(), []string{"pkg*"})
 				return newTestEngine("", "", fs, ignoreList)
 			},

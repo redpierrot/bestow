@@ -35,11 +35,16 @@ func (e *Engine) Init(cfg *InitConfig) (*ExecuteResult, error) {
 	if err := e.fileSystem.CreateDir(e.configHome); err != nil {
 		return nil, err
 	}
-	configAction, err := e.createConfigFile(e.source, e.destination, configFile)
+	configFileContent, err := config.FromTemplate(e.source, e.destination)
+	if err != nil {
+		return nil, fmt.Errorf("load config %s %s: %w", e.source, e.destination, err)
+	}
+	configAction, err := e.createFile(configFile, configFileContent)
 	if err != nil {
 		return nil, err
 	}
-	ignoreAction, err := e.createIgnoreFile(ignoreFile, cfg.IgnoreList)
+	ignoreFileContent := buildIgnoreFile(cfg.IgnoreList)
+	ignoreAction, err := e.createFile(ignoreFile, ignoreFileContent)
 	if err != nil {
 		return nil, err
 	}
@@ -77,15 +82,14 @@ func (e *Engine) checkExistingFiles(configFile, ignoreFile string, force bool) e
 	return nil
 }
 
-func (e *Engine) createIgnoreFile(ignoreFile string, ignoreList []string) (*ActionEvent, error) {
-	e.logger.Debug("creating ignore file", "filepath", ignoreFile)
-	e.logger.Debug("initializing ignore list", "ignore-list", ignoreList)
-	if err := e.fileSystem.CreateFile(ignoreFile, buildIgnoreFile(ignoreList)); err != nil {
+func (e *Engine) createFile(path, content string) (*ActionEvent, error) {
+	e.logger.Debug("creating the file", "path", path)
+	if err := e.fileSystem.CreateFile(path, content); err != nil {
 		return nil, err
 	}
 	return &ActionEvent{
 		Action:    actionCreated,
-		Msg:       ignoreFile,
+		Msg:       path,
 		EventType: EventSuccess,
 	}, nil
 }
@@ -99,20 +103,4 @@ func buildIgnoreFile(ignoreList []string) string {
 		sb.WriteByte('\n')
 	}
 	return sb.String()
-}
-
-func (e *Engine) createConfigFile(source, destination, configFile string) (*ActionEvent, error) {
-	e.logger.Debug("creating the config file", "path", configFile)
-	cfg, err := config.FromTemplate(source, destination)
-	if err != nil {
-		return nil, fmt.Errorf("load config %s %s: %w", source, destination, err)
-	}
-	if err := e.fileSystem.CreateFile(configFile, cfg); err != nil {
-		return nil, err
-	}
-	return &ActionEvent{
-		Action:    actionCreated,
-		Msg:       configFile,
-		EventType: EventSuccess,
-	}, nil
 }

@@ -14,7 +14,7 @@ import (
 
 type subTest struct {
 	name      string
-	fs        *MockFileSystem
+	fs        *mockFileSystem
 	want      []ActionEvent
 	wantErr   bool
 	wantErrIs error
@@ -34,7 +34,7 @@ func TestFileAction_execute(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "no errors",
-					fs:   &MockFileSystem{},
+					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{EventType: EventIgnore},
 					},
@@ -49,7 +49,7 @@ func TestFileAction_execute(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "no errors",
-					fs:   &MockFileSystem{},
+					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
 							Action:    actionSkip,
@@ -68,7 +68,7 @@ func TestFileAction_execute(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "no errors",
-					fs:   &MockFileSystem{},
+					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
 							Action:    actionLink,
@@ -79,7 +79,7 @@ func TestFileAction_execute(t *testing.T) {
 				},
 				{
 					name: "fail",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						linkFn: func(src, target string) error {
 							return os.ErrPermission
 						},
@@ -97,7 +97,7 @@ func TestFileAction_execute(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "no errors",
-					fs:   &MockFileSystem{},
+					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
 							Action:    actionRemove,
@@ -118,7 +118,7 @@ func TestFileAction_execute(t *testing.T) {
 				},
 				{
 					name: "move fail",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						moveFn: func(src, target string) error {
 							return os.ErrPermission
 						},
@@ -129,7 +129,7 @@ func TestFileAction_execute(t *testing.T) {
 				},
 				{
 					name: "link fail - move pass",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						linkFn: func(src, target string) error {
 							return os.ErrPermission
 						},
@@ -140,7 +140,7 @@ func TestFileAction_execute(t *testing.T) {
 				},
 				{
 					name: "link fail - recovery fail",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						moveFn: func(src, target string) error {
 							if strings.Contains(src, "tmp") {
 								return os.ErrPermission
@@ -157,7 +157,7 @@ func TestFileAction_execute(t *testing.T) {
 				},
 				{
 					name: "tmp remove fail",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						removeFn: func(path string) error {
 							if strings.Contains(path, "tmp") {
 								return os.ErrPermission
@@ -190,7 +190,7 @@ func TestFileAction_execute(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "no errors",
-					fs:   &MockFileSystem{},
+					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
 							Action:    actionBackup,
@@ -206,7 +206,7 @@ func TestFileAction_execute(t *testing.T) {
 				},
 				{
 					name: "move fails",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						moveFn: func(src, target string) error {
 							return os.ErrPermission
 						},
@@ -217,7 +217,7 @@ func TestFileAction_execute(t *testing.T) {
 				},
 				{
 					name: "link fail - recovery fail",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						moveFn: func(src, target string) error {
 							if strings.Contains(src, "backup") {
 								return os.ErrPermission
@@ -240,7 +240,7 @@ func TestFileAction_execute(t *testing.T) {
 				},
 				{
 					name: "link fail - recovery pass",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						linkFn: func(src, target string) error {
 							return os.ErrPermission
 						},
@@ -259,7 +259,7 @@ func TestFileAction_execute(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "no errors",
-					fs:   &MockFileSystem{},
+					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
 							Action:    actionAdopt,
@@ -275,7 +275,7 @@ func TestFileAction_execute(t *testing.T) {
 				},
 				{
 					name: "move fails",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						moveFn: func(src, target string) error {
 							return os.ErrPermission
 						},
@@ -286,7 +286,7 @@ func TestFileAction_execute(t *testing.T) {
 				},
 				{
 					name: "link fail - recovery fail",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						moveFn: func(src, target string) error {
 							if strings.Contains(src, "src") {
 								return os.ErrPermission
@@ -309,7 +309,7 @@ func TestFileAction_execute(t *testing.T) {
 				},
 				{
 					name: "link fail - recovery pass",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						linkFn: func(src, target string) error {
 							return os.ErrPermission
 						},
@@ -328,7 +328,7 @@ func TestFileAction_execute(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "no errors",
-					fs:   &MockFileSystem{},
+					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
 							Action:    actionRemove,
@@ -339,7 +339,7 @@ func TestFileAction_execute(t *testing.T) {
 				},
 				{
 					name: "remove fail",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						removeFn: func(path string) error {
 							return os.ErrPermission
 						},
@@ -382,7 +382,7 @@ func TestFileAction_undo(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "run",
-					fs:   &MockFileSystem{},
+					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{EventType: EventIgnore},
 					},
@@ -397,7 +397,7 @@ func TestFileAction_undo(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "run",
-					fs:   &MockFileSystem{},
+					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{EventType: EventIgnore},
 					},
@@ -412,7 +412,7 @@ func TestFileAction_undo(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "link file",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						removeFn: func(path string) error {
 							return nil
 						},
@@ -427,7 +427,7 @@ func TestFileAction_undo(t *testing.T) {
 				},
 				{
 					name: "remove fail",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						removeFn: func(path string) error {
 							return os.ErrPermission
 						},
@@ -445,7 +445,7 @@ func TestFileAction_undo(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "no errors",
-					fs:   &MockFileSystem{},
+					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
 							Action:    actionRemove,
@@ -456,7 +456,7 @@ func TestFileAction_undo(t *testing.T) {
 				},
 				{
 					name: "remove fail",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						removeFn: func(path string) error {
 							return os.ErrPermission
 						},
@@ -475,7 +475,7 @@ func TestFileAction_undo(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "no errors",
-					fs:   &MockFileSystem{},
+					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
 							Action:    actionRestore,
@@ -486,7 +486,7 @@ func TestFileAction_undo(t *testing.T) {
 				},
 				{
 					name: "move fails",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						moveFn: func(src, target string) error {
 							return os.ErrPermission
 						},
@@ -505,7 +505,7 @@ func TestFileAction_undo(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "no errors",
-					fs:   &MockFileSystem{},
+					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
 							Action:    actionRemove,
@@ -521,7 +521,7 @@ func TestFileAction_undo(t *testing.T) {
 				},
 				{
 					name: "remove fails",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						removeFn: func(path string) error {
 							return os.ErrPermission
 						},
@@ -532,7 +532,7 @@ func TestFileAction_undo(t *testing.T) {
 				},
 				{
 					name: "move fails",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						moveFn: func(src, target string) error {
 							return os.ErrPermission
 						},
@@ -557,7 +557,7 @@ func TestFileAction_undo(t *testing.T) {
 			cases: []subTest{
 				{
 					name: "no errors",
-					fs:   &MockFileSystem{},
+					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
 							Action:    actionLink,
@@ -568,7 +568,7 @@ func TestFileAction_undo(t *testing.T) {
 				},
 				{
 					name: "link fail",
-					fs: &MockFileSystem{
+					fs: &mockFileSystem{
 						linkFn: func(src, dest string) error {
 							return os.ErrPermission
 						},

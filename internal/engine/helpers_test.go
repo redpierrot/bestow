@@ -14,7 +14,7 @@ import (
 	"github.com/redpierrot/bestow/internal/file"
 )
 
-func newTestEngine(src, dest string, fs *MockFileSystem, ignoreList *IgnoreList) *Engine {
+func newTestEngine(src, dest string, fs *mockFileSystem, ignoreList *IgnoreList) *Engine {
 	logger := newTestLogger()
 	if ignoreList == nil {
 		ignoreList = newTestIgnoreList(fs, logger, nil)
@@ -28,7 +28,7 @@ func newTestEngine(src, dest string, fs *MockFileSystem, ignoreList *IgnoreList)
 	}
 }
 
-func newTestIgnoreList(fs *MockFileSystem, logger *slog.Logger, items []string) *IgnoreList {
+func newTestIgnoreList(fs *mockFileSystem, logger *slog.Logger, items []string) *IgnoreList {
 	if items == nil {
 		items = make([]string, 0)
 	}
@@ -71,7 +71,7 @@ func isSameAction(f1, f2 fileAction) bool {
 	return f1.kind() == f2.kind()
 }
 
-type MockFileSystem struct {
+type mockFileSystem struct {
 	listDirFn          func(parent string) ([]string, error)
 	listAllFilesFn     func(parent string) ([]string, error)
 	createFileFn       func(path, content string) error
@@ -86,84 +86,84 @@ type MockFileSystem struct {
 	existingFileTypeFn func(src, dest string) (file.ExistingType, error)
 }
 
-func (mf *MockFileSystem) ListDirs(parent string) ([]string, error) {
+func (mf *mockFileSystem) ListDirs(parent string) ([]string, error) {
 	if mf.listDirFn != nil {
 		return mf.listDirFn(parent)
 	}
 	return nil, nil
 }
 
-func (mf *MockFileSystem) ListAllFiles(parent string) ([]string, error) {
+func (mf *mockFileSystem) ListAllFiles(parent string) ([]string, error) {
 	if mf.listAllFilesFn != nil {
 		return mf.listAllFilesFn(parent)
 	}
 	return nil, nil
 }
 
-func (mf *MockFileSystem) CreateFile(path, content string) error {
+func (mf *mockFileSystem) CreateFile(path, content string) error {
 	if mf.createFileFn != nil {
 		return mf.createFileFn(path, content)
 	}
 	return nil
 }
 
-func (mf *MockFileSystem) CreateDir(path string) error {
+func (mf *mockFileSystem) CreateDir(path string) error {
 	if mf.createDirFn != nil {
 		return mf.createDirFn(path)
 	}
 	return nil
 }
 
-func (mf *MockFileSystem) Link(src, target string) error {
+func (mf *mockFileSystem) Link(src, target string) error {
 	if mf.linkFn != nil {
 		return mf.linkFn(src, target)
 	}
 	return nil
 }
 
-func (mf *MockFileSystem) Move(src, target string) error {
+func (mf *mockFileSystem) Move(src, target string) error {
 	if mf.moveFn != nil {
 		return mf.moveFn(src, target)
 	}
 	return nil
 }
 
-func (mf *MockFileSystem) Remove(path string) error {
+func (mf *mockFileSystem) Remove(path string) error {
 	if mf.removeFn != nil {
 		return mf.removeFn(path)
 	}
 	return nil
 }
 
-func (mf *MockFileSystem) IsDir(path string) (bool, error) {
+func (mf *mockFileSystem) IsDir(path string) (bool, error) {
 	if mf.isDirFn != nil {
 		return mf.isDirFn(path)
 	}
 	return false, nil
 }
 
-func (mf *MockFileSystem) IsEmptyDir(path string) (bool, error) {
+func (mf *mockFileSystem) IsEmptyDir(path string) (bool, error) {
 	if mf.isEmptyDirFn != nil {
 		return mf.isEmptyDirFn(path)
 	}
 	return true, nil
 }
 
-func (mf *MockFileSystem) Exists(path string) (bool, error) {
+func (mf *mockFileSystem) Exists(path string) (bool, error) {
 	if mf.existsFn != nil {
 		return mf.existsFn(path)
 	}
 	return false, nil
 }
 
-func (mf *MockFileSystem) ReadLines(path string) ([]string, error) {
+func (mf *mockFileSystem) ReadLines(path string) ([]string, error) {
 	if mf.readLinesFn != nil {
 		return mf.readLinesFn(path)
 	}
 	return make([]string, 0), nil
 }
 
-func (mf *MockFileSystem) ExistingFileType(src, dest string) (file.ExistingType, error) {
+func (mf *mockFileSystem) ExistingFileType(src, dest string) (file.ExistingType, error) {
 	if mf.existingFileTypeFn != nil {
 		return mf.existingFileTypeFn(src, dest)
 	}
