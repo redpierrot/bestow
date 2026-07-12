@@ -26,7 +26,7 @@ func Test_Init(t *testing.T) {
 		{
 			name: "no errors",
 			setup: func(t *testing.T, cfgHome string) *Engine {
-				e := newTestEngine("", "", &mockFileSystem{}, nil)
+				e := newTestEngine(&mockFileSystem{}, nil)
 				e.configHome = cfgHome
 				return e
 			},
@@ -58,7 +58,7 @@ func Test_Init(t *testing.T) {
 						return os.ErrPermission
 					},
 				}
-				e := newTestEngine("", "", mf, nil)
+				e := newTestEngine(mf, nil)
 				e.configHome = cfgHome
 				return e
 			},
@@ -78,7 +78,7 @@ func Test_Init(t *testing.T) {
 						return os.ErrPermission
 					},
 				}
-				e := newTestEngine("", "", mf, nil)
+				e := newTestEngine(mf, nil)
 				e.configHome = cfgHome
 				return e
 			},
@@ -101,7 +101,7 @@ func Test_Init(t *testing.T) {
 						return nil
 					},
 				}
-				e := newTestEngine("", "", mf, nil)
+				e := newTestEngine(mf, nil)
 				e.configHome = cfgHome
 				return e
 			},
@@ -124,7 +124,7 @@ func Test_Init(t *testing.T) {
 						return nil
 					},
 				}
-				e := newTestEngine("", "", mf, nil)
+				e := newTestEngine(mf, nil)
 				e.configHome = cfgHome
 				return e
 			},
@@ -147,7 +147,7 @@ func Test_Init(t *testing.T) {
 						return nil
 					},
 				}
-				e := newTestEngine("", "", mf, nil)
+				e := newTestEngine(mf, nil)
 				e.configHome = cfgHome
 				return e
 			},
@@ -202,7 +202,7 @@ func Test_checkExistingFiles(t *testing.T) {
 			name: "no errors",
 			setup: func(t *testing.T) Engine {
 				mf := &mockFileSystem{}
-				return *newTestEngine("", "", mf, nil)
+				return *newTestEngine(mf, nil)
 			},
 		},
 		{
@@ -216,7 +216,7 @@ func Test_checkExistingFiles(t *testing.T) {
 						return true, nil
 					},
 				}
-				return *newTestEngine("", "", mf, nil)
+				return *newTestEngine(mf, nil)
 			},
 			configFile: "config_file",
 			wantErr:    true,
@@ -233,7 +233,7 @@ func Test_checkExistingFiles(t *testing.T) {
 						return true, nil
 					},
 				}
-				return *newTestEngine("", "", mf, nil)
+				return *newTestEngine(mf, nil)
 			},
 			ignoreFile: "ignore_file",
 			wantErr:    true,
@@ -250,7 +250,7 @@ func Test_checkExistingFiles(t *testing.T) {
 						return false, nil
 					},
 				}
-				return *newTestEngine("", "", mf, nil)
+				return *newTestEngine(mf, nil)
 			},
 			configFile: "config_file",
 			op:         "exists config_file",
@@ -276,7 +276,7 @@ func Test_checkExistingFiles(t *testing.T) {
 						return false, nil
 					},
 				}
-				return *newTestEngine("", "", mf, nil)
+				return *newTestEngine(mf, nil)
 			},
 			ignoreFile: "ignore_file",
 			op:         "exists ignore_file",
@@ -299,7 +299,7 @@ func Test_checkExistingFiles(t *testing.T) {
 						return true, nil
 					},
 				}
-				return *newTestEngine("", "", mf, nil)
+				return *newTestEngine(mf, nil)
 			},
 			configFile: "config_file",
 			ignoreFile: "ignore_file",
@@ -319,7 +319,7 @@ func Test_checkExistingFiles(t *testing.T) {
 			name:  "force",
 			force: true,
 			setup: func(t *testing.T) Engine {
-				return *newTestEngine("", "", &mockFileSystem{}, nil)
+				return *newTestEngine(&mockFileSystem{}, nil)
 			},
 		},
 	}
