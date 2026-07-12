@@ -79,6 +79,8 @@ func (o *Output) PrintAction(action engine.ActionEvent, label string) {
 		text = o.skipStyle.Render(message)
 	case engine.EventUndo:
 		text = o.undoStyle.Render(message)
+	case engine.EventFailure:
+		text = o.warnStyle.Render(message)
 	case engine.EventIgnore:
 		return
 	}
