@@ -107,12 +107,12 @@ func TestFileAction_execute(t *testing.T) {
 						{
 							Action:    actionLink,
 							Msg:       "dest -> src",
-							EventType: EventStep,
+							EventType: EventSuccess,
 						},
 						{
 							Action:    actionRemove,
 							Msg:       "dest.bestow.tmp",
-							EventType: EventSuccess,
+							EventType: EventIgnore,
 						},
 					},
 				},
@@ -156,6 +156,7 @@ func TestFileAction_execute(t *testing.T) {
 					wantErrIs: os.ErrPermission,
 				},
 				{
+					// TODO: Should validate the warning
 					name: "tmp remove fail",
 					fs: &mockFileSystem{
 						removeFn: func(path string) error {
@@ -174,11 +175,14 @@ func TestFileAction_execute(t *testing.T) {
 						{
 							Action:    actionLink,
 							Msg:       "dest -> src",
-							EventType: EventStep,
+							EventType: EventSuccess,
+						},
+						{
+							Action:    actionLeftover,
+							Msg:       "temp file dest.bestow.tmp",
+							EventType: EventFailure,
 						},
 					},
-					wantErr:   true,
-					wantErrIs: os.ErrPermission,
 				},
 			},
 		},

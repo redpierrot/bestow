@@ -10,13 +10,14 @@ import (
 )
 
 const (
-	actionLink    = "link"
-	actionBackup  = "backup"
-	actionSkip    = "skip"
-	actionAdopt   = "adopt"
-	actionRemove  = "remove"
-	actionCreated = "created"
-	actionRestore = "restore"
+	actionLink     = "link"
+	actionBackup   = "backup"
+	actionSkip     = "skip"
+	actionAdopt    = "adopt"
+	actionRemove   = "remove"
+	actionCreated  = "created"
+	actionRestore  = "restore"
+	actionLeftover = "leftover"
 )
 
 // EventType defines the type of event that a file action has performed
@@ -33,7 +34,7 @@ const (
 	EventIgnore
 	// EventUndo is the event type emitted when the operation is undone
 	EventUndo
-	// EventFailure is the event type emitted when the operation is failed
+	// EventFailure is the event type emitted when the operation is at a failed state
 	EventFailure
 )
 
@@ -253,17 +254,23 @@ func (f *fileActionReplace) execute(fs FileSystem) ([]ActionEvent, error) {
 	linkStep := ActionEvent{
 		Action:    actionLink,
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
-		EventType: EventStep,
+		EventType: EventSuccess, // This is the success event. The next event is a step of housekeeping
 	}
 	events = append(events, linkStep)
 	if err := fs.Remove(tmp); err != nil {
-		f.logger.Warn("failed to remove the tmp", "tmp_file", tmp)
-		return events, fmt.Errorf("remove %s: %w", tmp, err)
+		f.logger.Warn("failed to remove the temp file", "tmp_file", tmp)
+		tmpStep := ActionEvent{
+			Action:    actionLeftover,
+			Msg:       fmt.Sprintf("temp file %s", tmp),
+			EventType: EventFailure,
+		}
+		events = append(events, tmpStep)
+		return events, nil // Returning nil here since the intended action is complete, although the temp file is there.
 	}
 	removeStep := ActionEvent{
 		Action:    actionRemove,
 		Msg:       tmp,
-		EventType: EventSuccess,
+		EventType: EventIgnore, // This is a housekeeping event, that should be ignored in summary
 	}
 	events = append(events, removeStep)
 	return events, nil
