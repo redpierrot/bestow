@@ -14,17 +14,15 @@ import (
 	"github.com/redpierrot/bestow/internal/file"
 )
 
-func newTestEngine(src, dest string, fs *mockFileSystem, ignoreList *IgnoreList) *Engine {
-	logger := newTestLogger()
+func newTestEngine(fs *mockFileSystem, ignoreList *IgnoreList) *Engine {
+	l := newTestLogger()
 	if ignoreList == nil {
-		ignoreList = newTestIgnoreList(fs, logger, nil)
+		ignoreList = newTestIgnoreList(fs, l, nil)
 	}
 	return &Engine{
-		logger:      logger,
-		source:      src,
-		destination: dest,
-		fileSystem:  fs,
-		ignore:      ignoreList,
+		logger:     l,
+		fileSystem: fs,
+		ignore:     ignoreList,
 	}
 }
 

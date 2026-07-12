@@ -37,7 +37,7 @@ func TestOperations_buildOperations(t *testing.T) {
 						return true, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			cfg: &CommandConfig{
 				Action: CommandStow,
@@ -59,7 +59,7 @@ func TestOperations_buildOperations(t *testing.T) {
 						return true, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			cfg: &CommandConfig{
 				Action: CommandStow,
@@ -109,7 +109,7 @@ func TestOperations_validateDestinations(t *testing.T) {
 			name: "no conflict",
 			setup: func() *Engine {
 				mf := &mockFileSystem{}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{
 				candidate("dotfiles/nvim/.config/nvim/init.lua", "home/.config/nvim/init.lua"),
@@ -121,7 +121,7 @@ func TestOperations_validateDestinations(t *testing.T) {
 			name: "conflict",
 			setup: func() *Engine {
 				mf := &mockFileSystem{}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{
 				candidate("dotfiles/nvim/init.lua", "home/.config/init.lua"),
@@ -173,7 +173,7 @@ func TestOperations_buildOperationCandidates(t *testing.T) {
 						return files, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			want: []operationCandidate{
 				candidate("file_0", "file_0"),
@@ -197,7 +197,7 @@ func TestOperations_buildOperationCandidates(t *testing.T) {
 					},
 				}
 				ignoreList := newTestIgnoreList(mf, newTestLogger(), []string{"*0*"})
-				return newTestEngine("", "", mf, ignoreList)
+				return newTestEngine(mf, ignoreList)
 			},
 			want: []operationCandidate{candidate("file_1", "file_1"), candidate("file_2", "file_2"), candidate("file_3", "file_3"), candidate("file_4", "file_4")},
 		},
@@ -210,7 +210,7 @@ func TestOperations_buildOperationCandidates(t *testing.T) {
 					},
 				}
 				ignoreList := newTestIgnoreList(mf, newTestLogger(), []string{"*0*"})
-				return newTestEngine("", "", mf, ignoreList)
+				return newTestEngine(mf, ignoreList)
 			},
 			want: make([]operationCandidate, 0),
 		},
@@ -249,7 +249,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 						return false, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
 			strategy:   ResolveSkip,
@@ -271,7 +271,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 						return file.ExistingManagedSymlink, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
 			strategy:   ResolveSkip,
@@ -290,7 +290,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 						return false, os.ErrPermission
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
 			strategy:   ResolveSkip,
@@ -346,7 +346,7 @@ func TestOperations_stowFileAction(t *testing.T) {
 						return false, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			cases: []strategyCase{
 				{strategy: ResolveSkip, want: ActionLink},
@@ -363,7 +363,7 @@ func TestOperations_stowFileAction(t *testing.T) {
 						return file.ExistingDir, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			cases: []strategyCase{
 				{strategy: ResolveSkip, wantErr: true, wantErrIs: errDestIsDir},
@@ -383,7 +383,7 @@ func TestOperations_stowFileAction(t *testing.T) {
 						return file.ExistingManagedSymlink, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			cases: []strategyCase{
 				{strategy: ResolveSkip, want: ActionUpToDate},
@@ -406,7 +406,7 @@ func TestOperations_stowFileAction(t *testing.T) {
 						return file.ExistingForeignSymlink, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			cases: []strategyCase{
 				{strategy: ResolveSkip, want: ActionSkip},
@@ -429,7 +429,7 @@ func TestOperations_stowFileAction(t *testing.T) {
 						return file.ExistingRegularFile, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			cases: []strategyCase{
 				{strategy: ResolveSkip, want: ActionSkip},
@@ -476,7 +476,7 @@ func TestOperations_unstowFileAction(t *testing.T) {
 						return file.ExistingManagedSymlink, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			candidate: candidate("src_file", "dest_file"),
 			want:      ActionRemove,
@@ -492,7 +492,7 @@ func TestOperations_unstowFileAction(t *testing.T) {
 						return file.ExistingForeignSymlink, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			candidate: candidate("src_file", "dest_file"),
 			want:      ActionSkip,
@@ -508,7 +508,7 @@ func TestOperations_unstowFileAction(t *testing.T) {
 						return file.ExistingRegularFile, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			candidate: candidate("src_file", "dest_file"),
 			want:      ActionSkip,
@@ -524,7 +524,7 @@ func TestOperations_unstowFileAction(t *testing.T) {
 						return file.ExistingDir, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			candidate: candidate("src_file", "dest_file"),
 			wantErr:   true,
@@ -541,7 +541,7 @@ func TestOperations_unstowFileAction(t *testing.T) {
 						return file.ExistingDir, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			candidate: candidate("src_file", "dest_file"),
 			want:      ActionUpToDate,
@@ -579,7 +579,7 @@ func TestOperations_calculateBackupPath(t *testing.T) {
 						return false, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			want: "dest_file.0.bestow.backup",
 		},
@@ -594,7 +594,7 @@ func TestOperations_calculateBackupPath(t *testing.T) {
 						return false, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			existingFiles: []string{"dest_file.0.bestow.backup", "dest_file.1.bestow.backup", "dest_file.2.bestow.backup"},
 			want:          "dest_file.3.bestow.backup",
@@ -607,7 +607,7 @@ func TestOperations_calculateBackupPath(t *testing.T) {
 						return false, os.ErrPermission
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			existingFiles: []string{"dest_file.0.bestow.backup", "dest_file.1.bestow.backup", "dest_file.2.bestow.backup"},
 			wantErr:       true,
@@ -624,7 +624,7 @@ func TestOperations_calculateBackupPath(t *testing.T) {
 						return false, nil
 					},
 				}
-				return newTestEngine("", "", mf, nil)
+				return newTestEngine(mf, nil)
 			},
 			existingFiles: []string{
 				"dest_file.0.bestow.backup",

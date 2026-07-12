@@ -6,7 +6,6 @@ package engine
 
 import (
 	"os"
-	"path/filepath"
 	"slices"
 	"testing"
 )
@@ -23,24 +22,20 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 		{
 			name: "no args",
 			setup: func() *Engine {
-				src := filepath.Join("home", "user", "dotfiles")
-				dest := filepath.Join("home", "user")
-				packageList := testPackageList(src)
+				packageList := testPackageList("")
 				fs := &mockFileSystem{
 					listDirFn: func(parent string) ([]string, error) {
 						return packageList, nil
 					},
 				}
-				return newTestEngine(src, dest, fs, nil)
+				return newTestEngine(fs, nil)
 			},
 			want: []string{"pkg1", "pkg2", "pkg3"},
 		},
 		{
 			name: "with args",
 			setup: func() *Engine {
-				src := filepath.Join("home", "user", "dotfiles")
-				dest := filepath.Join("home", "user")
-				packageList := testPackageList(src)
+				packageList := testPackageList("")
 				fs := &mockFileSystem{
 					listDirFn: func(parent string) ([]string, error) {
 						return packageList, nil
@@ -49,7 +44,7 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 						return true, nil
 					},
 				}
-				return newTestEngine(src, dest, fs, nil)
+				return newTestEngine(fs, nil)
 			},
 			args: []string{"pkg2"},
 			want: []string{"pkg2"},
@@ -57,8 +52,6 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 		{
 			name: "list dirs error",
 			setup: func() *Engine {
-				src := filepath.Join("home", "user", "dotfiles")
-				dest := filepath.Join("home", "user")
 				fs := &mockFileSystem{
 					listDirFn: func(parent string) ([]string, error) {
 						return nil, os.ErrNotExist
@@ -67,7 +60,7 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 						return false, os.ErrNotExist
 					},
 				}
-				return newTestEngine(src, dest, fs, nil)
+				return newTestEngine(fs, nil)
 			},
 			wantErr:   true,
 			wantErrIs: os.ErrNotExist,
@@ -75,14 +68,12 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 		{
 			name: "list dirs error with args",
 			setup: func() *Engine {
-				src := filepath.Join("home", "user", "dotfiles")
-				dest := filepath.Join("home", "user")
 				fs := &mockFileSystem{
 					isDirFn: func(path string) (bool, error) {
 						return false, os.ErrNotExist
 					},
 				}
-				return newTestEngine(src, dest, fs, nil)
+				return newTestEngine(fs, nil)
 			},
 			args:      []string{"pkg2"},
 			wantErr:   true,
@@ -114,15 +105,13 @@ func TestPackageOperations_retrieveAllPackages(t *testing.T) {
 		{
 			name: "with multiple packages",
 			setup: func() *Engine {
-				src := filepath.Join("home", "user", "dotfiles")
-				dest := filepath.Join("home", "user")
-				dirs := []string{filepath.Join(src, "pkg1"), filepath.Join(src, "pkg2"), filepath.Join(src, "pkg3")}
+				dirs := []string{"pkg1", "pkg2", "pkg3"}
 				fs := &mockFileSystem{
 					listDirFn: func(parent string) ([]string, error) {
 						return dirs, nil
 					},
 				}
-				return newTestEngine(src, dest, fs, nil)
+				return newTestEngine(fs, nil)
 			},
 			want: []string{"pkg1", "pkg2", "pkg3"},
 		},
@@ -134,7 +123,7 @@ func TestPackageOperations_retrieveAllPackages(t *testing.T) {
 						return nil, os.ErrNotExist
 					},
 				}
-				return newTestEngine("", "", fs, nil)
+				return newTestEngine(fs, nil)
 			},
 			wantErr:   true,
 			wantErrIs: os.ErrNotExist,
@@ -171,7 +160,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 						return true, nil
 					},
 				}
-				return newTestEngine("", "", fs, nil)
+				return newTestEngine(fs, nil)
 			},
 			want: []string{"pkg1", "pkg2", "pkg3"},
 			args: []string{"pkg1", "pkg2", "pkg3"},
@@ -184,7 +173,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 						return true, nil
 					},
 				}
-				return newTestEngine("", "", fs, nil)
+				return newTestEngine(fs, nil)
 			},
 			args:      []string{"pkg1", ".", "pkg3"},
 			wantErr:   true,
@@ -198,7 +187,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 						return false, nil
 					},
 				}
-				return newTestEngine("", "", fs, nil)
+				return newTestEngine(fs, nil)
 			},
 			args:      []string{"pkg1", "pkg3"},
 			wantErr:   true,
@@ -212,7 +201,7 @@ func TestPackageOperations_retrievePackagesFromArgs(t *testing.T) {
 						return false, os.ErrPermission
 					},
 				}
-				return newTestEngine("", "", fs, nil)
+				return newTestEngine(fs, nil)
 			},
 			args:      []string{"pkg1", "pkg3"},
 			wantErr:   true,
@@ -247,7 +236,7 @@ func TestPackageOperations_filterPackages(t *testing.T) {
 			setup: func() *Engine {
 				fs := &mockFileSystem{}
 				ignoreList := newTestIgnoreList(fs, newTestLogger(), []string{"docs"})
-				return newTestEngine("", "", fs, ignoreList)
+				return newTestEngine(fs, ignoreList)
 			},
 			candidates: []string{"nvim", "zsh", "docs", "mydocs"},
 			want:       []string{"nvim", "zsh", "mydocs"},
@@ -256,7 +245,7 @@ func TestPackageOperations_filterPackages(t *testing.T) {
 			name: "no candidates",
 			setup: func() *Engine {
 				fs := &mockFileSystem{}
-				return newTestEngine("", "", fs, nil)
+				return newTestEngine(fs, nil)
 			},
 			candidates: []string{},
 			want:       []string{},
@@ -266,7 +255,7 @@ func TestPackageOperations_filterPackages(t *testing.T) {
 			setup: func() *Engine {
 				fs := &mockFileSystem{}
 				ignoreList := newTestIgnoreList(fs, newTestLogger(), []string{"pkg*"})
-				return newTestEngine("", "", fs, ignoreList)
+				return newTestEngine(fs, ignoreList)
 			},
 			candidates: []string{"pkg1", "pkg2", "pkg3"},
 			want:       []string{},
