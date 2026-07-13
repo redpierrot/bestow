@@ -62,27 +62,6 @@ const (
 
 const corruptedSystemErrMsg = "failed to undo; system is in a corrupted state; manual intervention needed"
 
-func (a ActionKind) String() string {
-	switch a {
-	case ActionUpToDate:
-		return "up-to-date"
-	case ActionSkip:
-		return "skip"
-	case ActionLink:
-		return "link"
-	case ActionReplace:
-		return "replace"
-	case ActionBackup:
-		return "backup"
-	case ActionAdopt:
-		return "adopt"
-	case ActionRemove:
-		return "remove"
-	default:
-		return fmt.Sprintf("Unknown %d", a)
-	}
-}
-
 // ActionEvent stores the event that occurred while performing an action
 type ActionEvent struct {
 	Action    string
