@@ -56,6 +56,8 @@ const (
 	ActionAdopt
 	// ActionRemove when the action is to remove the file
 	ActionRemove
+	// NOTE: Keep to count the number of actions. Should always the last element
+	numActionKinds
 )
 
 const corruptedSystemErrMsg = "failed to undo; system is in a corrupted state; manual intervention needed"

@@ -111,13 +111,7 @@ func (e *Engine) executeFileActions(ctx context.Context, actions []fileAction) (
 			}
 			return undoResult, executeErr
 		}
-		if err := e.updateSummary(action, summary, false); err != nil {
-			return &ExecuteResult{
-				Events:  events,
-				Summary: summary,
-				DryRun:  e.dryRun,
-			}, err
-		}
+		e.updateSummary(action, summary, false)
 		if kind := action.kind(); kind != ActionSkip && kind != ActionUpToDate {
 			completedActions = append(completedActions, action)
 		}
@@ -141,13 +135,7 @@ func (e *Engine) undoFileActions(actions []fileAction, summary *Summary, events 
 				DryRun:  e.dryRun,
 			}, err
 		}
-		if err := e.updateSummary(action, summary, true); err != nil {
-			return &ExecuteResult{
-				Events:  events,
-				Summary: summary,
-				DryRun:  e.dryRun,
-			}, err
-		}
+		e.updateSummary(action, summary, true)
 		events = append(events, operationEvents...)
 	}
 	return &ExecuteResult{
@@ -157,29 +145,12 @@ func (e *Engine) undoFileActions(actions []fileAction, summary *Summary, events 
 	}, nil
 }
 
-func (e *Engine) updateSummary(action fileAction, summary *Summary, isUndo bool) error {
-	if isUndo {
-		summary.Reverted += 1
-		return nil
+func (e *Engine) updateSummary(action fileAction, summary *Summary, isUndo bool) {
+	if !isUndo {
+		summary.counts[action.kind()]++
+		return
 	}
-	actionType := action.kind()
-	switch actionType {
-	case ActionUpToDate:
-		summary.UpToDate += 1
-	case ActionSkip:
-		summary.Skipped += 1
-	case ActionLink:
-		summary.Stowed += 1
-	case ActionReplace:
-		summary.Replaced += 1
-	case ActionBackup:
-		summary.BackedUp += 1
-	case ActionAdopt:
-		summary.Adopted += 1
-	case ActionRemove:
-		summary.Unstowed += 1
-	default:
-		return fmt.Errorf("undefined action %d", actionType)
+	if action.kind() != ActionSkip && action.kind() != ActionUpToDate {
+		summary.reverted++
 	}
-	return nil
 }

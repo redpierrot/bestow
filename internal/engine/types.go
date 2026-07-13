@@ -22,22 +22,16 @@ type ExecuteResult struct {
 
 // Summary stores a summary of all the operations performed during an execution
 type Summary struct {
-	// Stowed number of stowed files
-	Stowed int
-	// Unstowed number of unstowed files
-	Unstowed int
-	// Replaced number of replaced files
-	Replaced int
-	// BackedUp number of backed up files
-	BackedUp int
-	// Adopted number of adopted files
-	Adopted int
-	// Skipped number of skipped files
-	Skipped int
-	// UpToDate number of up-to-date files
-	UpToDate int
-	// Reverted number of reverted files, in case of a failure or interrupt
-	Reverted int
+	counts   [numActionKinds]int
+	reverted int
+}
+
+func (s *Summary) Count(k ActionKind) int {
+	return s.counts[k]
+}
+
+func (s *Summary) Reverted() int {
+	return s.reverted
 }
 
 // FileSystem defines the operations needed for the engine to perform file operations
