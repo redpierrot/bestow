@@ -190,7 +190,7 @@ func (e *Engine) stowFileAction(candidate operationCandidate, strategy ResolveSt
 		return newFileActionReplace(candidate.source, candidate.destination, e.logger), nil
 	case ResolveSkip:
 		e.logger.Debug("skipping the existing file at the destination", "destination", candidate.destination, "strategy", strategy)
-		return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("%s: %s", existing.String(), strategy), e.logger), nil
+		return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("%s: %s", existing, strategy), e.logger), nil
 	case ResolveBackup:
 		e.logger.Debug("existing file at the destination will be backed up and replaced", "destination", candidate.destination, "strategy", strategy)
 		backupPath, err := e.calculateBackupPath(candidate.destination)

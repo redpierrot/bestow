@@ -21,17 +21,6 @@ const (
 	CommandUnstow
 )
 
-func (a CommandAction) String() string {
-	switch a {
-	case CommandStow:
-		return "stow"
-	case CommandUnstow:
-		return "unstow"
-	default:
-		return "unknown action"
-	}
-}
-
 // CommandConfig stores the configurations for a given command execution
 type CommandConfig struct {
 	Action           CommandAction
