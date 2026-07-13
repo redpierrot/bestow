@@ -5,18 +5,326 @@ All Rights Reversed (ɔ)
 package engine
 
 import (
+	"context"
 	"os"
 	"slices"
 	"testing"
+
+	"github.com/redpierrot/bestow/internal/file"
 )
 
 func TestEngine_NewEngine(t *testing.T) {
+	tests := []struct {
+		name      string
+		dryRun    bool
+		wantErr   bool
+		wantErrIs error
+	}{
+		{
+			name:   "dry run",
+			dryRun: true,
+		},
+		{
+			name:   "normal run",
+			dryRun: false,
+		},
+		{
+			name:   "normal run",
+			dryRun: false,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			e, err := NewEngine(&EngineConfig{}, tc.dryRun, newTestLogger())
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			_, isDryRun := e.fileSystem.(*file.DryRunHandler)
+			if isDryRun != tc.dryRun {
+				t.Fatalf("got %v, want %v", isDryRun, tc.dryRun)
+			}
+		})
+	}
 }
 
 func TestEngine_Execute(t *testing.T) {
 }
 
 func TestEngine_executeFileActions(t *testing.T) {
+	// to simulate SIGTERM
+	var cancel context.CancelFunc
+
+	tests := []struct {
+		name        string
+		fs          *mockFileSystem
+		ctx         func() context.Context
+		actions     []fileAction
+		wantEvents  []ActionEvent
+		wantSummary Summary
+		wantErr     bool
+		wantErrIs   error
+	}{
+		{
+			name: "single action success",
+			fs:   &mockFileSystem{},
+			ctx: func() context.Context {
+				return t.Context()
+			},
+			actions: []fileAction{
+				newFileActionLink("src", "dest", newTestLogger()),
+			},
+			wantEvents: []ActionEvent{
+				{
+					Action:    actionLink,
+					Msg:       "dest -> src",
+					EventType: EventSuccess,
+				},
+			},
+			wantSummary: Summary{
+				counts: [numActionKinds]int{ActionLink: 1},
+			},
+		},
+		{
+			name: "multiple actions success",
+			fs:   &mockFileSystem{},
+			ctx: func() context.Context {
+				return t.Context()
+			},
+			actions: []fileAction{
+				newFileActionLink("src1", "dest1", newTestLogger()),
+				newFileActionLink("src2", "dest2", newTestLogger()),
+				newFileActionLink("src3", "dest3", newTestLogger()),
+			},
+			wantEvents: []ActionEvent{
+				{
+					Action:    actionLink,
+					Msg:       "dest1 -> src1",
+					EventType: EventSuccess,
+				},
+				{
+					Action:    actionLink,
+					Msg:       "dest2 -> src2",
+					EventType: EventSuccess,
+				},
+				{
+					Action:    actionLink,
+					Msg:       "dest3 -> src3",
+					EventType: EventSuccess,
+				},
+			},
+			wantSummary: Summary{
+				counts: [numActionKinds]int{ActionLink: 3},
+			},
+		},
+		{
+			name: "multiple actions fail in the middle",
+			fs: &mockFileSystem{
+				linkFn: func(src, target string) error {
+					if src == "src3" {
+						return os.ErrPermission
+					}
+					return nil
+				},
+			},
+			ctx: func() context.Context {
+				return t.Context()
+			},
+			actions: []fileAction{
+				newFileActionLink("src1", "dest1", newTestLogger()),
+				newFileActionLink("src2", "dest2", newTestLogger()),
+				newFileActionLink("src3", "dest3", newTestLogger()),
+			},
+			wantEvents: []ActionEvent{
+				{
+					Action:    actionLink,
+					Msg:       "dest1 -> src1",
+					EventType: EventSuccess,
+				},
+				{
+					Action:    actionLink,
+					Msg:       "dest2 -> src2",
+					EventType: EventSuccess,
+				},
+				{
+					Action:    actionRemove,
+					Msg:       "dest2",
+					EventType: EventUndo,
+				},
+				{
+					Action:    actionRemove,
+					Msg:       "dest1",
+					EventType: EventUndo,
+				},
+			},
+			wantSummary: Summary{
+				counts:   [numActionKinds]int{ActionLink: 2},
+				reverted: 2,
+			},
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
+		},
+		{
+			name: "multiple actions fail in the middle - undo fail",
+			fs: &mockFileSystem{
+				linkFn: func(src, target string) error {
+					if src == "src3" {
+						return os.ErrPermission
+					}
+					return nil
+				},
+				removeFn: func(path string) error {
+					if path == "dest1" {
+						return os.ErrPermission
+					}
+					return nil
+				},
+			},
+			ctx: func() context.Context {
+				return t.Context()
+			},
+			actions: []fileAction{
+				newFileActionLink("src1", "dest1", newTestLogger()),
+				newFileActionLink("src2", "dest2", newTestLogger()),
+				newFileActionLink("src3", "dest3", newTestLogger()),
+			},
+			wantEvents: []ActionEvent{
+				{
+					Action:    actionLink,
+					Msg:       "dest1 -> src1",
+					EventType: EventSuccess,
+				},
+				{
+					Action:    actionLink,
+					Msg:       "dest2 -> src2",
+					EventType: EventSuccess,
+				},
+				{
+					Action:    actionRemove,
+					Msg:       "dest2",
+					EventType: EventUndo,
+				},
+			},
+			wantSummary: Summary{
+				counts:   [numActionKinds]int{ActionLink: 2},
+				reverted: 1,
+			},
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
+		},
+		{
+			name: "multiple actions - sigterm in the middle",
+			fs: &mockFileSystem{
+				linkFn: func(src, target string) error {
+					if src == "src2" {
+						cancel()
+					}
+					return nil
+				},
+			},
+			ctx: func() context.Context {
+				var ctx context.Context
+				ctx, cancel = context.WithCancel(t.Context())
+				return ctx
+			},
+			actions: []fileAction{
+				newFileActionLink("src1", "dest1", newTestLogger()),
+				newFileActionLink("src2", "dest2", newTestLogger()),
+				newFileActionLink("src3", "dest3", newTestLogger()),
+			},
+			wantEvents: []ActionEvent{
+				{
+					Action:    actionLink,
+					Msg:       "dest1 -> src1",
+					EventType: EventSuccess,
+				},
+				{
+					Action:    actionLink,
+					Msg:       "dest2 -> src2",
+					EventType: EventSuccess,
+				},
+				{
+					Action:    actionRemove,
+					Msg:       "dest2",
+					EventType: EventUndo,
+				},
+				{
+					Action:    actionRemove,
+					Msg:       "dest1",
+					EventType: EventUndo,
+				},
+			},
+			wantSummary: Summary{
+				counts:   [numActionKinds]int{ActionLink: 2},
+				reverted: 2,
+			},
+			wantErr:   true,
+			wantErrIs: context.Canceled,
+		},
+		{
+			name: "multiple actions - sigterm in the middle - undo fail",
+			fs: &mockFileSystem{
+				linkFn: func(src, target string) error {
+					if src == "src2" {
+						cancel()
+					}
+					return nil
+				},
+				removeFn: func(path string) error {
+					if path == "dest1" {
+						return os.ErrPermission
+					}
+					return nil
+				},
+			},
+			ctx: func() context.Context {
+				var ctx context.Context
+				ctx, cancel = context.WithCancel(t.Context())
+				return ctx
+			},
+			actions: []fileAction{
+				newFileActionLink("src1", "dest1", newTestLogger()),
+				newFileActionLink("src2", "dest2", newTestLogger()),
+				newFileActionLink("src3", "dest3", newTestLogger()),
+			},
+			wantEvents: []ActionEvent{
+				{
+					Action:    actionLink,
+					Msg:       "dest1 -> src1",
+					EventType: EventSuccess,
+				},
+				{
+					Action:    actionLink,
+					Msg:       "dest2 -> src2",
+					EventType: EventSuccess,
+				},
+				{
+					Action:    actionRemove,
+					Msg:       "dest2",
+					EventType: EventUndo,
+				},
+			},
+			wantSummary: Summary{
+				counts:   [numActionKinds]int{ActionLink: 2},
+				reverted: 1,
+			},
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newTestEngine(tc.fs, newTestIgnoreList(tc.fs, newTestLogger(), nil))
+			ctx := tc.ctx()
+			result, err := e.executeFileActions(ctx, tc.actions)
+			validateErrScenario(t, tc.wantErr, err, tc.wantErrIs)
+			if !slices.Equal(result.Events, tc.wantEvents) {
+				t.Fatalf("got %v, want %v", result.Events, tc.wantEvents)
+			}
+			if *result.Summary != tc.wantSummary {
+				t.Fatalf("got %v, want %v", result.Summary, tc.wantSummary)
+			}
+		})
+	}
 }
 
 func TestEngine_undoFileActions(t *testing.T) {
