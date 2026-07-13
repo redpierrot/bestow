@@ -38,6 +38,19 @@ type Output struct {
 	actionStyle  lipgloss.Style
 }
 
+var summaryLabels = []struct {
+	kind  engine.ActionKind
+	label string
+}{
+	{kind: engine.ActionUpToDate, label: "up-to-date"},
+	{kind: engine.ActionSkip, label: "skip"},
+	{kind: engine.ActionLink, label: "link"},
+	{kind: engine.ActionReplace, label: "replace"},
+	{kind: engine.ActionBackup, label: "backup"},
+	{kind: engine.ActionAdopt, label: "adopt"},
+	{kind: engine.ActionRemove, label: "remove"},
+}
+
 // NewOutput returns an Output value, that can be used to print output
 func NewOutput(l Level) *Output {
 	hasDarkBg := lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
@@ -108,31 +121,14 @@ func (o *Output) printSummaryLine(summary *engine.Summary) {
 	if summary == nil {
 		return
 	}
-	summaryFields := 8
-	parts := make([]string, 0, summaryFields)
-	if summary.Stowed > 0 {
-		parts = append(parts, fmt.Sprintf("stowed: %d", summary.Stowed))
+	parts := make([]string, 0, len(summaryLabels)+1)
+	for _, sl := range summaryLabels {
+		if n := summary.Count(sl.kind); n > 0 {
+			parts = append(parts, fmt.Sprintf("%s: %d", sl.label, n))
+		}
 	}
-	if summary.Unstowed > 0 {
-		parts = append(parts, fmt.Sprintf("unstowed: %d", summary.Unstowed))
-	}
-	if summary.Replaced > 0 {
-		parts = append(parts, fmt.Sprintf("replaced: %d", summary.Replaced))
-	}
-	if summary.BackedUp > 0 {
-		parts = append(parts, fmt.Sprintf("backed up: %d", summary.BackedUp))
-	}
-	if summary.Adopted > 0 {
-		parts = append(parts, fmt.Sprintf("adopted: %d", summary.Adopted))
-	}
-	if summary.Skipped > 0 {
-		parts = append(parts, fmt.Sprintf("skipped: %d", summary.Skipped))
-	}
-	if summary.UpToDate > 0 {
-		parts = append(parts, fmt.Sprintf("up-to-date: %d", summary.UpToDate))
-	}
-	if summary.Reverted > 0 {
-		parts = append(parts, fmt.Sprintf("reverted: %d", summary.Reverted))
+	if n := summary.Reverted(); n > 0 {
+		parts = append(parts, fmt.Sprintf("reverted: %d", n))
 	}
 	if len(parts) == 0 {
 		_, _ = lipgloss.Println("no operations to execute")
