@@ -69,35 +69,35 @@ func (i *IgnoreList) forPackage(pkg string) ([]string, error) {
 	return pkgIgnoreList, nil
 }
 
-func (i *IgnoreList) isIgnoredFile(name, pkg string) (bool, error) {
-	i.logger.Debug("checking ignorability", "package", pkg, "file_name", name)
+func (i *IgnoreList) isIgnoredFile(path, pkg string) (bool, error) {
+	i.logger.Debug("checking ignorability", "package", pkg, "file_path", path)
 	ignoreList, err := i.forPackage(pkg)
 	if err != nil {
 		return false, err
 	}
 	for _, ignoreItem := range ignoreList {
-		match, err := doublestar.Match(ignoreItem, name)
-		if err != nil {
-			return false, fmt.Errorf("parse %s %s: %w", ignoreItem, name, err)
-		}
+		match := doublestar.MatchUnvalidated(ignoreItem, path)
 		if match {
 			return true, nil
+		}
+		if name := filepath.Base(path); name != path {
+			match = doublestar.MatchUnvalidated(ignoreItem, name)
+			if match {
+				return true, nil
+			}
 		}
 	}
 	return false, nil
 }
 
-func (i *IgnoreList) isIgnored(pkg string) (bool, error) {
+func (i *IgnoreList) isIgnored(pkg string) bool {
 	for _, ignoreItem := range i.items {
-		match, err := doublestar.Match(ignoreItem, pkg)
-		if err != nil {
-			return false, fmt.Errorf("parse %s %s: %w", ignoreItem, pkg, err)
-		}
+		match := doublestar.MatchUnvalidated(ignoreItem, pkg)
 		if match {
-			return true, nil
+			return true
 		}
 	}
-	return false, nil
+	return false
 }
 
 func readIgnoreFile(source string, reader IgnoreReader) ([]string, error) {
@@ -118,6 +118,9 @@ func readIgnoreFile(source string, reader IgnoreReader) ([]string, error) {
 		trimmed := strings.TrimSpace(line)
 		if trimmed == "" || strings.HasPrefix(trimmed, "#") {
 			continue
+		}
+		if !doublestar.ValidatePattern(trimmed) {
+			return nil, fmt.Errorf("parse %s: %w", trimmed, errInvalidPattern)
 		}
 		patterns = append(patterns, trimmed)
 	}
