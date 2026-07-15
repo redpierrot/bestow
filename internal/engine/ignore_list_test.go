@@ -6,6 +6,7 @@ package engine
 
 import (
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -83,13 +84,76 @@ func Test_newIgnoreList(t *testing.T) {
 	}
 }
 
-func Test_forPackage(t *testing.T) {
-}
-
 func Test_isIgnoredFile(t *testing.T) {
-}
-
-func Test_isIgnored(t *testing.T) {
+	tests := []struct {
+		name        string
+		path        string
+		pkg         string
+		ignoreItems []string
+		reader      *mockIgnoreReader
+		want        bool
+		wantErr     bool
+		wantErrIs   error
+	}{
+		{
+			name:        "file name - ignored",
+			path:        filepath.Join("parent", "file_path"),
+			pkg:         "parent",
+			ignoreItems: []string{"file_path"},
+			reader:      &mockIgnoreReader{},
+			want:        true,
+		},
+		{
+			name:        "glob - ignored",
+			path:        filepath.Join("parent", "file_path"),
+			pkg:         "parent",
+			ignoreItems: []string{"*/**/file_path"},
+			reader:      &mockIgnoreReader{},
+			want:        true,
+		},
+		{
+			name:        "file name - not ignored",
+			path:        filepath.Join("parent", "file_path"),
+			pkg:         "parent",
+			ignoreItems: []string{"path"},
+			reader:      &mockIgnoreReader{},
+			want:        false,
+		},
+		{
+			name:        "glob - not ignored",
+			path:        filepath.Join("parent", "file_path"),
+			pkg:         "parent",
+			ignoreItems: []string{"*/**/path"},
+			reader:      &mockIgnoreReader{},
+			want:        false,
+		},
+		{
+			name:        "read ignore file fail",
+			path:        filepath.Join("parent", "file_path"),
+			pkg:         "parent",
+			ignoreItems: []string{"*/**/path"},
+			reader: &mockIgnoreReader{
+				existsFn: func(path string) (bool, error) {
+					return false, os.ErrPermission
+				},
+			},
+			want:      false,
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			ignoreList := newTestIgnoreList(tc.reader, newTestLogger(), tc.ignoreItems)
+			isIgnored, err := ignoreList.isIgnoredFile(tc.path, tc.pkg)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			if isIgnored != tc.want {
+				t.Fatalf("got %v, want %v", isIgnored, tc.want)
+			}
+		})
+	}
 }
 
 func TestReadIgnoreFile(t *testing.T) {
@@ -154,6 +218,19 @@ func TestReadIgnoreFile(t *testing.T) {
 			},
 			wantErr:   true,
 			wantErrIs: os.ErrPermission,
+		},
+		{
+			name: "invalid pattern",
+			reader: &mockIgnoreReader{
+				existsFn: func(path string) (bool, error) {
+					return true, nil
+				},
+				readLinesFn: func(path string) ([]string, error) {
+					return []string{"*.md", "[a-z"}, nil
+				},
+			},
+			wantErr:   true,
+			wantErrIs: errInvalidPattern,
 		},
 	}
 	for _, tc := range tests {

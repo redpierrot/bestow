@@ -82,4 +82,6 @@ var (
 	errMultiFile = errors.New("multiple files competing for the same destination")
 	// errUnsupportedAction is returned when the provided action is unsupported
 	errUnsupportedAction = errors.New("unsupported action")
+	// errInvalidPattern is returned when a provided ignore file contains invalid patterns
+	errInvalidPattern = errors.New("invalid ignore pattern")
 )
