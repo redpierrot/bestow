@@ -28,10 +28,6 @@ func TestEngine_NewEngine(t *testing.T) {
 			name:   "normal run",
 			dryRun: false,
 		},
-		{
-			name:   "normal run",
-			dryRun: false,
-		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -45,9 +41,6 @@ func TestEngine_NewEngine(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestEngine_Execute(t *testing.T) {
 }
 
 func TestEngine_executeFileActions(t *testing.T) {

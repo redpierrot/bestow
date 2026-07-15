@@ -26,7 +26,7 @@ func newTestEngine(fs *mockFileSystem, ignoreList *IgnoreList) *Engine {
 	}
 }
 
-func newTestIgnoreList(fs *mockFileSystem, logger *slog.Logger, items []string) *IgnoreList {
+func newTestIgnoreList(fs IgnoreReader, logger *slog.Logger, items []string) *IgnoreList {
 	if items == nil {
 		items = make([]string, 0)
 	}

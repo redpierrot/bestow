@@ -25,10 +25,7 @@ func (e *Engine) buildPackageList(args []string) ([]string, error) {
 			return nil, err
 		}
 	}
-	packages, err := e.filterPackages(pkgCandidates)
-	if err != nil {
-		return nil, err
-	}
+	packages := e.filterPackages(pkgCandidates)
 	e.logger.Debug("package list populated", "package_list", packages)
 	return packages, nil
 }
@@ -76,14 +73,11 @@ func (e *Engine) retrievePackagesFromArgs(candidates []string) ([]string, error)
 	return result, nil
 }
 
-func (e *Engine) filterPackages(candidates []string) ([]string, error) {
+func (e *Engine) filterPackages(candidates []string) []string {
 	e.logger.Debug("filtering packages", "candidates", candidates, "filter", e.ignore.items)
 	result := make([]string, 0, len(candidates))
 	for _, candidate := range candidates {
-		shouldIgnore, err := e.ignore.isIgnored(candidate)
-		if err != nil {
-			return nil, err
-		}
+		shouldIgnore := e.ignore.isIgnored(candidate)
 		if shouldIgnore {
 			e.logger.Debug("ignoring package candidate", "candidate", candidate)
 			continue
@@ -91,5 +85,5 @@ func (e *Engine) filterPackages(candidates []string) ([]string, error) {
 		e.logger.Debug("adding package to process", "package", candidate)
 		result = append(result, candidate)
 	}
-	return result, nil
+	return result
 }

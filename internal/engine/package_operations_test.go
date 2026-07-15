@@ -228,8 +228,6 @@ func TestPackageOperations_filterPackages(t *testing.T) {
 		setup      func() *Engine
 		want       []string
 		candidates []string
-		wantErr    bool
-		wantErrIs  error
 	}{
 		{
 			name: "filter with ignore",
@@ -264,10 +262,7 @@ func TestPackageOperations_filterPackages(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			eng := tc.setup()
-			filtered, err := eng.filterPackages(tc.candidates)
-			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
-				return
-			}
+			filtered := eng.filterPackages(tc.candidates)
 			if !slices.Equal(filtered, tc.want) {
 				t.Fatalf("got %v, want %v", filtered, tc.want)
 			}
