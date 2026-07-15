@@ -43,6 +43,46 @@ func TestEngine_NewEngine(t *testing.T) {
 	}
 }
 
+func TestEngine_Execute(t *testing.T) {
+	tests := []struct {
+		name        string
+		setup       func(t *testing.T) Engine
+		cfg         *CommandConfig
+		wantEvents  []ActionEvent
+		wantSummary *Summary
+		wantErr     bool
+		wantErrIs   error
+	}{
+		{
+			name: "no errors",
+			setup: func(t *testing.T) Engine {
+				mf := &mockFileSystem{}
+				return *newTestEngine(mf, newTestIgnoreList(mf, newTestLogger(), nil))
+			},
+			cfg: &CommandConfig{
+				Action: CommandStow,
+			},
+			wantEvents:  []ActionEvent{},
+			wantSummary: &Summary{},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			e := tc.setup(t)
+			executeResult, err := e.Execute(t.Context(), tc.cfg)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			if *executeResult.Summary != *tc.wantSummary {
+				t.Fatalf("got %v, want %v", executeResult.Summary, tc.wantSummary)
+			}
+			if !slices.Equal(executeResult.Events, tc.wantEvents) {
+				t.Fatalf("got %v, want %v", executeResult.Events, tc.wantEvents)
+			}
+		})
+	}
+}
+
 func TestEngine_executeFileActions(t *testing.T) {
 	// to simulate SIGTERM
 	var cancel context.CancelFunc
