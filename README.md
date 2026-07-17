@@ -1,3 +1,8 @@
+[![build](https://github.com/redpierrot/bestow/actions/workflows/build.yml/badge.svg?branch=main&event=push)](https://github.com/redpierrot/bestow/workflows/build.yml)
+[![codecov](https://codecov.io/github/redpierrot/bestow/graph/badge.svg?token=DCC3VHGZTC)](https://codecov.io/github/redpierrot/bestow)
+[![last commit](https://shields.io/github/last-commit/redpierrot/bestow)](https://github.com/redpierrot/bestow)
+[![Go](https://shields.io/github/go-mod/go-version/redpierrot/bestow)](https://go.dev)
+
 # Bestow
 
 A fast, modern symlink manager for dotfiles — (Be)Stow is the spiritual successor to GNU Stow, written in Go.
