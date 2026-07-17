@@ -5,9 +5,10 @@
 
 # Bestow
 
-A fast, modern symlink manager for dotfiles — (Be)Stow is the spiritual successor to GNU Stow, written in Go.
+A modern, fast symlink manager. (Be)Stow is the spiritual successor to [GNU stow](https://www.gnu.org/savannah-checkouts/gnu/stow/stow.html) written in [Go](https://go.dev).
 
-Bestow creates and manages symlinks between a source directory (your dotfiles repo) and a destination (your `$HOME`). It mirrors the directory structure inside each package, so your dotfiles live in one place and your tools find them where they expect.
+Bestow creates and manages symlinks between a source directory and a destination directory.
+If you are managing your dotfiles as a repository, bestow is your friend to manage your configs by linking the dotfiles to your config home directory.
 
 ## Installation
 
@@ -28,7 +29,7 @@ task build          # requires Task (taskfile.dev)
 
 ```sh
 # 1. Initialize bestow with your dotfiles directory
-bestow init --source ~/dotfiles
+bestow init --source ~/dotfiles --destination $HOME
 
 # 2. Stow everything
 bestow stow
@@ -53,7 +54,7 @@ dotfiles/
     └── .gitconfig                  → $HOME/.gitconfig
 ```
 
-Bestow creates the intermediate directories as needed and only symlinks the leaf files.
+> **NOTE**: Unlike GNU _stow_, _bestow_ does not link directories. Instead, _bestow_ creates the intermediate directories and links only files. This is a design choice to not to overcomplicate the stowing process.
 
 ## Commands
 
@@ -80,7 +81,7 @@ Creates symlinks from source packages to the destination.
 
 ```sh
 bestow stow                         # stow all packages
-bestow stow nvim git                # stow specific packages
+bestow stow nvim git                # stow specific packages nvim and git
 bestow stow --force                 # replace conflicting files
 bestow stow --backup                # back up conflicting files before replacing
 bestow stow --adopt                 # move conflicting files into the source
@@ -116,7 +117,6 @@ bestow unstow --dry-run             # preview
 
 | Flag            | Description                                              |
 | --------------- | -------------------------------------------------------- |
-| `-n, --dry-run` | Preview operations without touching the filesystem       |
 | `-v, --verbose` | Enable debug-level log output                            |
 | `-q, --quiet`   | Suppress all output except errors                        |
 | `--profile`     | Use a named profile from the config (default: `default`) |
@@ -189,6 +189,8 @@ When a file already exists at the destination, bestow applies a conflict resolut
 | Adopt    | `--adopt`   | Move the existing file into the source, then link back    |
 
 > **Note:** Bestow never applies a conflict strategy to files it already manages. A destination that already points to the correct source is reported as _up-to-date_ and left untouched.
+
+> **Important: Bestow welcomes contributions, but do not approve contributions that _seems_ AI-generated garbage. If you don't understand your code, do not submit it to somewhere else.
 
 ## License
 
