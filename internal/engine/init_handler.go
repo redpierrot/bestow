@@ -88,7 +88,7 @@ func (e *Engine) createFile(path, content string) (*ActionEvent, error) {
 		return nil, err
 	}
 	return &ActionEvent{
-		Action:    actionCreated,
+		Action:    fileOpCreated,
 		Msg:       path,
 		EventType: EventSuccess,
 	}, nil

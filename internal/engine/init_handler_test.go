@@ -38,12 +38,12 @@ func Test_Init(t *testing.T) {
 			want: ExecuteResult{
 				Events: []ActionEvent{
 					{
-						Action:    actionCreated,
+						Action:    fileOpCreated,
 						Msg:       filepath.Join("config_home", "config_file"),
 						EventType: EventSuccess,
 					},
 					{
-						Action:    actionCreated,
+						Action:    fileOpCreated,
 						Msg:       filepath.Join("config_home", ignoreFileName),
 						EventType: EventSuccess,
 					},

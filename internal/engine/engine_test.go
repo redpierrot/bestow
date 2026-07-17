@@ -108,7 +108,7 @@ func TestEngine_executeFileActions(t *testing.T) {
 			},
 			wantEvents: []ActionEvent{
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "dest -> src",
 					EventType: EventSuccess,
 				},
@@ -130,17 +130,17 @@ func TestEngine_executeFileActions(t *testing.T) {
 			},
 			wantEvents: []ActionEvent{
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "dest1 -> src1",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "dest2 -> src2",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "dest3 -> src3",
 					EventType: EventSuccess,
 				},
@@ -169,22 +169,22 @@ func TestEngine_executeFileActions(t *testing.T) {
 			},
 			wantEvents: []ActionEvent{
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "dest1 -> src1",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "dest2 -> src2",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionRemove,
+					Action:    fileOpRemove,
 					Msg:       "dest2",
 					EventType: EventUndo,
 				},
 				{
-					Action:    actionRemove,
+					Action:    fileOpRemove,
 					Msg:       "dest1",
 					EventType: EventUndo,
 				},
@@ -222,17 +222,17 @@ func TestEngine_executeFileActions(t *testing.T) {
 			},
 			wantEvents: []ActionEvent{
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "dest1 -> src1",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "dest2 -> src2",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionRemove,
+					Action:    fileOpRemove,
 					Msg:       "dest2",
 					EventType: EventUndo,
 				},
@@ -266,22 +266,22 @@ func TestEngine_executeFileActions(t *testing.T) {
 			},
 			wantEvents: []ActionEvent{
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "dest1 -> src1",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "dest2 -> src2",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionRemove,
+					Action:    fileOpRemove,
 					Msg:       "dest2",
 					EventType: EventUndo,
 				},
 				{
-					Action:    actionRemove,
+					Action:    fileOpRemove,
 					Msg:       "dest1",
 					EventType: EventUndo,
 				},
@@ -321,17 +321,17 @@ func TestEngine_executeFileActions(t *testing.T) {
 			},
 			wantEvents: []ActionEvent{
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "dest1 -> src1",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "dest2 -> src2",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionRemove,
+					Action:    fileOpRemove,
 					Msg:       "dest2",
 					EventType: EventUndo,
 				},
@@ -378,14 +378,14 @@ func TestEngine_undoFileActions(t *testing.T) {
 			},
 			events: []ActionEvent{
 				{
-					Action:    actionSkip,
+					Action:    fileOpSkip,
 					Msg:       "src -> dest [reason]",
 					EventType: EventSkip,
 				},
 			},
 			wantEvents: []ActionEvent{
 				{
-					Action:    actionSkip,
+					Action:    fileOpSkip,
 					Msg:       "src -> dest [reason]",
 					EventType: EventSkip,
 				},
@@ -402,19 +402,19 @@ func TestEngine_undoFileActions(t *testing.T) {
 			fs: &mockFileSystem{},
 			events: []ActionEvent{
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src -> dest",
 					EventType: EventSuccess,
 				},
 			},
 			wantEvents: []ActionEvent{
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src -> dest",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionRemove,
+					Action:    fileOpRemove,
 					Msg:       "dest",
 					EventType: EventUndo,
 				},
@@ -433,49 +433,49 @@ func TestEngine_undoFileActions(t *testing.T) {
 			fs: &mockFileSystem{},
 			events: []ActionEvent{
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src1 -> dest1",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src2 -> dest2",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src3 -> dest3",
 					EventType: EventSuccess,
 				},
 			},
 			wantEvents: []ActionEvent{
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src1 -> dest1",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src2 -> dest2",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src3 -> dest3",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionRemove,
+					Action:    fileOpRemove,
 					Msg:       "dest3",
 					EventType: EventUndo,
 				},
 				{
-					Action:    actionRemove,
+					Action:    fileOpRemove,
 					Msg:       "dest2",
 					EventType: EventUndo,
 				},
 				{
-					Action:    actionRemove,
+					Action:    fileOpRemove,
 					Msg:       "dest1",
 					EventType: EventUndo,
 				},
@@ -501,39 +501,39 @@ func TestEngine_undoFileActions(t *testing.T) {
 			},
 			events: []ActionEvent{
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src1 -> dest1",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src2 -> dest2",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src3 -> dest3",
 					EventType: EventSuccess,
 				},
 			},
 			wantEvents: []ActionEvent{
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src1 -> dest1",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src2 -> dest2",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionLink,
+					Action:    fileOpLink,
 					Msg:       "src3 -> dest3",
 					EventType: EventSuccess,
 				},
 				{
-					Action:    actionRemove,
+					Action:    fileOpRemove,
 					Msg:       "dest3",
 					EventType: EventUndo,
 				},
