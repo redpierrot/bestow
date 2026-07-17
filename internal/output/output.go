@@ -94,7 +94,7 @@ func (o *Output) PrintAction(action engine.ActionEvent, label string) {
 		text = o.undoStyle.Render(message)
 	case engine.EventFailure:
 		text = o.warnStyle.Render(message)
-	case engine.EventIgnore:
+	default:
 		return
 	}
 	_, _ = lipgloss.Println(text)

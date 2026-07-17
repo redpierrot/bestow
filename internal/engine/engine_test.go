@@ -389,9 +389,6 @@ func TestEngine_undoFileActions(t *testing.T) {
 					Msg:       "src -> dest [reason]",
 					EventType: EventSkip,
 				},
-				{
-					EventType: EventIgnore,
-				},
 			},
 		},
 		{

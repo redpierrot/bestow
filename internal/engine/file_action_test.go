@@ -35,9 +35,6 @@ func TestFileAction_execute(t *testing.T) {
 				{
 					name: "no errors",
 					fs:   &mockFileSystem{},
-					want: []ActionEvent{
-						{EventType: EventIgnore},
-					},
 				},
 			},
 		},
@@ -108,11 +105,6 @@ func TestFileAction_execute(t *testing.T) {
 							Action:    fileOpLink,
 							Msg:       "dest -> src",
 							EventType: EventSuccess,
-						},
-						{
-							Action:    fileOpRemove,
-							Msg:       "dest.bestow.tmp",
-							EventType: EventIgnore,
 						},
 					},
 				},
@@ -387,9 +379,6 @@ func TestFileAction_undo(t *testing.T) {
 				{
 					name: "run",
 					fs:   &mockFileSystem{},
-					want: []ActionEvent{
-						{EventType: EventIgnore},
-					},
 				},
 			},
 		},
@@ -402,9 +391,6 @@ func TestFileAction_undo(t *testing.T) {
 				{
 					name: "run",
 					fs:   &mockFileSystem{},
-					want: []ActionEvent{
-						{EventType: EventIgnore},
-					},
 				},
 			},
 		},
