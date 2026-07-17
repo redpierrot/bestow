@@ -25,22 +25,8 @@ const (
 	ResolveBackup
 )
 
+// TODO: Make configurable
 const maxBackupFileCount = 6
-
-func (r ResolveStrategy) String() string {
-	switch r {
-	case ResolveSkip:
-		return "skip"
-	case ResolveForce:
-		return "force"
-	case ResolveAdopt:
-		return "adopt"
-	case ResolveBackup:
-		return "backup"
-	default:
-		return fmt.Sprintf("unknown %d", r)
-	}
-}
 
 type operationCandidate struct {
 	source      string
@@ -190,7 +176,7 @@ func (e *Engine) stowFileAction(candidate operationCandidate, strategy ResolveSt
 		return newFileActionReplace(candidate.source, candidate.destination, e.logger), nil
 	case ResolveSkip:
 		e.logger.Debug("skipping the existing file at the destination", "destination", candidate.destination, "strategy", strategy)
-		return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("%s: %s", existing, strategy), e.logger), nil
+		return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("%s: %s", existing, "skip"), e.logger), nil
 	case ResolveBackup:
 		e.logger.Debug("existing file at the destination will be backed up and replaced", "destination", candidate.destination, "strategy", strategy)
 		backupPath, err := e.calculateBackupPath(candidate.destination)
@@ -200,7 +186,7 @@ func (e *Engine) stowFileAction(candidate operationCandidate, strategy ResolveSt
 		return newFileActionBackup(candidate.source, candidate.destination, backupPath, e.logger), nil
 	default:
 		e.logger.Warn("unsupported resolution strategy", "strategy", strategy, "destination", candidate.destination)
-		return nil, fmt.Errorf("unsupported strategy %s: %w", strategy, errUnsupportedAction)
+		return nil, fmt.Errorf("unsupported strategy %v: %w", strategy, errUnsupportedAction)
 	}
 }
 
