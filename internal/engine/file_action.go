@@ -30,8 +30,6 @@ const (
 	EventStep
 	// EventSkip is the event type emitted when the operation is skipped
 	EventSkip
-	// EventIgnore is the event type emitted when the operation is ignored
-	EventIgnore
 	// EventUndo is the event type emitted when the operation is undone
 	EventUndo
 	// EventFailure is the event type emitted when the operation is at a failed state
@@ -102,15 +100,11 @@ func newFileActionUpToDate(source, destination, reason string, l *slog.Logger) *
 
 func (f *fileActionUpToDate) execute(_ FileSystem) ([]ActionEvent, error) {
 	f.logger.Debug(f.reason, "source", f.source, "destination", f.destination)
-	return []ActionEvent{
-		{EventType: EventIgnore},
-	}, nil
+	return nil, nil
 }
 
 func (f *fileActionUpToDate) undo(_ FileSystem) ([]ActionEvent, error) {
-	return []ActionEvent{
-		{EventType: EventIgnore},
-	}, nil
+	return nil, nil
 }
 
 func (f *fileActionUpToDate) kind() ActionKind {
@@ -144,9 +138,7 @@ func (f *fileActionSkip) execute(_ FileSystem) ([]ActionEvent, error) {
 }
 
 func (f *fileActionSkip) undo(_ FileSystem) ([]ActionEvent, error) {
-	return []ActionEvent{
-		{EventType: EventIgnore},
-	}, nil
+	return nil, nil
 }
 
 func (f *fileActionSkip) kind() ActionKind {
@@ -248,12 +240,7 @@ func (f *fileActionReplace) execute(fs FileSystem) ([]ActionEvent, error) {
 		events = append(events, tmpStep)
 		return events, nil // Returning nil here since the intended action is complete, although the temp file is there.
 	}
-	removeStep := ActionEvent{
-		Action:    fileOpRemove,
-		Msg:       tmp,
-		EventType: EventIgnore, // This is a housekeeping event, that should be ignored in summary
-	}
-	events = append(events, removeStep)
+	f.logger.Debug("temp file removed successfully", "file", tmp)
 	return events, nil
 }
 
