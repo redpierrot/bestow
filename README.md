@@ -190,7 +190,7 @@ When a file already exists at the destination, bestow applies a conflict resolut
 
 > **Note:** Bestow never applies a conflict strategy to files it already manages. A destination that already points to the correct source is reported as _up-to-date_ and left untouched.
 
-> **Important: Bestow welcomes contributions, but do not approve contributions that _seems_ AI-generated garbage. If you don't understand your code, do not submit it to somewhere else.
+> **Important**: Bestow welcomes contributions, but do not approve contributions that _seems_ AI-generated garbage. If you don't understand your code, do not submit it to somewhere else.
 
 ## License
 
