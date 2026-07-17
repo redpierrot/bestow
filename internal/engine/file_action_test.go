@@ -52,7 +52,7 @@ func TestFileAction_execute(t *testing.T) {
 					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
-							Action:    actionSkip,
+							Action:    fileOpSkip,
 							Msg:       "src -> dest [reason]",
 							EventType: EventSkip,
 						},
@@ -71,7 +71,7 @@ func TestFileAction_execute(t *testing.T) {
 					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
-							Action:    actionLink,
+							Action:    fileOpLink,
 							Msg:       "dest -> src",
 							EventType: EventSuccess,
 						},
@@ -100,17 +100,17 @@ func TestFileAction_execute(t *testing.T) {
 					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
-							Action:    actionRemove,
+							Action:    fileOpRemove,
 							Msg:       "dest",
 							EventType: EventStep,
 						},
 						{
-							Action:    actionLink,
+							Action:    fileOpLink,
 							Msg:       "dest -> src",
 							EventType: EventSuccess,
 						},
 						{
-							Action:    actionRemove,
+							Action:    fileOpRemove,
 							Msg:       "dest.bestow.tmp",
 							EventType: EventIgnore,
 						},
@@ -168,17 +168,17 @@ func TestFileAction_execute(t *testing.T) {
 					},
 					want: []ActionEvent{
 						{
-							Action:    actionRemove,
+							Action:    fileOpRemove,
 							Msg:       "dest",
 							EventType: EventStep,
 						},
 						{
-							Action:    actionLink,
+							Action:    fileOpLink,
 							Msg:       "dest -> src",
 							EventType: EventSuccess,
 						},
 						{
-							Action:    actionLeftover,
+							Action:    fileOpLeftover,
 							Msg:       "temp file dest.bestow.tmp",
 							EventType: EventFailure,
 						},
@@ -197,12 +197,12 @@ func TestFileAction_execute(t *testing.T) {
 					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
-							Action:    actionBackup,
+							Action:    fileOpBackup,
 							Msg:       "dest -> dest.bestow.backup",
 							EventType: EventStep,
 						},
 						{
-							Action:    actionLink,
+							Action:    fileOpLink,
 							Msg:       "dest -> src",
 							EventType: EventSuccess,
 						},
@@ -234,7 +234,7 @@ func TestFileAction_execute(t *testing.T) {
 					},
 					want: []ActionEvent{
 						{
-							Action:    actionBackup,
+							Action:    fileOpBackup,
 							Msg:       "dest -> dest.bestow.backup",
 							EventType: EventStep,
 						},
@@ -266,12 +266,12 @@ func TestFileAction_execute(t *testing.T) {
 					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
-							Action:    actionAdopt,
+							Action:    fileOpAdopt,
 							Msg:       "dest -> src",
 							EventType: EventStep,
 						},
 						{
-							Action:    actionLink,
+							Action:    fileOpLink,
 							Msg:       "dest -> src",
 							EventType: EventSuccess,
 						},
@@ -303,7 +303,7 @@ func TestFileAction_execute(t *testing.T) {
 					},
 					want: []ActionEvent{
 						{
-							Action:    actionAdopt,
+							Action:    fileOpAdopt,
 							Msg:       "dest -> src",
 							EventType: EventStep,
 						},
@@ -335,7 +335,7 @@ func TestFileAction_execute(t *testing.T) {
 					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
-							Action:    actionRemove,
+							Action:    fileOpRemove,
 							Msg:       "dest",
 							EventType: EventSuccess,
 						},
@@ -423,7 +423,7 @@ func TestFileAction_undo(t *testing.T) {
 					},
 					want: []ActionEvent{
 						{
-							Action:    actionRemove,
+							Action:    fileOpRemove,
 							Msg:       "dest",
 							EventType: EventUndo,
 						},
@@ -452,7 +452,7 @@ func TestFileAction_undo(t *testing.T) {
 					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
-							Action:    actionRemove,
+							Action:    fileOpRemove,
 							Msg:       "dest",
 							EventType: EventUndo,
 						},
@@ -482,7 +482,7 @@ func TestFileAction_undo(t *testing.T) {
 					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
-							Action:    actionRestore,
+							Action:    fileOpRestore,
 							Msg:       "dest.bestow.backup -> dest",
 							EventType: EventUndo,
 						},
@@ -512,12 +512,12 @@ func TestFileAction_undo(t *testing.T) {
 					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
-							Action:    actionRemove,
+							Action:    fileOpRemove,
 							Msg:       "dest",
 							EventType: EventUndo,
 						},
 						{
-							Action:    actionRestore,
+							Action:    fileOpRestore,
 							Msg:       "src -> dest",
 							EventType: EventUndo,
 						},
@@ -543,7 +543,7 @@ func TestFileAction_undo(t *testing.T) {
 					},
 					want: []ActionEvent{
 						{
-							Action:    actionRemove,
+							Action:    fileOpRemove,
 							Msg:       "dest",
 							EventType: EventUndo,
 						},
@@ -564,7 +564,7 @@ func TestFileAction_undo(t *testing.T) {
 					fs:   &mockFileSystem{},
 					want: []ActionEvent{
 						{
-							Action:    actionLink,
+							Action:    fileOpLink,
 							Msg:       "dest -> src",
 							EventType: EventUndo,
 						},

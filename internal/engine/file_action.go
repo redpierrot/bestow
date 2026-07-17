@@ -10,14 +10,14 @@ import (
 )
 
 const (
-	actionLink     = "link"
-	actionBackup   = "backup"
-	actionSkip     = "skip"
-	actionAdopt    = "adopt"
-	actionRemove   = "remove"
-	actionCreated  = "created"
-	actionRestore  = "restore"
-	actionLeftover = "leftover"
+	fileOpLink     = "link"
+	fileOpBackup   = "backup"
+	fileOpSkip     = "skip"
+	fileOpAdopt    = "adopt"
+	fileOpRemove   = "remove"
+	fileOpCreated  = "created"
+	fileOpRestore  = "restore"
+	fileOpLeftover = "leftover"
 )
 
 // EventType defines the type of event that a file action has performed
@@ -136,7 +136,7 @@ func newFileActionSkip(source, destination, reason string, l *slog.Logger) *file
 func (f *fileActionSkip) execute(_ FileSystem) ([]ActionEvent, error) {
 	return []ActionEvent{
 		{
-			Action:    actionSkip,
+			Action:    fileOpSkip,
 			Msg:       fmt.Sprintf("%s -> %s [%s]", f.source, f.destination, f.reason),
 			EventType: EventSkip,
 		},
@@ -173,7 +173,7 @@ func (f *fileActionLink) execute(fs FileSystem) ([]ActionEvent, error) {
 	}
 	return []ActionEvent{
 		{
-			Action:    actionLink,
+			Action:    fileOpLink,
 			Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
 			EventType: EventSuccess,
 		},
@@ -187,7 +187,7 @@ func (f *fileActionLink) undo(fs FileSystem) ([]ActionEvent, error) {
 	}
 	return []ActionEvent{
 		{
-			Action:    actionRemove,
+			Action:    fileOpRemove,
 			Msg:       f.destination,
 			EventType: EventUndo,
 		},
@@ -219,7 +219,7 @@ func (f *fileActionReplace) execute(fs FileSystem) ([]ActionEvent, error) {
 		return nil, err
 	}
 	moveStep := ActionEvent{
-		Action:    actionRemove,
+		Action:    fileOpRemove,
 		Msg:       f.destination,
 		EventType: EventStep,
 	}
@@ -233,7 +233,7 @@ func (f *fileActionReplace) execute(fs FileSystem) ([]ActionEvent, error) {
 		return nil, err
 	}
 	linkStep := ActionEvent{
-		Action:    actionLink,
+		Action:    fileOpLink,
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
 		EventType: EventSuccess, // This is the success event. The next event is a step of housekeeping
 	}
@@ -241,7 +241,7 @@ func (f *fileActionReplace) execute(fs FileSystem) ([]ActionEvent, error) {
 	if err := fs.Remove(tmp); err != nil {
 		f.logger.Warn("failed to remove the temp file", "tmp_file", tmp)
 		tmpStep := ActionEvent{
-			Action:    actionLeftover,
+			Action:    fileOpLeftover,
 			Msg:       fmt.Sprintf("temp file %s", tmp),
 			EventType: EventFailure,
 		}
@@ -249,7 +249,7 @@ func (f *fileActionReplace) execute(fs FileSystem) ([]ActionEvent, error) {
 		return events, nil // Returning nil here since the intended action is complete, although the temp file is there.
 	}
 	removeStep := ActionEvent{
-		Action:    actionRemove,
+		Action:    fileOpRemove,
 		Msg:       tmp,
 		EventType: EventIgnore, // This is a housekeeping event, that should be ignored in summary
 	}
@@ -265,7 +265,7 @@ func (f *fileActionReplace) undo(fs FileSystem) ([]ActionEvent, error) {
 	}
 	return []ActionEvent{
 		{
-			Action:    actionRemove,
+			Action:    fileOpRemove,
 			Msg:       f.destination,
 			EventType: EventUndo,
 		},
@@ -298,7 +298,7 @@ func (f *fileActionBackup) execute(fs FileSystem) ([]ActionEvent, error) {
 	}
 	var events []ActionEvent
 	moveStep := ActionEvent{
-		Action:    actionBackup,
+		Action:    fileOpBackup,
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.backup),
 		EventType: EventStep,
 	}
@@ -312,7 +312,7 @@ func (f *fileActionBackup) execute(fs FileSystem) ([]ActionEvent, error) {
 		return nil, err
 	}
 	linkStep := ActionEvent{
-		Action:    actionLink,
+		Action:    fileOpLink,
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
 		EventType: EventSuccess,
 	}
@@ -326,7 +326,7 @@ func (f *fileActionBackup) undo(fs FileSystem) ([]ActionEvent, error) {
 	}
 	return []ActionEvent{
 		{
-			Action:    actionRestore,
+			Action:    fileOpRestore,
 			Msg:       fmt.Sprintf("%s -> %s", f.backup, f.destination),
 			EventType: EventUndo,
 		},
@@ -357,7 +357,7 @@ func (f *fileActionAdopt) execute(fs FileSystem) ([]ActionEvent, error) {
 	}
 	var events []ActionEvent
 	moveStep := ActionEvent{
-		Action:    actionAdopt,
+		Action:    fileOpAdopt,
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
 		EventType: EventStep,
 	}
@@ -370,7 +370,7 @@ func (f *fileActionAdopt) execute(fs FileSystem) ([]ActionEvent, error) {
 		return nil, err
 	}
 	linkStep := ActionEvent{
-		Action:    actionLink,
+		Action:    fileOpLink,
 		Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
 		EventType: EventSuccess,
 	}
@@ -384,7 +384,7 @@ func (f *fileActionAdopt) undo(fs FileSystem) ([]ActionEvent, error) {
 		return nil, fmt.Errorf("file system in corrupted state; manual intervention needed: %w", err)
 	}
 	removeStep := ActionEvent{
-		Action:    actionRemove,
+		Action:    fileOpRemove,
 		Msg:       f.destination,
 		EventType: EventUndo,
 	}
@@ -393,7 +393,7 @@ func (f *fileActionAdopt) undo(fs FileSystem) ([]ActionEvent, error) {
 		return []ActionEvent{removeStep}, err
 	}
 	moveStep := ActionEvent{
-		Action:    actionRestore,
+		Action:    fileOpRestore,
 		Msg:       fmt.Sprintf("%s -> %s", f.source, f.destination),
 		EventType: EventUndo,
 	}
@@ -424,7 +424,7 @@ func (f *fileActionRemove) execute(fs FileSystem) ([]ActionEvent, error) {
 	}
 	return []ActionEvent{
 		{
-			Action:    actionRemove,
+			Action:    fileOpRemove,
 			Msg:       f.destination,
 			EventType: EventSuccess,
 		},
@@ -438,7 +438,7 @@ func (f *fileActionRemove) undo(fs FileSystem) ([]ActionEvent, error) {
 	}
 	return []ActionEvent{
 		{
-			Action:    actionLink,
+			Action:    fileOpLink,
 			Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
 			EventType: EventUndo,
 		},
