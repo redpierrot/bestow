@@ -32,8 +32,8 @@ func setupLogging(cmd *cobra.Command) error {
 	return nil
 }
 
-func loadConfig(cmd *cobra.Command) (*config.Config, error) {
-	if err := viper.ReadInConfig(); err != nil {
+func loadConfig(v viper.Viper, cmd *cobra.Command) (*config.Config, error) {
+	if err := v.ReadInConfig(); err != nil {
 		return nil, &engine.HintedError{
 			Op:   "read config",
 			Err:  err,
@@ -42,9 +42,9 @@ func loadConfig(cmd *cobra.Command) (*config.Config, error) {
 	}
 	// Profile flag is bound before the config is loaded so the viper configs does not pollute with provided profile keys
 	if f := cmd.Flags().Lookup(flagProfile); f != nil {
-		_ = viper.BindPFlag(flagProfile, f)
+		_ = v.BindPFlag(flagProfile, f)
 	}
-	cfg, err := config.NewConfig(viper.GetViper(), appLogger)
+	cfg, err := config.NewConfig(&v, appLogger)
 	if err != nil {
 		return nil, err
 	}

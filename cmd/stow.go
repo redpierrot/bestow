@@ -8,6 +8,7 @@ import (
 	"github.com/redpierrot/bestow/internal/config"
 	"github.com/redpierrot/bestow/internal/engine"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 var stowCmd = &cobra.Command{
@@ -16,7 +17,7 @@ var stowCmd = &cobra.Command{
 	Long:    stowLong,
 	Example: stowExamples,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := loadConfig(cmd)
+		cfg, err := loadConfig(*viper.GetViper(), cmd)
 		if err != nil {
 			return err
 		}
