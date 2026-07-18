@@ -6,6 +6,7 @@ package output
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
@@ -27,6 +28,7 @@ const (
 
 // Output is used to print output to stdout and stderr
 type Output struct {
+	out, err     io.Writer
 	level        Level
 	successStyle lipgloss.Style
 	warnStyle    lipgloss.Style
@@ -52,10 +54,12 @@ var summaryLabels = []struct {
 }
 
 // NewOutput returns an Output value, that can be used to print output
-func NewOutput(l Level) *Output {
+func NewOutput(out, err io.Writer, l Level) *Output {
 	hasDarkBg := lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
 	lightDark := lipgloss.LightDark(hasDarkBg)
 	return &Output{
+		out:          out,
+		err:          err,
 		level:        l,
 		successStyle: lipgloss.NewStyle().Bold(true).Foreground(lightDark(lipgloss.Green, lipgloss.BrightGreen)),
 		warnStyle:    lipgloss.NewStyle().Bold(true).Foreground(lightDark(lipgloss.Yellow, lipgloss.BrightYellow)),
@@ -97,7 +101,7 @@ func (o *Output) PrintAction(action engine.ActionEvent, label string) {
 	default:
 		return
 	}
-	_, _ = lipgloss.Println(text)
+	_, _ = lipgloss.Fprintln(o.out, text)
 }
 
 // PrintResult prints the provided result in a defined manner
@@ -131,38 +135,38 @@ func (o *Output) printSummaryLine(summary *engine.Summary) {
 		parts = append(parts, fmt.Sprintf("reverted: %d", n))
 	}
 	if len(parts) == 0 {
-		_, _ = lipgloss.Println("no operations to execute")
+		_, _ = lipgloss.Fprintln(o.out, "no operations to execute")
 		return
 	}
-	_, _ = lipgloss.Println(strings.Join(parts, "   "))
+	_, _ = lipgloss.Fprintln(o.out, strings.Join(parts, "   "))
 }
 
 // PrintHint prints any hints to stderr
 func (o *Output) PrintHint(hint string) {
 	message := "[hint] " + hint
-	_, _ = lipgloss.Fprintln(os.Stderr, o.hintStyle.Render(message))
+	_, _ = lipgloss.Fprintln(o.err, o.hintStyle.Render(message))
 }
 
 // PrintConflict prints the provided conflicts to stderr
 func (o *Output) PrintConflict(conflicts []engine.DestinationConflict) {
-	_, _ = lipgloss.Fprintln(os.Stderr, o.errStyle.Render("conflicts:"))
+	_, _ = lipgloss.Fprintln(o.err, o.errStyle.Render("conflicts:"))
 	for _, conflict := range conflicts {
-		_, _ = lipgloss.Fprintln(os.Stderr, o.errStyle.Render(conflict.Destination))
+		_, _ = lipgloss.Fprintln(o.err, o.errStyle.Render(conflict.Destination))
 		for _, source := range conflict.Sources {
-			_, _ = lipgloss.Fprintln(os.Stderr, o.warnStyle.Render("-", source))
+			_, _ = lipgloss.Fprintln(o.err, o.warnStyle.Render("-", source))
 		}
 	}
 }
 
 // PrintAggregatedError prints the information of the provided AggregatedError
 func (o *Output) PrintAggregatedError(err *engine.AggregatedError) {
-	_, _ = lipgloss.Fprintln(os.Stderr, o.errStyle.Render(err.Msg))
+	_, _ = lipgloss.Fprintln(o.err, o.errStyle.Render(err.Msg))
 	for _, item := range err.Items {
-		_, _ = lipgloss.Fprintln(os.Stderr, o.errStyle.Render(fmt.Sprintf("  %s", item.Error())))
+		_, _ = lipgloss.Fprintln(o.err, o.errStyle.Render(fmt.Sprintf("  %s", item.Error())))
 	}
 }
 
 // PrintCommandError prints a command error to stderr
 func (o *Output) PrintCommandError(err error) {
-	_, _ = lipgloss.Fprintln(os.Stderr, o.errStyle.Render(err.Error()))
+	_, _ = lipgloss.Fprintln(o.err, o.errStyle.Render(err.Error()))
 }

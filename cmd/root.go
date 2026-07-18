@@ -76,7 +76,7 @@ func init() {
 	charmLogger = charmlog.NewWithOptions(os.Stderr, opts)
 	appLogger = slog.New(charmLogger)
 
-	appOutput = output.NewOutput(output.Normal)
+	appOutput = output.NewOutput(os.Stdout, os.Stderr, output.Normal)
 
 	cobra.OnInitialize(initConfig)
 	// Disable showing `completion` in the available commands list while keeping the command available
