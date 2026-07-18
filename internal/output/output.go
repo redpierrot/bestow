@@ -77,8 +77,8 @@ func (o *Output) SetLevel(level Level) {
 	o.level = level
 }
 
-// PrintAction prints the information of an action executed by the Engine, with the provided label
-func (o *Output) PrintAction(action engine.ActionEvent, label string) {
+// printAction prints the information of an action executed by the Engine, with the provided label
+func (o *Output) printAction(action engine.ActionEvent, label string) {
 	var message string
 	formattedAction := o.actionStyle.Render(action.Action)
 	if label == "" {
@@ -109,16 +109,17 @@ func (o *Output) PrintResult(result *engine.ExecuteResult) {
 	if result == nil {
 		return
 	}
+	if o.level == Quiet {
+		return
+	}
 	var label string
 	if result.DryRun {
 		label = "[dryrun]"
 	}
-	if o.level != Quiet {
-		for _, action := range result.Events {
-			o.PrintAction(action, label)
-		}
-		o.printSummaryLine(result.Summary)
+	for _, action := range result.Events {
+		o.printAction(action, label)
 	}
+	o.printSummaryLine(result.Summary)
 }
 
 func (o *Output) printSummaryLine(summary *engine.Summary) {
