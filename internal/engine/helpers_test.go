@@ -167,3 +167,36 @@ func (mf *mockFileSystem) ExistingFileType(src, dest string) (file.ExistingType,
 	}
 	return file.ExistingUnknown, nil
 }
+
+func TestSummary(t *testing.T) {
+	tests := []struct {
+		name       string
+		summary    *Summary
+		action     ActionKind
+		wantCount  int
+		wantRevert int
+	}{
+		{
+			name: "stow",
+			summary: &Summary{
+				counts:   [numActionKinds]int{ActionLink: 1},
+				reverted: 5,
+			},
+			action:     ActionLink,
+			wantCount:  1,
+			wantRevert: 5,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			count := tc.summary.Count(tc.action)
+			if count != tc.wantCount {
+				t.Fatalf("got %d, want %d", count, tc.wantCount)
+			}
+			reverted := tc.summary.Reverted()
+			if reverted != tc.wantRevert {
+				t.Fatalf("got reverted %d, want %d", reverted, tc.wantRevert)
+			}
+		})
+	}
+}
