@@ -2,6 +2,8 @@
 All Rights Reversed (ɔ)
 */
 
+// Package output is the layer that handles all the outputs to the stdout and
+// stderr for bestow.
 package output
 
 import (
