@@ -7,6 +7,7 @@ package engine
 import (
 	"fmt"
 	"path/filepath"
+	"time"
 
 	"github.com/redpierrot/bestow/internal/file"
 )
@@ -24,9 +25,6 @@ const (
 	// ResolveBackup backs up the destination file before linking
 	ResolveBackup
 )
-
-// TODO: Make configurable
-const maxBackupFileCount = 6
 
 type operationCandidate struct {
 	source      string
@@ -179,10 +177,8 @@ func (e *Engine) stowFileAction(candidate operationCandidate, strategy ResolveSt
 		return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("%s: %s", existing, "skip"), e.logger), nil
 	case ResolveBackup:
 		e.logger.Debug("existing file at the destination will be backed up and replaced", "destination", candidate.destination, "strategy", strategy)
-		backupPath, err := e.calculateBackupPath(candidate.destination)
-		if err != nil {
-			return nil, err
-		}
+		backupId := time.Now().Format("yyyymmddhhmmss")
+		backupPath := fmt.Sprintf("%s.%s.%s", candidate.destination, backupId, backupExtension)
 		return newFileActionBackup(candidate.source, candidate.destination, backupPath, e.logger), nil
 	default:
 		e.logger.Warn("unsupported resolution strategy", "strategy", strategy, "destination", candidate.destination)
@@ -214,24 +210,4 @@ func (e *Engine) unstowFileAction(candidate operationCandidate) (fileAction, err
 	}
 	e.logger.Warn("destination is not managed by bestow", "destination", candidate.destination, "file_type", existing)
 	return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink", e.logger), nil
-}
-
-func (e *Engine) calculateBackupPath(dest string) (string, error) {
-	i := 0
-	for i < maxBackupFileCount {
-		backupPath := fmt.Sprintf("%s.%d.%s", dest, i, backupExtension)
-		exists, err := e.fileSystem.Exists(backupPath)
-		if err != nil {
-			return "", fmt.Errorf("backup %s: %w", backupPath, err)
-		}
-		if !exists {
-			return backupPath, nil
-		}
-		i++
-	}
-	return "", &HintedError{
-		Op:   fmt.Sprintf("backup %s", dest),
-		Err:  fmt.Errorf("exceeds maximum backup count %d", maxBackupFileCount),
-		Hint: fmt.Sprintf("remove existing backups %s.*.bestow.backup", dest),
-	}
 }
