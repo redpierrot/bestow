@@ -36,8 +36,8 @@ var unstowCmd = &cobra.Command{
 			return err
 		}
 		cmdCfg := engine.CommandConfig{
-			Action: engine.CommandUnstow,
-			Args:   args,
+			Kind: engine.CommandUnstow,
+			Args: args,
 		}
 		summary, err := eng.Execute(cmd.Context(), &cmdCfg)
 		appOutput.PrintResult(summary)

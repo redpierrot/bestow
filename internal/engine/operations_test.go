@@ -40,8 +40,8 @@ func TestOperations_buildOperations(t *testing.T) {
 				return newTestEngine(mf, nil)
 			},
 			cfg: &CommandConfig{
-				Action: CommandStow,
-				Args:   []string{"bestow"},
+				Kind: CommandStow,
+				Args: []string{"bestow"},
 			},
 			want: []fileAction{
 				newFileActionLink("src_file_1", "src_file_1", newTestLogger()),
@@ -62,8 +62,8 @@ func TestOperations_buildOperations(t *testing.T) {
 				return newTestEngine(mf, nil)
 			},
 			cfg: &CommandConfig{
-				Action: CommandStow,
-				Args:   []string{"bestow", "nvim", "stow"},
+				Kind: CommandStow,
+				Args: []string{"bestow", "nvim", "stow"},
 			},
 			wantErr: true,
 			wantErrAs: func(t *testing.T, err error) {
@@ -235,7 +235,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 		setup      func() *Engine
 		candidates []operationCandidate
 		strategy   ResolveStrategy
-		cmdAction  CommandAction
+		cmdAction  CommandKind
 		want       []fileAction
 		wantErr    bool
 		wantErrIs  error

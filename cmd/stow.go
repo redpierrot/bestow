@@ -60,7 +60,7 @@ var stowCmd = &cobra.Command{
 			return err
 		}
 		cmdCfg := engine.CommandConfig{
-			Action:           engine.CommandStow,
+			Kind:             engine.CommandStow,
 			Args:             args,
 			ConflictStrategy: strategy,
 		}
