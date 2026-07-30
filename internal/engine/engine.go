@@ -2,6 +2,7 @@
 All Rights Reversed (ɔ)
 */
 
+// Package engine is the main operation engine of the bestow.
 package engine
 
 import (

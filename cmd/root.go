@@ -2,6 +2,7 @@
 All Rights Reversed (ɔ)
 */
 
+// Package cmd is the main package that acts as the interface between the engine and the input.
 package cmd
 
 import (
