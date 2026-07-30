@@ -5,12 +5,13 @@ All Rights Reversed (ɔ)
 package engine
 
 import (
-	"fmt"
+	"log/slog"
 	"path/filepath"
-	"time"
-
-	"github.com/redpierrot/bestow/internal/file"
 )
+
+type Operation interface {
+	FileAction(candidate operationCandidate) (fileAction, error)
+}
 
 // ResolveStrategy defines the file action resolving strategy when the destination exist
 type ResolveStrategy int
@@ -29,6 +30,17 @@ const (
 type operationCandidate struct {
 	source      string
 	destination string
+}
+
+func getOperation(kind CommandKind, fs FileSystem, l *slog.Logger, strategy ResolveStrategy) Operation {
+	switch kind {
+	case CommandStow:
+		return newStowOperation(fs, l, strategy)
+	case CommandUnstow:
+		return newUnstowOperation(fs, l)
+	default:
+		return nil
+	}
 }
 
 func (e *Engine) buildOperations(cfg *CommandConfig) ([]fileAction, error) {
@@ -116,18 +128,12 @@ func (e *Engine) buildOperationCandidates(pkg string) ([]operationCandidate, err
 	return candidates, nil
 }
 
-func (e *Engine) buildFileActions(candidates []operationCandidate, strategy ResolveStrategy, cmdAction CommandKind) ([]fileAction, error) {
+func (e *Engine) buildFileActions(candidates []operationCandidate, strategy ResolveStrategy, cmdKind CommandKind) ([]fileAction, error) {
 	actions := make([]fileAction, 0, len(candidates))
 	errs := make([]error, 0, len(candidates))
+	operation := getOperation(cmdKind, e.fileSystem, e.logger, strategy)
 	for _, candidate := range candidates {
-		var action fileAction
-		var err error
-		switch cmdAction {
-		case CommandStow:
-			action, err = e.stowFileAction(candidate, strategy)
-		case CommandUnstow:
-			action, err = e.unstowFileAction(candidate)
-		}
+		action, err := operation.FileAction(candidate)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -141,73 +147,4 @@ func (e *Engine) buildFileActions(candidates []operationCandidate, strategy Reso
 		}
 	}
 	return actions, nil
-}
-
-func (e *Engine) stowFileAction(candidate operationCandidate, strategy ResolveStrategy) (fileAction, error) {
-	destExists, err := e.fileSystem.Exists(candidate.destination)
-	if err != nil {
-		return nil, err
-	}
-	if !destExists {
-		return newFileActionLink(candidate.source, candidate.destination, e.logger), nil
-	}
-	existing, err := e.fileSystem.ExistingFileType(candidate.source, candidate.destination)
-	if err != nil {
-		return nil, err
-	}
-	if existing == file.ExistingDir {
-		return nil, fmt.Errorf("stow %s: %w", candidate.destination, errDestIsDir)
-	}
-	if existing == file.ExistingManagedSymlink {
-		return newFileActionUpToDate(candidate.source, candidate.destination, "file already stowed", e.logger), nil
-	}
-
-	if strategy == ResolveAdopt {
-		if existing != file.ExistingRegularFile {
-			return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("adopt %s: %s", candidate.destination, existing), e.logger), nil
-		}
-		return newFileActionAdopt(candidate.source, candidate.destination, e.logger), nil
-	}
-	switch strategy {
-	case ResolveForce:
-		e.logger.Debug("existing destination will be replaced", "destination", candidate.destination, "strategy", strategy)
-		return newFileActionReplace(candidate.source, candidate.destination, e.logger), nil
-	case ResolveSkip:
-		e.logger.Debug("skipping the existing file at the destination", "destination", candidate.destination, "strategy", strategy)
-		return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("%s: %s", existing, "skip"), e.logger), nil
-	case ResolveBackup:
-		e.logger.Debug("existing file at the destination will be backed up and replaced", "destination", candidate.destination, "strategy", strategy)
-		backupId := time.Now().Format("yyyymmddhhmmss")
-		backupPath := fmt.Sprintf("%s.%s.%s", candidate.destination, backupId, backupExtension)
-		return newFileActionBackup(candidate.source, candidate.destination, backupPath, e.logger), nil
-	default:
-		e.logger.Warn("unsupported resolution strategy", "strategy", strategy, "destination", candidate.destination)
-		return nil, fmt.Errorf("unsupported strategy %v: %w", strategy, errUnsupportedAction)
-	}
-}
-
-func (e *Engine) unstowFileAction(candidate operationCandidate) (fileAction, error) {
-	destExists, err := e.fileSystem.Exists(candidate.destination)
-	if err != nil {
-		return nil, err
-	}
-	if !destExists {
-		return newFileActionUpToDate(candidate.source, candidate.destination, "destination does not exist", e.logger), nil
-	}
-	existing, err := e.fileSystem.ExistingFileType(candidate.source, candidate.destination)
-	if err != nil {
-		return nil, err
-	}
-	switch existing {
-	case file.ExistingDir:
-		return nil, fmt.Errorf("unstow %s: %w", candidate.destination, errDestIsDir)
-	case file.ExistingRegularFile:
-		return newFileActionSkip(candidate.source, candidate.destination, "regular file", e.logger), nil
-	case file.ExistingManagedSymlink:
-		return newFileActionRemove(candidate.source, candidate.destination, e.logger), nil
-	case file.ExistingForeignSymlink:
-		return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink", e.logger), nil
-	}
-	e.logger.Warn("destination is not managed by bestow", "destination", candidate.destination, "file_type", existing)
-	return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink", e.logger), nil
 }
