@@ -13,17 +13,17 @@ import (
 	"github.com/redpierrot/bestow/internal/file"
 )
 
-// CommandAction defines the different actions in Bestow
-type CommandAction int
+// CommandKind defines the different actions in Bestow
+type CommandKind int
 
 const (
-	CommandStow CommandAction = iota
+	CommandStow CommandKind = iota
 	CommandUnstow
 )
 
 // CommandConfig stores the configurations for a given command execution
 type CommandConfig struct {
-	Action           CommandAction
+	Kind             CommandKind
 	Args             []string
 	ConflictStrategy ResolveStrategy
 }

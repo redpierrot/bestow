@@ -34,7 +34,7 @@ type operationCandidate struct {
 }
 
 func (e *Engine) buildOperations(cfg *CommandConfig) ([]fileAction, error) {
-	e.logger.Debug("populating operations", "action", cfg.Action)
+	e.logger.Debug("populating operations", "Command", cfg.Kind)
 	packageList, err := e.buildPackageList(cfg.Args)
 	if err != nil {
 		return nil, err
@@ -58,7 +58,7 @@ func (e *Engine) buildOperations(cfg *CommandConfig) ([]fileAction, error) {
 	if err := e.validateDestinations(candidates); err != nil {
 		return nil, err
 	}
-	return e.buildFileActions(candidates, cfg.ConflictStrategy, cfg.Action)
+	return e.buildFileActions(candidates, cfg.ConflictStrategy, cfg.Kind)
 }
 
 func (e *Engine) validateDestinations(candidates []operationCandidate) error {
@@ -118,7 +118,7 @@ func (e *Engine) buildOperationCandidates(pkg string) ([]operationCandidate, err
 	return candidates, nil
 }
 
-func (e *Engine) buildFileActions(candidates []operationCandidate, strategy ResolveStrategy, cmdAction CommandAction) ([]fileAction, error) {
+func (e *Engine) buildFileActions(candidates []operationCandidate, strategy ResolveStrategy, cmdAction CommandKind) ([]fileAction, error) {
 	actions := make([]fileAction, 0, len(candidates))
 	errs := make([]error, 0, len(candidates))
 	for _, candidate := range candidates {

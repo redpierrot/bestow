@@ -60,7 +60,7 @@ func TestEngine_Execute(t *testing.T) {
 				return *newTestEngine(mf, newTestIgnoreList(mf, newTestLogger(), nil))
 			},
 			cfg: &CommandConfig{
-				Action: CommandStow,
+				Kind: CommandStow,
 			},
 			wantEvents:  []ActionEvent{},
 			wantSummary: &Summary{},
