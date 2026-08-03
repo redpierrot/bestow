@@ -43,7 +43,7 @@ func getOperation(kind CommandKind, fs FileSystem, l *slog.Logger, strategy Reso
 	}
 }
 
-func (e *Engine) buildOperations(args []string) ([]operationCandidate, error) {
+func (e *Engine) findCandidates(args []string) ([]operationCandidate, error) {
 	packageList, err := e.buildPackageList(args)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (e *Engine) buildOperations(args []string) ([]operationCandidate, error) {
 	candidates := make([]operationCandidate, 0, len(packageList))
 	errs := make([]error, 0, len(packageList))
 	for _, pkg := range packageList {
-		packageCandidates, err := e.buildOperationCandidates(pkg)
+		packageCandidates, err := e.findPackageCandidates(pkg)
 		if err != nil {
 			errs = append(errs, err)
 			continue
@@ -97,7 +97,7 @@ func (e *Engine) validateDestinations(candidates []operationCandidate) error {
 	return nil
 }
 
-func (e *Engine) buildOperationCandidates(pkg string) ([]operationCandidate, error) {
+func (e *Engine) findPackageCandidates(pkg string) ([]operationCandidate, error) {
 	pkgPath := filepath.Join(e.source, pkg)
 	fileList, err := e.fileSystem.ListAllFiles(pkgPath)
 	if err != nil {
