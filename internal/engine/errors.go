@@ -84,4 +84,6 @@ var (
 	errUnsupportedAction = errors.New("unsupported action")
 	// errInvalidPattern is returned when a provided ignore file contains invalid patterns
 	errInvalidPattern = errors.New("invalid ignore pattern")
+	// errPackageOutsideSource is returned when a provided package is living outside the source directory
+	errPackageOutsideSource = errors.New("package is outside the source")
 )

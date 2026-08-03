@@ -79,6 +79,37 @@ func TestPackageOperations_buildPackageList(t *testing.T) {
 			wantErr:   true,
 			wantErrIs: os.ErrNotExist,
 		},
+		{
+			name: "args outside source",
+			setup: func() *Engine {
+				fs := &mockFileSystem{
+					isDirFn: func(path string) (bool, error) {
+						return true, nil
+					},
+				}
+				e := newTestEngine(fs, nil)
+				e.source = "/Users/ru/dotfiles"
+				return e
+			},
+			args:      []string{"../pkg2"},
+			wantErr:   true,
+			wantErrIs: errPackageOutsideSource,
+		},
+		{
+			name: "args with relative paths",
+			setup: func() *Engine {
+				fs := &mockFileSystem{
+					isDirFn: func(path string) (bool, error) {
+						return true, nil
+					},
+				}
+				e := newTestEngine(fs, nil)
+				e.source = "/Users/ru/dotfiles"
+				return e
+			},
+			args: []string{"../dotfiles/pkg2"},
+			want: []string{"../dotfiles/pkg2"},
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

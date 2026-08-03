@@ -7,6 +7,7 @@ package engine
 import (
 	"fmt"
 	"path/filepath"
+	"strings"
 )
 
 func (e *Engine) buildPackageList(args []string) ([]string, error) {
@@ -56,8 +57,11 @@ func (e *Engine) retrievePackagesFromArgs(candidates []string) ([]string, error)
 				Err:  errRootIsNotPkg,
 			}
 		}
-		pkgPath := filepath.Clean(candidate)
-		isDir, err := e.fileSystem.IsDir(filepath.Join(e.source, pkgPath))
+		pkg := filepath.Clean(candidate)
+		if !e.isInsideSource(pkg) {
+			return nil, fmt.Errorf("package %s: %w", candidate, errPackageOutsideSource)
+		}
+		isDir, err := e.fileSystem.IsDir(filepath.Join(e.source, pkg))
 		if err != nil {
 			return nil, fmt.Errorf("read package %s: %w", candidate, err)
 		}
@@ -68,7 +72,7 @@ func (e *Engine) retrievePackagesFromArgs(candidates []string) ([]string, error)
 				Err:  errPkgIsNotDir,
 			}
 		}
-		result = append(result, pkgPath)
+		result = append(result, pkg)
 	}
 	return result, nil
 }
@@ -86,4 +90,9 @@ func (e *Engine) filterPackages(candidates []string) []string {
 		result = append(result, candidate)
 	}
 	return result
+}
+
+func (e *Engine) isInsideSource(pkg string) bool {
+	pkgPath := filepath.Clean(filepath.Join(e.source, pkg))
+	return strings.Contains(pkgPath, e.source)
 }
