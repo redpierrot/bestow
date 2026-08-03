@@ -60,7 +60,7 @@ func (so *StowOperation) FileAction(candidate operationCandidate) (fileAction, e
 		return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("%s: %s", existing, "skip"), so.l), nil
 	case ResolveBackup:
 		so.l.Debug("existing file at the destination will be backed up and replaced", "destination", candidate.destination, "strategy", so.strategy)
-		backupID := time.Now().Format("yyyymmddhhmmss")
+		backupID := time.Now().Format("20060102030405")
 		backupPath := fmt.Sprintf("%s.%s.%s", candidate.destination, backupID, backupExtension)
 		return newFileActionBackup(candidate.source, candidate.destination, backupPath, so.l), nil
 	default:
