@@ -20,8 +20,8 @@ func TestOperations_buildOperations(t *testing.T) {
 	tests := []struct {
 		name      string
 		setup     func() *Engine
-		cfg       *CommandConfig
-		want      []fileAction
+		args      []string
+		want      []operationCandidate
 		wantErr   bool
 		wantErrIs error
 		wantErrAs func(t *testing.T, err error)
@@ -31,21 +31,21 @@ func TestOperations_buildOperations(t *testing.T) {
 			setup: func() *Engine {
 				mf := &mockFileSystem{
 					listAllFilesFn: func(parent string) ([]string, error) {
-						return []string{"src_file_1", "src_file_2"}, nil
+						return []string{"/Users/ru/dotfiles/bestow/src_file_1", "/Users/ru/dotfiles/bestow/src_file_2"}, nil
 					},
 					isDirFn: func(path string) (bool, error) {
 						return true, nil
 					},
 				}
-				return newTestEngine(mf, nil)
+				e := newTestEngine(mf, nil)
+				e.source = "/Users/ru/dotfiles"
+				e.destination = "/Users/ru/"
+				return e
 			},
-			cfg: &CommandConfig{
-				Kind: CommandStow,
-				Args: []string{"bestow"},
-			},
-			want: []fileAction{
-				newFileActionLink("src_file_1", "src_file_1", newTestLogger()),
-				newFileActionLink("src_file_2", "src_file_2", newTestLogger()),
+			args: []string{"bestow"},
+			want: []operationCandidate{
+				{source: "/Users/ru/dotfiles/bestow/src_file_1", destination: "/Users/ru/src_file_1"},
+				{source: "/Users/ru/dotfiles/bestow/src_file_2", destination: "/Users/ru/src_file_2"},
 			},
 		},
 		{
@@ -61,10 +61,7 @@ func TestOperations_buildOperations(t *testing.T) {
 				}
 				return newTestEngine(mf, nil)
 			},
-			cfg: &CommandConfig{
-				Kind: CommandStow,
-				Args: []string{"bestow", "nvim", "stow"},
-			},
+			args:    []string{"bestow", "nvim", "stow"},
 			wantErr: true,
 			wantErrAs: func(t *testing.T, err error) {
 				var expected *AggregatedError
@@ -78,7 +75,7 @@ func TestOperations_buildOperations(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			e := tc.setup()
-			actions, err := e.buildOperations(tc.cfg)
+			actions, err := e.buildOperations(tc.args)
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				if tc.wantErrAs != nil {
 					tc.wantErrAs(t, err)
@@ -86,11 +83,11 @@ func TestOperations_buildOperations(t *testing.T) {
 				return
 			}
 			if len(actions) != len(tc.want) {
-				t.Fatalf("got actions %d, want %d", len(actions), len(tc.want))
+				t.Fatalf("got candidates %d, want %d", len(actions), len(tc.want))
 			}
 			for i := range len(actions) {
-				if actions[i].kind() != tc.want[i].kind() {
-					t.Fatalf("got action %v, want %v", actions[i], tc.want[i])
+				if actions[i] != tc.want[i] {
+					t.Fatalf("got candidate %v, want %v", actions[i], tc.want[i])
 				}
 			}
 		})

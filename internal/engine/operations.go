@@ -43,9 +43,8 @@ func getOperation(kind CommandKind, fs FileSystem, l *slog.Logger, strategy Reso
 	}
 }
 
-func (e *Engine) buildOperations(cfg *CommandConfig) ([]fileAction, error) {
-	e.logger.Debug("populating operations", "Command", cfg.Kind)
-	packageList, err := e.buildPackageList(cfg.Args)
+func (e *Engine) buildOperations(args []string) ([]operationCandidate, error) {
+	packageList, err := e.buildPackageList(args)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +67,7 @@ func (e *Engine) buildOperations(cfg *CommandConfig) ([]fileAction, error) {
 	if err := e.validateDestinations(candidates); err != nil {
 		return nil, err
 	}
-	return e.buildFileActions(candidates, cfg.ConflictStrategy, cfg.Kind)
+	return candidates, nil
 }
 
 func (e *Engine) validateDestinations(candidates []operationCandidate) error {
