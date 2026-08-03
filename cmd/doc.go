@@ -100,3 +100,16 @@ bestow unstow
 # Provide custom source and destination
 bestow unstow -s ~/dotfiles -d ~/sandbox
 `
+
+const statusShort = "Shows the current status of the stow"
+const statusLong = `Shows the current status of the source and the destination.
+
+Status walks through the source and destination files, then reports the number
+of files per each category: 'stowed', 'unstowed', 'conflict', and 'unknown' (when errors occur)
+`
+const statusExamples = `# Show the status of all packages
+bestow status
+
+# Show the status of specific packages
+bestow status nvim git
+`

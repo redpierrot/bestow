@@ -55,6 +55,16 @@ var summaryLabels = []struct {
 	{kind: engine.ActionRemove, label: "remove"},
 }
 
+var statusLabels = []struct {
+	status engine.State
+	label  string
+}{
+	{status: engine.Unknown, label: "unknown"},
+	{status: engine.Unstowed, label: "unstowed"},
+	{status: engine.Stowed, label: "stowed"},
+	{status: engine.Conflict, label: "conflict"},
+}
+
 // NewOutput returns an Output value, that can be used to print output
 func NewOutput(out, err io.Writer, l Level) *Output {
 	hasDarkBg := lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
@@ -140,6 +150,16 @@ func (o *Output) printSummaryLine(summary *engine.Summary) {
 	if len(parts) == 0 {
 		_, _ = lipgloss.Fprintln(o.out, "no operations to execute")
 		return
+	}
+	_, _ = lipgloss.Fprintln(o.out, strings.Join(parts, "   "))
+}
+
+func (o *Output) PrintStatus(status *engine.Status) {
+	parts := make([]string, 0, len(statusLabels))
+	for _, sl := range statusLabels {
+		if n := status.Count(sl.status); n > 0 {
+			parts = append(parts, fmt.Sprintf("%s: %d", sl.label, n))
+		}
 	}
 	_, _ = lipgloss.Fprintln(o.out, strings.Join(parts, "   "))
 }
