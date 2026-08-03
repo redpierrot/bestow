@@ -75,7 +75,7 @@ func TestOperations_buildOperations(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			e := tc.setup()
-			actions, err := e.buildOperations(tc.args)
+			actions, err := e.findCandidates(tc.args)
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				if tc.wantErrAs != nil {
 					tc.wantErrAs(t, err)
@@ -215,7 +215,7 @@ func TestOperations_buildOperationCandidates(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			e := tc.setup()
-			candidates, err := e.buildOperationCandidates(tc.pkg)
+			candidates, err := e.findPackageCandidates(tc.pkg)
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}

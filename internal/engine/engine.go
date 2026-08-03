@@ -72,7 +72,7 @@ func NewEngine(cfg *EngineConfig, dryRun bool, l *slog.Logger) (*Engine, error) 
 
 // Execute executes the given operation with the provided configs
 func (e *Engine) Execute(ctx context.Context, cfg *CommandConfig) (*ExecuteResult, error) {
-	candidates, err := e.buildOperations(cfg.Args)
+	candidates, err := e.findCandidates(cfg.Args)
 	if err != nil {
 		return nil, err
 	}
