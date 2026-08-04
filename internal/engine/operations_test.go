@@ -646,6 +646,8 @@ func TestOperations_getOperation(t *testing.T) {
 		name      string
 		kind      CommandKind
 		expectNil bool
+		wantErr   bool
+		wantErrIs error
 	}{
 		{
 			name: "stow",
@@ -658,15 +660,19 @@ func TestOperations_getOperation(t *testing.T) {
 		{
 			name:      "undefined",
 			kind:      100,
-			expectNil: true,
+			wantErr:   true,
+			wantErrIs: errUnsupportedAction,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			operation := getOperation(tc.kind, &mockFileSystem{}, newTestLogger(), ResolveSkip)
-			if tc.expectNil != (operation == nil) {
-				t.Fatalf("got %v, want %v", operation, tc.expectNil)
+			operation, err := getOperation(tc.kind, &mockFileSystem{}, newTestLogger(), ResolveSkip)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			if operation == nil {
+				t.Fatalf("got nil, want Operation")
 			}
 		})
 	}
