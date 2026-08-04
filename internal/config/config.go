@@ -2,7 +2,7 @@
 All Rights Reversed (ɔ)
 */
 
-// Package config if the layer for handling configs in bestow.
+// Package config is the layer for handling configs in bestow.
 package config
 
 import (
