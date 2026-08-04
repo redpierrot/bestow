@@ -93,6 +93,14 @@ func (e *Engine) filterPackages(candidates []string) []string {
 }
 
 func (e *Engine) isInsideSource(pkg string) bool {
+	source := filepath.Clean(e.source)
 	pkgPath := filepath.Clean(filepath.Join(e.source, pkg))
-	return strings.Contains(pkgPath, e.source)
+	rel, err := filepath.Rel(source, pkgPath)
+	if err != nil {
+		return false
+	}
+	if rel == ".." {
+		return false
+	}
+	return !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
