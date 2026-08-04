@@ -23,6 +23,9 @@ type Status struct {
 }
 
 func (s *Status) Count(state State) int {
+	if state < 0 || state >= numStates {
+		return 0
+	}
 	return s.counts[state]
 }
 
