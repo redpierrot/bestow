@@ -645,7 +645,6 @@ func TestOperations_getOperation(t *testing.T) {
 	tests := []struct {
 		name      string
 		kind      CommandKind
-		expectNil bool
 		wantErr   bool
 		wantErrIs error
 	}{
