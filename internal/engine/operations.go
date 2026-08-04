@@ -32,14 +32,14 @@ type operationCandidate struct {
 	destination string
 }
 
-func getOperation(kind CommandKind, fs FileSystem, l *slog.Logger, strategy ResolveStrategy) Operation {
+func getOperation(kind CommandKind, fs FileSystem, l *slog.Logger, strategy ResolveStrategy) (Operation, error) {
 	switch kind {
 	case CommandStow:
-		return newStowOperation(fs, l, strategy)
+		return newStowOperation(fs, l, strategy), nil
 	case CommandUnstow:
-		return newUnstowOperation(fs, l)
+		return newUnstowOperation(fs, l), nil
 	default:
-		return nil
+		return nil, errUnsupportedAction
 	}
 }
 
@@ -130,7 +130,10 @@ func (e *Engine) findPackageCandidates(pkg string) ([]operationCandidate, error)
 func (e *Engine) buildFileActions(candidates []operationCandidate, strategy ResolveStrategy, cmdKind CommandKind) ([]fileAction, error) {
 	actions := make([]fileAction, 0, len(candidates))
 	errs := make([]error, 0, len(candidates))
-	operation := getOperation(cmdKind, e.fileSystem, e.logger, strategy)
+	operation, err := getOperation(cmdKind, e.fileSystem, e.logger, strategy)
+	if err != nil {
+		return nil, err
+	}
 	for _, candidate := range candidates {
 		action, err := operation.FileAction(candidate)
 		if err != nil {
