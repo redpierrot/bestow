@@ -236,7 +236,7 @@ func TestHandler_Remove(t *testing.T) {
 	tests := []struct {
 		name      string
 		path      string
-		setup     func(t *testing.T, dir string)
+		setup     func(t *testing.T, parent, file string)
 		wantErr   bool
 		wantErrIs error
 		handler   *Handler
@@ -244,7 +244,8 @@ func TestHandler_Remove(t *testing.T) {
 		{
 			name: "file",
 			path: "src_file",
-			setup: func(t *testing.T, path string) {
+			setup: func(t *testing.T, parent, file string) {
+				path := filepath.Join(parent, file)
 				if err := os.WriteFile(path, []byte("test file content"), permFileWrite); err != nil {
 					t.Fatal(err)
 				}
@@ -254,7 +255,8 @@ func TestHandler_Remove(t *testing.T) {
 		{
 			name: "dir",
 			path: "src_dir",
-			setup: func(t *testing.T, path string) {
+			setup: func(t *testing.T, parent, file string) {
+				path := filepath.Join(parent, file)
 				if err := os.Mkdir(path, permWritableDir); err != nil {
 					t.Fatal(err)
 				}
@@ -264,16 +266,34 @@ func TestHandler_Remove(t *testing.T) {
 		{
 			name:    "non-existing",
 			path:    "src_dir",
-			setup:   func(t *testing.T, path string) {},
+			setup:   func(t *testing.T, parent, file string) {},
 			handler: NewHandler(newTestLogger()),
+		},
+		{
+			name: "unreadable parent",
+			path: "src_dir",
+			setup: func(t *testing.T, parent, file string) {
+				if err := os.Chmod(parent, permNone); err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() {
+					if err := os.Chmod(parent, permDirWrite); err != nil {
+						t.Fatal(err)
+					}
+				})
+			},
+			handler:   NewHandler(newTestLogger()),
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			testRoot := t.TempDir()
-			path := filepath.Join(testRoot, tc.path)
-			tc.setup(t, path)
+			fileName := "file"
+			tc.setup(t, testRoot, fileName)
+			path := filepath.Join(testRoot, fileName)
 			err := tc.handler.Remove(path)
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
