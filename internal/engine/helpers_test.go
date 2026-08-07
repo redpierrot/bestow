@@ -78,7 +78,6 @@ type mockFileSystem struct {
 	moveFn             func(src, target string) error
 	removeFn           func(path string) error
 	isDirFn            func(path string) (bool, error)
-	isEmptyDirFn       func(path string) (bool, error)
 	existsFn           func(path string) (bool, error)
 	readLinesFn        func(path string) ([]string, error)
 	existingFileTypeFn func(src, dest string) (file.ExistingType, error)
