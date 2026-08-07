@@ -6,10 +6,32 @@ package output
 
 import (
 	"bytes"
+	"fmt"
 	"testing"
 
 	"github.com/redpierrot/bestow/internal/engine"
 )
+
+type mockSummary struct {
+	counts   map[engine.ActionKind]int
+	reverted int
+}
+
+func (ms mockSummary) Count(kind engine.ActionKind) int {
+	return ms.counts[kind]
+}
+
+func (ms mockSummary) Reverted() int {
+	return ms.reverted
+}
+
+type mockStatus struct {
+	counts map[engine.State]int
+}
+
+func (ms mockStatus) Count(state engine.State) int {
+	return ms.counts[state]
+}
 
 func TestOutput_printAction(t *testing.T) {
 	tests := []struct {
@@ -124,7 +146,7 @@ func TestOutput_printAction(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			var out, err bytes.Buffer
-			o := NewOutput(&out, &err, Normal)
+			o := NewOutput(&out, &err)
 			o.printAction(tc.action, tc.label)
 
 			got := out.String()
@@ -217,10 +239,8 @@ func TestOutput_PrintResult(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			var out, err bytes.Buffer
-			o := NewOutput(&out, &err, Normal)
-			if tc.level != Normal {
-				o.SetLevel(tc.level)
-			}
+			o := NewOutput(&out, &err)
+			o.SetLevel(tc.level)
 			o.PrintResult(tc.result)
 			got := out.String()
 			if got != tc.want {
@@ -231,16 +251,82 @@ func TestOutput_PrintResult(t *testing.T) {
 }
 
 func TestOutput_printSummaryLine(t *testing.T) {
+	tests := []struct {
+		name    string
+		level   Level
+		summary summarizer
+		want    string
+	}{
+		{
+			name:  "multiple counts",
+			level: Normal,
+			summary: mockSummary{
+				counts: map[engine.ActionKind]int{
+					engine.ActionLink:  4,
+					engine.ActionAdopt: 1,
+				},
+			},
+			want: "link: 4   adopt: 1\n",
+		},
+		{
+			name:  "with reverts",
+			level: Normal,
+			summary: mockSummary{
+				counts: map[engine.ActionKind]int{
+					engine.ActionLink:  4,
+					engine.ActionAdopt: 1,
+				},
+				reverted: 5,
+			},
+			want: "link: 4   adopt: 1   reverted: 5\n",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var out, err bytes.Buffer
+			o := NewOutput(&out, &err)
+			o.SetLevel(tc.level)
+
+			o.printSummaryLine(tc.summary)
+			got := out.String()
+			if got != tc.want {
+				t.Fatalf("got %q, want %q", got, tc.want)
+			}
+		})
+	}
 }
 
-func TestOutput_PrintHint(t *testing.T) {
-}
-
-func TestOutput_PrintConflict(t *testing.T) {
-}
-
-func TestOutput_PrintAggregatedError(t *testing.T) {
+func TestOutput_PrintStatus(t *testing.T) {
+	ms := &mockStatus{
+		counts: map[engine.State]int{
+			engine.Stowed:   10,
+			engine.Unstowed: 0,
+		},
+	}
+	var out, err bytes.Buffer
+	o := NewOutput(&out, &err)
+	o.PrintStatus(ms)
+	wantOut := "stowed: 10\n"
+	wantErr := ""
+	if wantOut != out.String() {
+		t.Fatalf("got %q, want %s", &out, wantOut)
+	}
+	if wantErr != err.String() {
+		t.Fatalf("got %q, want %s", &err, wantErr)
+	}
 }
 
 func TestOutput_PrintCommandError(t *testing.T) {
+	testErr := fmt.Errorf("sample error")
+	var out, err bytes.Buffer
+	o := NewOutput(&out, &err)
+	o.PrintCommandError(testErr)
+	wantErr := "sample error\n"
+	wantOut := ""
+	if err.String() != wantErr {
+		t.Fatalf("got %q, want %q", &err, wantErr)
+	}
+	if out.String() != wantOut {
+		t.Fatalf("got %q, want %q", &err, wantOut)
+	}
 }

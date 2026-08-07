@@ -28,6 +28,15 @@ const (
 	Quiet
 )
 
+type summarizer interface {
+	Count(engine.ActionKind) int
+	Reverted() int
+}
+
+type status interface {
+	Count(status engine.State) int
+}
+
 // Output is used to print output to stdout and stderr
 type Output struct {
 	out, err     io.Writer
@@ -66,13 +75,13 @@ var statusLabels = []struct {
 }
 
 // NewOutput returns an Output value, that can be used to print output
-func NewOutput(out, err io.Writer, l Level) *Output {
+func NewOutput(out, err io.Writer) *Output {
 	hasDarkBg := lipgloss.HasDarkBackground(os.Stdin, os.Stdout)
 	lightDark := lipgloss.LightDark(hasDarkBg)
 	return &Output{
 		out:          out,
 		err:          err,
-		level:        l,
+		level:        Normal,
 		successStyle: lipgloss.NewStyle().Bold(true).Foreground(lightDark(lipgloss.Green, lipgloss.BrightGreen)),
 		warnStyle:    lipgloss.NewStyle().Bold(true).Foreground(lightDark(lipgloss.Yellow, lipgloss.BrightYellow)),
 		errStyle:     lipgloss.NewStyle().Bold(true).Foreground(lightDark(lipgloss.Red, lipgloss.BrightRed)),
@@ -131,13 +140,12 @@ func (o *Output) PrintResult(result *engine.ExecuteResult) {
 	for _, action := range result.Events {
 		o.printAction(action, label)
 	}
-	o.printSummaryLine(result.Summary)
+	if result.Summary != nil {
+		o.printSummaryLine(result.Summary)
+	}
 }
 
-func (o *Output) printSummaryLine(summary *engine.Summary) {
-	if summary == nil {
-		return
-	}
+func (o *Output) printSummaryLine(summary summarizer) {
 	parts := make([]string, 0, len(summaryLabels)+1)
 	for _, sl := range summaryLabels {
 		if n := summary.Count(sl.kind); n > 0 {
@@ -154,7 +162,7 @@ func (o *Output) printSummaryLine(summary *engine.Summary) {
 	_, _ = lipgloss.Fprintln(o.out, strings.Join(parts, "   "))
 }
 
-func (o *Output) PrintStatus(status *engine.Status) {
+func (o *Output) PrintStatus(status status) {
 	parts := make([]string, 0, len(statusLabels))
 	for _, sl := range statusLabels {
 		if n := status.Count(sl.status); n > 0 {
