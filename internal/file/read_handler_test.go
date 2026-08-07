@@ -22,7 +22,7 @@ func TestReadHandler_ListDirs(t *testing.T) {
 		wantErrIs error
 	}{
 		{
-			name: "existing dirs",
+			name: "no error",
 			setup: func(t *testing.T, parent string) {
 				if err := os.Mkdir(parent, permWritableDir); err != nil {
 					t.Fatal(err)
@@ -38,7 +38,7 @@ func TestReadHandler_ListDirs(t *testing.T) {
 			want:    []string{"subdir_0", "subdir_1", "subdir_2", "subdir_3", "subdir_4"},
 		},
 		{
-			name: "empty dir",
+			name: "empty parent",
 			setup: func(t *testing.T, parent string) {
 				if err := os.Mkdir(parent, permWritableDir); err != nil {
 					t.Fatal(err)
@@ -59,7 +59,7 @@ func TestReadHandler_ListDirs(t *testing.T) {
 			wantErrIs: ErrNotDir,
 		},
 		{
-			name: "dir with files and subdirs",
+			name: "parent with files and directories",
 			setup: func(t *testing.T, parent string) {
 				if err := os.Mkdir(parent, permWritableDir); err != nil {
 					t.Fatal(err)
@@ -78,6 +78,32 @@ func TestReadHandler_ListDirs(t *testing.T) {
 			},
 			handler: NewHandler(newTestLogger()),
 			want:    []string{"subdir_0", "subdir_1", "subdir_2", "subdir_3", "subdir_4"},
+		},
+		{
+			name: "non readable dir",
+			setup: func(t *testing.T, parent string) {
+				if err := os.Mkdir(parent, permWritableDir); err != nil {
+					t.Fatal(err)
+				}
+				if err := os.Chmod(parent, permNone); err != nil {
+					t.Fatal(err)
+				}
+				t.Cleanup(func() {
+					if err := os.Chmod(parent, permWritableDir); err != nil {
+						t.Fatal(err)
+					}
+				})
+			},
+			handler:   NewHandler(newTestLogger()),
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
+		},
+		{
+			name:      "non existent dir",
+			setup:     func(t *testing.T, parent string) {},
+			handler:   NewHandler(newTestLogger()),
+			wantErr:   true,
+			wantErrIs: ErrNotDir,
 		},
 	}
 

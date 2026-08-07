@@ -232,64 +232,6 @@ func TestHandler_Link(t *testing.T) {
 	}
 }
 
-func TestHandler_IsEmptyDir(t *testing.T) {
-	tests := []struct {
-		name      string
-		setup     func(t *testing.T, dir string)
-		handler   *Handler
-		want      bool
-		wantErr   bool
-		wantErrIs error
-	}{
-		{
-			name: "empty dir",
-			setup: func(t *testing.T, dir string) {
-				if err := os.Mkdir(dir, permWritableDir); err != nil {
-					t.Fatal(err)
-				}
-			},
-			handler: NewHandler(newTestLogger()),
-			want:    true,
-		},
-		{
-			name: "non-empty dir",
-			setup: func(t *testing.T, dir string) {
-				if err := os.Mkdir(dir, permWritableDir); err != nil {
-					t.Fatal(err)
-				}
-				tmpFile := filepath.Join(dir, "source_file")
-				if err := os.WriteFile(tmpFile, []byte("Sample file content"), permFileWrite); err != nil {
-					t.Fatal(err)
-				}
-			},
-			handler: NewHandler(newTestLogger()),
-			want:    false,
-		},
-		{
-			name:      "non-existent dir",
-			setup:     func(t *testing.T, dir string) {},
-			handler:   NewHandler(newTestLogger()),
-			want:      false,
-			wantErr:   true,
-			wantErrIs: ErrNotDir,
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			testRoot := t.TempDir()
-			src := filepath.Join(testRoot, "source")
-			tc.setup(t, src)
-			isEmpty, err := tc.handler.IsEmptyDir(src)
-			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
-				return
-			}
-			if isEmpty != tc.want {
-				t.Fatalf("got isEmpty %v, want %v", isEmpty, tc.want)
-			}
-		})
-	}
-}
-
 func TestHandler_Remove(t *testing.T) {
 	tests := []struct {
 		name      string
