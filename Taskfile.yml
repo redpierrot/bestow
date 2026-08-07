@@ -63,4 +63,7 @@ tasks:
     cmds:
       - go test -race -coverprofile=coverage.out ./...
       - go tool cover -func=coverage.out
-      - go tool cover -html=coverage.out -o coverage.html
+      - cmd: go tool cover -html=coverage.out -o coverage.html
+        silent: true
+      - cmd: 'awk ''NR>1{tot+=$2; if($3>0) cov+=$2} END{printf "Total Coverage:  %.2f%%\n", 100*cov/tot}'' coverage.out'
+        silent: true
