@@ -12,6 +12,97 @@ import (
 	"testing"
 )
 
+func TestReadHandler_ListDirs(t *testing.T) {
+	tests := []struct {
+		name      string
+		setup     func(t *testing.T, parent string)
+		handler   *Handler
+		want      []string
+		wantErr   bool
+		wantErrIs error
+	}{
+		{
+			name: "existing dirs",
+			setup: func(t *testing.T, parent string) {
+				if err := os.Mkdir(parent, permWritableDir); err != nil {
+					t.Fatal(err)
+				}
+				for i := range 5 {
+					subDir := filepath.Join(parent, fmt.Sprintf("subdir_%d", i))
+					if err := os.Mkdir(subDir, permWritableDir); err != nil {
+						t.Fatal(err)
+					}
+				}
+			},
+			handler: NewHandler(newTestLogger()),
+			want:    []string{"subdir_0", "subdir_1", "subdir_2", "subdir_3", "subdir_4"},
+		},
+		{
+			name: "empty dir",
+			setup: func(t *testing.T, parent string) {
+				if err := os.Mkdir(parent, permWritableDir); err != nil {
+					t.Fatal(err)
+				}
+			},
+			handler: NewHandler(newTestLogger()),
+			want:    make([]string, 0),
+		},
+		{
+			name: "non dir path",
+			setup: func(t *testing.T, parent string) {
+				if err := os.WriteFile(parent, []byte("sample file content"), permFileWrite); err != nil {
+					t.Fatal(err)
+				}
+			},
+			handler:   NewHandler(newTestLogger()),
+			wantErr:   true,
+			wantErrIs: ErrNotDir,
+		},
+		{
+			name: "dir with files and subdirs",
+			setup: func(t *testing.T, parent string) {
+				if err := os.Mkdir(parent, permWritableDir); err != nil {
+					t.Fatal(err)
+				}
+				for i := range 5 {
+					subDir := filepath.Join(parent, fmt.Sprintf("subdir_%d", i))
+					if err := os.Mkdir(subDir, permWritableDir); err != nil {
+						t.Fatal(err)
+					}
+					filePath := filepath.Join(subDir, "file")
+					_, err := os.Create(filePath)
+					if err != nil {
+						t.Fatal(err)
+					}
+				}
+			},
+			handler: NewHandler(newTestLogger()),
+			want:    []string{"subdir_0", "subdir_1", "subdir_2", "subdir_3", "subdir_4"},
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			testRoot := t.TempDir()
+			parent := filepath.Join(testRoot, "dest")
+			tc.setup(t, parent)
+			got, err := tc.handler.ListDirs(parent)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			if len(tc.want) != len(got) {
+				t.Fatalf("got len(dirs) %d, want %d", len(got), len(tc.want))
+			}
+			for _, wantDir := range tc.want {
+				wantPath := filepath.Join(parent, wantDir)
+				if !slices.Contains(got, wantPath) {
+					t.Fatalf("missing %s", wantPath)
+				}
+			}
+		})
+	}
+}
+
 func TestReadHandler_ListAllFiles(t *testing.T) {
 	tests := []struct {
 		name      string
@@ -114,6 +205,64 @@ func TestReadHandler_ListAllFiles(t *testing.T) {
 				if !slices.Contains(files, wantPath) {
 					t.Fatalf("missing %s", wantPath)
 				}
+			}
+		})
+	}
+}
+
+func TestReadHandler_ReadLines(t *testing.T) {
+	tests := []struct {
+		name      string
+		handler   *Handler
+		setup     func(t *testing.T, path, content string)
+		want      []string
+		content   string
+		wantErr   bool
+		wantErrIs error
+	}{
+		{
+			name:    "existing file",
+			handler: NewHandler(newTestLogger()),
+			setup: func(t *testing.T, path, content string) {
+				if err := os.WriteFile(path, []byte(content), permFileWrite); err != nil {
+					t.Fatal(err)
+				}
+			},
+			content: "sample file content\nwith lines",
+			want:    []string{"sample file content", "with lines"},
+		},
+		{
+			name:      "non existing file",
+			handler:   NewHandler(newTestLogger()),
+			setup:     func(t *testing.T, path, content string) {},
+			content:   "",
+			wantErr:   true,
+			wantErrIs: os.ErrNotExist,
+		},
+		{
+			name:    "no perm",
+			handler: NewHandler(newTestLogger()),
+			setup: func(t *testing.T, path, content string) {
+				if err := os.WriteFile(path, []byte(content), permNone); err != nil {
+					t.Fatal(err)
+				}
+			},
+			content:   "",
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			testRoot := t.TempDir()
+			path := filepath.Join(testRoot, "file")
+			tc.setup(t, path, tc.content)
+			content, err := tc.handler.ReadLines(path)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			if !slices.Equal(content, tc.want) {
+				t.Fatalf("got %v, want %v", content, tc.want)
 			}
 		})
 	}
@@ -274,155 +423,6 @@ func TestReadHandler_ExistingFileType(t *testing.T) {
 			}
 			if existingType != tc.want {
 				t.Fatalf("got existingType %v, want %v", existingType, tc.want)
-			}
-		})
-	}
-}
-
-func TestReadHandler_ListDirs(t *testing.T) {
-	tests := []struct {
-		name      string
-		setup     func(t *testing.T, parent string)
-		handler   *Handler
-		want      []string
-		wantErr   bool
-		wantErrIs error
-	}{
-		{
-			name: "existing dirs",
-			setup: func(t *testing.T, parent string) {
-				if err := os.Mkdir(parent, permWritableDir); err != nil {
-					t.Fatal(err)
-				}
-				for i := range 5 {
-					subDir := filepath.Join(parent, fmt.Sprintf("subdir_%d", i))
-					if err := os.Mkdir(subDir, permWritableDir); err != nil {
-						t.Fatal(err)
-					}
-				}
-			},
-			handler: NewHandler(newTestLogger()),
-			want:    []string{"subdir_0", "subdir_1", "subdir_2", "subdir_3", "subdir_4"},
-		},
-		{
-			name: "empty dir",
-			setup: func(t *testing.T, parent string) {
-				if err := os.Mkdir(parent, permWritableDir); err != nil {
-					t.Fatal(err)
-				}
-			},
-			handler: NewHandler(newTestLogger()),
-			want:    make([]string, 0),
-		},
-		{
-			name: "non dir path",
-			setup: func(t *testing.T, parent string) {
-				if err := os.WriteFile(parent, []byte("sample file content"), permFileWrite); err != nil {
-					t.Fatal(err)
-				}
-			},
-			handler:   NewHandler(newTestLogger()),
-			wantErr:   true,
-			wantErrIs: ErrNotDir,
-		},
-		{
-			name: "dir with files and subdirs",
-			setup: func(t *testing.T, parent string) {
-				if err := os.Mkdir(parent, permWritableDir); err != nil {
-					t.Fatal(err)
-				}
-				for i := range 5 {
-					subDir := filepath.Join(parent, fmt.Sprintf("subdir_%d", i))
-					if err := os.Mkdir(subDir, permWritableDir); err != nil {
-						t.Fatal(err)
-					}
-					filePath := filepath.Join(subDir, "file")
-					_, err := os.Create(filePath)
-					if err != nil {
-						t.Fatal(err)
-					}
-				}
-			},
-			handler: NewHandler(newTestLogger()),
-			want:    []string{"subdir_0", "subdir_1", "subdir_2", "subdir_3", "subdir_4"},
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			testRoot := t.TempDir()
-			parent := filepath.Join(testRoot, "dest")
-			tc.setup(t, parent)
-			got, err := tc.handler.ListDirs(parent)
-			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
-				return
-			}
-			if len(tc.want) != len(got) {
-				t.Fatalf("got len(dirs) %d, want %d", len(got), len(tc.want))
-			}
-			for _, wantDir := range tc.want {
-				wantPath := filepath.Join(parent, wantDir)
-				if !slices.Contains(got, wantPath) {
-					t.Fatalf("missing %s", wantPath)
-				}
-			}
-		})
-	}
-}
-
-func TestReadHandler_ReadLines(t *testing.T) {
-	tests := []struct {
-		name      string
-		handler   *Handler
-		setup     func(t *testing.T, path, content string)
-		want      []string
-		content   string
-		wantErr   bool
-		wantErrIs error
-	}{
-		{
-			name:    "existing file",
-			handler: NewHandler(newTestLogger()),
-			setup: func(t *testing.T, path, content string) {
-				if err := os.WriteFile(path, []byte(content), permFileWrite); err != nil {
-					t.Fatal(err)
-				}
-			},
-			content: "sample file content\nwith lines",
-			want:    []string{"sample file content", "with lines"},
-		},
-		{
-			name:      "non existing file",
-			handler:   NewHandler(newTestLogger()),
-			setup:     func(t *testing.T, path, content string) {},
-			content:   "",
-			wantErr:   true,
-			wantErrIs: os.ErrNotExist,
-		},
-		{
-			name:    "no perm",
-			handler: NewHandler(newTestLogger()),
-			setup: func(t *testing.T, path, content string) {
-				if err := os.WriteFile(path, []byte(content), permNone); err != nil {
-					t.Fatal(err)
-				}
-			},
-			content:   "",
-			wantErr:   true,
-			wantErrIs: os.ErrPermission,
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			testRoot := t.TempDir()
-			path := filepath.Join(testRoot, "file")
-			tc.setup(t, path, tc.content)
-			content, err := tc.handler.ReadLines(path)
-			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
-				return
-			}
-			if !slices.Equal(content, tc.want) {
-				t.Fatalf("got %v, want %v", content, tc.want)
 			}
 		})
 	}
