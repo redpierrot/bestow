@@ -8,7 +8,6 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"log/slog"
 	"os"
@@ -86,37 +85,6 @@ func (h *readHandler) IsDir(path string) (bool, error) {
 		return false, err
 	}
 	return stat.IsDir(), nil
-}
-
-// IsEmptyDir returns true if the provided path is empty. Returns true if the path is a directory. False, if the path
-// is not a directory. Returns an error if any IO error occurred.
-func (h *readHandler) IsEmptyDir(path string) (empty bool, err error) {
-	h.logger.Debug("checking if the provided path is an empty directory", "path", path)
-	isDir, err := h.IsDir(path)
-	if err != nil {
-		return false, err
-	}
-	if !isDir {
-		return false, fmt.Errorf("read %s: %w", path, ErrNotDir)
-	}
-	f, err := os.Open(path)
-	if err != nil {
-		return false, err
-	}
-	defer func() {
-		if closeErr := f.Close(); closeErr != nil && err == nil {
-			err = closeErr
-		}
-	}()
-
-	_, err = f.ReadDir(1)
-	if errors.Is(err, io.EOF) {
-		return true, nil
-	}
-	if err != nil {
-		return false, fmt.Errorf("read %s: %w", path, err)
-	}
-	return false, nil
 }
 
 // Exists returns true if the provided path exists.

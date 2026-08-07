@@ -140,13 +140,6 @@ func (mf *mockFileSystem) IsDir(path string) (bool, error) {
 	return false, nil
 }
 
-func (mf *mockFileSystem) IsEmptyDir(path string) (bool, error) {
-	if mf.isEmptyDirFn != nil {
-		return mf.isEmptyDirFn(path)
-	}
-	return true, nil
-}
-
 func (mf *mockFileSystem) Exists(path string) (bool, error) {
 	if mf.existsFn != nil {
 		return mf.existsFn(path)
