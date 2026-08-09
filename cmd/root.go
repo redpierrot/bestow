@@ -10,14 +10,10 @@ import (
 	"errors"
 	"log/slog"
 	"os"
-	"path/filepath"
-	"strings"
 
 	charmlog "github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 
-	"github.com/redpierrot/bestow/internal/config"
 	"github.com/redpierrot/bestow/internal/engine"
 	"github.com/redpierrot/bestow/internal/output"
 )
@@ -33,10 +29,6 @@ type App struct {
 	out        *output.Output
 }
 
-var (
-	configFile string
-)
-
 func newRootCmd(app *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "bestow",
@@ -46,6 +38,11 @@ func newRootCmd(app *App) *cobra.Command {
 		Version:       version,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			configFile, err := stringFlag(cmd.Flags(), flagConfigFile)
+			if err != nil {
+				return err
+			}
+			initConfig(app, configFile)
 			return setupLogging(cmd, app)
 		},
 	}
@@ -88,34 +85,17 @@ func exitCodeFor(out *output.Output, err error) int {
 }
 
 func initRootCommand(cmd *cobra.Command, app *App) {
-	initConfig(app)
 	// Disable showing `completion` in the available commands list while keeping the command available
 	cmd.CompletionOptions.HiddenDefaultCmd = true
 	// Hide the `help` subcommand from the subcommand list (only allow `-h/--help` flags)
 	cmd.SetHelpCommand(&cobra.Command{Hidden: true})
-
 	cmd.PersistentFlags().BoolP(flagDryRun, "n", false, "run the command without actually making the file system changes")
 	cmd.PersistentFlags().BoolP(flagVerbose, "v", false, "print verbose logs")
 	cmd.PersistentFlags().BoolP(flagQuiet, "q", false, "quiet logs; only print the summary")
-	cmd.PersistentFlags().StringVar(&configFile, flagConfigFile, "", "provide custom config file")
+	cmd.PersistentFlags().String(flagConfigFile, "", "provide custom config file")
 	cmd.PersistentFlags().String(flagProfile, "default", "profile to run the command")
-
 	cmd.MarkFlagsMutuallyExclusive(flagQuiet, flagVerbose)
 	cobra.EnableTraverseRunHooks = true
-}
-
-func initConfig(app *App) {
-	app.logger.Debug("initializing config")
-	if configFile != "" {
-		app.logger.Debug("custom config file provided", "path", configFile)
-		viper.SetConfigFile(configFile)
-	} else {
-		configFilePath := filepath.Join(config.AppConfigHome(), configFileName)
-		app.logger.Debug("no custom config file provided; using default", "path", configFilePath)
-		viper.SetConfigFile(configFilePath)
-	}
-	viper.SetEnvPrefix(strings.ToUpper(rootCmdName))
-	viper.AutomaticEnv()
 }
 
 func getApp() *App {
