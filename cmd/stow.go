@@ -19,20 +19,19 @@ type stowParams struct {
 	packages    []string
 }
 
-var stowCmd = &cobra.Command{
-	Use:     "stow [packages...]",
-	Short:   stowShort,
-	Long:    stowLong,
-	Example: stowExamples,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return executeStow(viper.GetViper(), cmd, args)
-	},
-}
-
-func init() {
-	addOperationFlags(stowCmd.Flags())
-	addConflictResolutionFlags(stowCmd)
-	rootCmd.AddCommand(stowCmd)
+func newStowCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "stow [packages...]",
+		Short:   stowShort,
+		Long:    stowLong,
+		Example: stowExamples,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeStow(viper.GetViper(), cmd, args)
+		},
+	}
+	addOperationFlags(cmd.Flags())
+	addConflictResolutionFlags(cmd)
+	return cmd
 }
 
 func executeStow(v *viper.Viper, cmd *cobra.Command, args []string) error {
