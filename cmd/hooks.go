@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func setupLogging(cmd *cobra.Command) error {
+func setupLogging(cmd *cobra.Command, app *App) error {
 	verbose, err := boolFlag(cmd.Flags(), flagVerbose)
 	if err != nil {
 		return err
@@ -23,16 +23,16 @@ func setupLogging(cmd *cobra.Command) error {
 		return err
 	}
 	if verbose {
-		charmLogger.SetLevel(charmlog.DebugLevel)
+		app.logHandler.SetLevel(charmlog.DebugLevel)
 	}
 	if quiet {
-		charmLogger.SetLevel(charmlog.ErrorLevel)
-		appOutput.SetLevel(output.Quiet)
+		app.logHandler.SetLevel(charmlog.ErrorLevel)
+		app.out.SetLevel(output.Quiet)
 	}
 	return nil
 }
 
-func loadConfig(v *viper.Viper, cmd *cobra.Command) (*config.Config, error) {
+func loadConfig(v *viper.Viper, cmd *cobra.Command, app *App) (*config.Config, error) {
 	if err := v.ReadInConfig(); err != nil {
 		return nil, &engine.HintedError{
 			Op:   "read config",
@@ -44,7 +44,7 @@ func loadConfig(v *viper.Viper, cmd *cobra.Command) (*config.Config, error) {
 	if f := cmd.Flags().Lookup(flagProfile); f != nil {
 		_ = v.BindPFlag(flagProfile, f)
 	}
-	cfg, err := config.NewConfig(v, appLogger)
+	cfg, err := config.NewConfig(v, app.logger)
 	if err != nil {
 		return nil, err
 	}
@@ -57,8 +57,8 @@ func loadConfig(v *viper.Viper, cmd *cobra.Command) (*config.Config, error) {
 	return cfg, nil
 }
 
-func buildEngine(v *viper.Viper, cmd *cobra.Command, dryRun bool) (*engine.Engine, error) {
-	cfg, err := loadConfig(v, cmd)
+func buildEngine(v *viper.Viper, cmd *cobra.Command, dryRun bool, app *App) (*engine.Engine, error) {
+	cfg, err := loadConfig(v, cmd, app)
 	if err != nil {
 		return nil, err
 	}
@@ -68,5 +68,5 @@ func buildEngine(v *viper.Viper, cmd *cobra.Command, dryRun bool) (*engine.Engin
 		DryRun:      dryRun,
 		ConfigHome:  config.AppConfigHome(),
 	}
-	return engine.NewEngine(engineConfig, appLogger)
+	return engine.NewEngine(engineConfig, app.logger)
 }

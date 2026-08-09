@@ -5,28 +5,25 @@ All Rights Reversed (ɔ)
 package cmd
 
 import (
-	"github.com/redpierrot/bestow/internal/config"
 	"github.com/redpierrot/bestow/internal/engine"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 type stowParams struct {
-	source      string
-	destination string
-	dryRun      bool
-	strategy    engine.ResolveStrategy
-	packages    []string
+	dryRun   bool
+	strategy engine.ResolveStrategy
+	packages []string
 }
 
-func newStowCmd() *cobra.Command {
+func newStowCmd(app *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "stow [packages...]",
 		Short:   stowShort,
 		Long:    stowLong,
 		Example: stowExamples,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeStow(viper.GetViper(), cmd, args)
+			return executeStow(app, viper.GetViper(), cmd, args)
 		},
 	}
 	addOperationFlags(cmd.Flags())
@@ -34,17 +31,12 @@ func newStowCmd() *cobra.Command {
 	return cmd
 }
 
-func executeStow(v *viper.Viper, cmd *cobra.Command, args []string) error {
-	cfg, err := loadConfig(v, cmd)
+func executeStow(app *App, v *viper.Viper, cmd *cobra.Command, args []string) error {
+	params, err := parseStowParams(cmd, args)
 	if err != nil {
 		return err
 	}
-	appLogger.Debug("running stow command", "args", args)
-	params, err := parseStowParams(cfg, cmd, args)
-	if err != nil {
-		return err
-	}
-	e, err := buildEngine(v, cmd, params.dryRun)
+	e, err := buildEngine(v, cmd, params.dryRun, app)
 	if err != nil {
 		return err
 	}
@@ -55,14 +47,14 @@ func executeStow(v *viper.Viper, cmd *cobra.Command, args []string) error {
 	}
 	summary, err := e.Execute(cmd.Context(), &cmdCfg)
 
-	appOutput.PrintResult(summary)
+	app.out.PrintResult(summary)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func parseStowParams(cfg *config.Config, cmd *cobra.Command, args []string) (*stowParams, error) {
+func parseStowParams(cmd *cobra.Command, args []string) (*stowParams, error) {
 	var force, adopt, backup bool
 	force, err := boolFlag(cmd.Flags(), flagForce)
 	if err != nil {
@@ -82,11 +74,9 @@ func parseStowParams(cfg *config.Config, cmd *cobra.Command, args []string) (*st
 		return nil, err
 	}
 	return &stowParams{
-		source:      cfg.Source,
-		destination: cfg.Destination,
-		dryRun:      dryRun,
-		strategy:    strategy,
-		packages:    args,
+		dryRun:   dryRun,
+		strategy: strategy,
+		packages: args,
 	}, nil
 }
 
