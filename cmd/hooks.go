@@ -56,3 +56,17 @@ func loadConfig(v *viper.Viper, cmd *cobra.Command) (*config.Config, error) {
 	}
 	return cfg, nil
 }
+
+func buildEngine(v *viper.Viper, cmd *cobra.Command, dryRun bool) (*engine.Engine, error) {
+	cfg, err := loadConfig(v, cmd)
+	if err != nil {
+		return nil, err
+	}
+	engineConfig := &engine.EngineConfig{
+		Source:      cfg.Source,
+		Destination: cfg.Destination,
+		DryRun:      dryRun,
+		ConfigHome:  config.AppConfigHome(),
+	}
+	return engine.NewEngine(engineConfig, appLogger)
+}

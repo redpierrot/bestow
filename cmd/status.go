@@ -5,8 +5,6 @@ All Rights Reversed (ɔ)
 package cmd
 
 import (
-	"github.com/redpierrot/bestow/internal/config"
-	"github.com/redpierrot/bestow/internal/engine"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -27,22 +25,11 @@ func init() {
 }
 
 func executeStatus(v *viper.Viper, cmd *cobra.Command, args []string) error {
-	cfg, err := loadConfig(v, cmd)
+	e, err := buildEngine(v, cmd, false)
 	if err != nil {
 		return err
 	}
-	appLogger.Debug("running status command", "args", args)
-
-	engineCfg := engine.EngineConfig{
-		Source:      cfg.Source,
-		Destination: cfg.Destination,
-		ConfigHome:  config.AppConfigHome(),
-	}
-	eng, err := engine.NewEngine(&engineCfg, appLogger)
-	if err != nil {
-		return err
-	}
-	status, err := eng.Status(args)
+	status, err := e.Status(args)
 	if err != nil {
 		return err
 	}
