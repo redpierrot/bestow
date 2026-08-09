@@ -28,7 +28,7 @@ var statusCmd = &cobra.Command{
 			Destination: cfg.Destination,
 			ConfigHome:  config.AppConfigHome(),
 		}
-		eng, err := engine.NewEngine(&engineCfg, true, appLogger)
+		eng, err := engine.NewEngine(&engineCfg, appLogger)
 		if err != nil {
 			return err
 		}

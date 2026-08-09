@@ -45,12 +45,13 @@ type EngineConfig struct {
 	ConfigHome  string
 	Source      string
 	Destination string
+	DryRun      bool
 }
 
 // NewEngine returns an Engine value with the provided configs
-func NewEngine(cfg *EngineConfig, dryRun bool, l *slog.Logger) (*Engine, error) {
+func NewEngine(cfg *EngineConfig, l *slog.Logger) (*Engine, error) {
 	var handler FileSystem
-	if dryRun {
+	if cfg.DryRun {
 		handler = file.NewDryRunHandler(l)
 	} else {
 		handler = file.NewHandler(l)
@@ -66,7 +67,7 @@ func NewEngine(cfg *EngineConfig, dryRun bool, l *slog.Logger) (*Engine, error) 
 		logger:      l.With("component", "engine"),
 		fileSystem:  handler,
 		configHome:  cfg.ConfigHome,
-		dryRun:      dryRun,
+		dryRun:      cfg.DryRun,
 	}, nil
 }
 
