@@ -5,6 +5,9 @@ All Rights Reversed (ɔ)
 package cmd
 
 import (
+	"path/filepath"
+	"strings"
+
 	charmlog "github.com/charmbracelet/log"
 	"github.com/redpierrot/bestow/internal/config"
 	"github.com/redpierrot/bestow/internal/engine"
@@ -30,6 +33,20 @@ func setupLogging(cmd *cobra.Command, app *App) error {
 		app.out.SetLevel(output.Quiet)
 	}
 	return nil
+}
+
+func initConfig(app *App, configFile string) {
+	app.logger.Debug("initializing config")
+	if configFile != "" {
+		app.logger.Debug("custom config file provided", "path", configFile)
+		viper.SetConfigFile(configFile)
+	} else {
+		configFilePath := filepath.Join(config.AppConfigHome(), configFileName)
+		app.logger.Debug("no custom config file provided; using default", "path", configFilePath)
+		viper.SetConfigFile(configFilePath)
+	}
+	viper.SetEnvPrefix(strings.ToUpper(rootCmdName))
+	viper.AutomaticEnv()
 }
 
 func loadConfig(v *viper.Viper, cmd *cobra.Command, app *App) (*config.Config, error) {
