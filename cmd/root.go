@@ -27,14 +27,17 @@ const configFileName = "config.yaml"
 
 var version = "dev"
 
+type App struct {
+	logHandler *charmlog.Logger
+	logger     *slog.Logger
+	out        *output.Output
+}
+
 var (
-	configFile  string
-	charmLogger *charmlog.Logger
-	appLogger   *slog.Logger
-	appOutput   *output.Output
+	configFile string
 )
 
-func newRootCmd() *cobra.Command {
+func newRootCmd(app *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:           "bestow",
 		Short:         rootCmdShort,
@@ -43,22 +46,23 @@ func newRootCmd() *cobra.Command {
 		Version:       version,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			return setupLogging(cmd)
+			return setupLogging(cmd, app)
 		},
 	}
-	initRootCommand(cmd)
-	cmd.AddCommand(newStowCmd())
-	cmd.AddCommand(newUnstowCmd())
-	cmd.AddCommand(newStatusCmd())
-	cmd.AddCommand(newInitCmd())
+	initRootCommand(cmd, app)
+	cmd.AddCommand(newStowCmd(app))
+	cmd.AddCommand(newUnstowCmd(app))
+	cmd.AddCommand(newStatusCmd(app))
+	cmd.AddCommand(newInitCmd(app))
 
 	return cmd
 }
 
 func Execute(ctx context.Context) {
-	cmd := newRootCmd()
+	app := getApp()
+	cmd := newRootCmd(app)
 	if err := cmd.ExecuteContext(ctx); err != nil {
-		os.Exit(exitCodeFor(appOutput, err))
+		os.Exit(exitCodeFor(app.out, err))
 	}
 }
 
@@ -83,18 +87,8 @@ func exitCodeFor(out *output.Output, err error) int {
 	return 0
 }
 
-func initRootCommand(cmd *cobra.Command) {
-	// Setting logger in the init method to avoid falling back to default logger.
-	opts := charmlog.Options{
-		Level:           charmlog.InfoLevel,
-		ReportTimestamp: false,
-	}
-	charmLogger = charmlog.NewWithOptions(os.Stderr, opts)
-	appLogger = slog.New(charmLogger)
-
-	appOutput = output.NewOutput(os.Stdout, os.Stderr)
-
-	cobra.OnInitialize(initConfig)
+func initRootCommand(cmd *cobra.Command, app *App) {
+	initConfig(app)
 	// Disable showing `completion` in the available commands list while keeping the command available
 	cmd.CompletionOptions.HiddenDefaultCmd = true
 	// Hide the `help` subcommand from the subcommand list (only allow `-h/--help` flags)
@@ -110,16 +104,32 @@ func initRootCommand(cmd *cobra.Command) {
 	cobra.EnableTraverseRunHooks = true
 }
 
-func initConfig() {
-	appLogger.Debug("initializing config")
+func initConfig(app *App) {
+	app.logger.Debug("initializing config")
 	if configFile != "" {
-		appLogger.Debug("custom config file provided", "path", configFile)
+		app.logger.Debug("custom config file provided", "path", configFile)
 		viper.SetConfigFile(configFile)
 	} else {
 		configFilePath := filepath.Join(config.AppConfigHome(), configFileName)
-		appLogger.Debug("no custom config file provided; using default", "path", configFilePath)
+		app.logger.Debug("no custom config file provided; using default", "path", configFilePath)
 		viper.SetConfigFile(configFilePath)
 	}
 	viper.SetEnvPrefix(strings.ToUpper(rootCmdName))
 	viper.AutomaticEnv()
+}
+
+func getApp() *App {
+	// Setting logger in the init method to avoid falling back to default logger.
+	opts := charmlog.Options{
+		Level:           charmlog.InfoLevel,
+		ReportTimestamp: false,
+	}
+	logHandler := charmlog.NewWithOptions(os.Stderr, opts)
+	logger := slog.New(logHandler)
+	out := output.NewOutput(os.Stdout, os.Stderr)
+	return &App{
+		logHandler: logHandler,
+		logger:     logger,
+		out:        out,
+	}
 }

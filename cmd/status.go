@@ -9,22 +9,22 @@ import (
 	"github.com/spf13/viper"
 )
 
-func newStatusCmd() *cobra.Command {
+func newStatusCmd(app *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "status [packages...]",
 		Short:   statusShort,
 		Long:    statusLong,
 		Example: statusExamples,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeStatus(viper.GetViper(), cmd, args)
+			return executeStatus(viper.GetViper(), cmd, args, app)
 		},
 	}
 	addOperationFlags(cmd.Flags())
 	return cmd
 }
 
-func executeStatus(v *viper.Viper, cmd *cobra.Command, args []string) error {
-	e, err := buildEngine(v, cmd, false)
+func executeStatus(v *viper.Viper, cmd *cobra.Command, args []string, app *App) error {
+	e, err := buildEngine(v, cmd, false, app)
 	if err != nil {
 		return err
 	}
@@ -32,6 +32,6 @@ func executeStatus(v *viper.Viper, cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	appOutput.PrintStatus(status)
+	app.out.PrintStatus(status)
 	return nil
 }

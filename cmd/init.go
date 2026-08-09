@@ -21,14 +21,14 @@ const (
 	flagInitForce       = "force"
 )
 
-func newInitCmd() *cobra.Command {
+func newInitCmd(app *App) *cobra.Command {
 	cmd := &cobra.Command{
 		Use:     "init",
 		Short:   initShort,
 		Long:    initLong,
 		Example: initExamples,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeInit(cmd)
+			return executeInit(cmd, app)
 		},
 	}
 	cmd.Flags().StringP(flagInitSource, "s", "", "source directory of the files for symlinks; written to 'config.yaml'")
@@ -45,13 +45,13 @@ func newInitCmd() *cobra.Command {
 	return cmd
 }
 
-func executeInit(cmd *cobra.Command) error {
+func executeInit(cmd *cobra.Command, app *App) error {
 	source, err := stringFlag(cmd.Flags(), flagInitSource)
 	if err != nil {
 		return err
 	}
 	if source == "" {
-		appLogger.Warn("no source provided, using current directory")
+		app.logger.Warn("no source provided, using current directory")
 		source, err = os.Getwd()
 		if err != nil {
 			return err
@@ -75,7 +75,7 @@ func executeInit(cmd *cobra.Command) error {
 		ConfigHome:  config.AppConfigHome(),
 		DryRun:      dryRun,
 	}
-	eng, err := engine.NewEngine(&engineCfg, appLogger)
+	eng, err := engine.NewEngine(&engineCfg, app.logger)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func executeInit(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	appOutput.PrintResult(summary)
+	app.out.PrintResult(summary)
 	return nil
 
 }
