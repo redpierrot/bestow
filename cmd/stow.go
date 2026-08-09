@@ -45,13 +45,7 @@ func executeStow(v *viper.Viper, cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	engineCfg := engine.EngineConfig{
-		Source:      params.source,
-		Destination: params.destination,
-		DryRun:      params.dryRun,
-		ConfigHome:  config.AppConfigHome(),
-	}
-	eng, err := engine.NewEngine(&engineCfg, appLogger)
+	e, err := buildEngine(v, cmd, params.dryRun)
 	if err != nil {
 		return err
 	}
@@ -60,7 +54,7 @@ func executeStow(v *viper.Viper, cmd *cobra.Command, args []string) error {
 		Args:            params.packages,
 		ResolveStrategy: params.strategy,
 	}
-	summary, err := eng.Execute(cmd.Context(), &cmdCfg)
+	summary, err := e.Execute(cmd.Context(), &cmdCfg)
 
 	appOutput.PrintResult(summary)
 	if err != nil {
