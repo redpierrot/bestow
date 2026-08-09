@@ -46,16 +46,17 @@ var initCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		engineCfg := engine.EngineConfig{
-			Source:      source,
-			Destination: destination,
-			ConfigHome:  config.AppConfigHome(),
-		}
 		dryRun, err := boolFlag(cmd.Flags(), flagDryRun)
 		if err != nil {
 			return err
 		}
-		eng, err := engine.NewEngine(&engineCfg, dryRun, appLogger)
+		engineCfg := engine.EngineConfig{
+			Source:      source,
+			Destination: destination,
+			ConfigHome:  config.AppConfigHome(),
+			DryRun:      dryRun,
+		}
+		eng, err := engine.NewEngine(&engineCfg, appLogger)
 		if err != nil {
 			return err
 		}

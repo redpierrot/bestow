@@ -31,7 +31,9 @@ func TestEngine_NewEngine(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			e, err := NewEngine(&EngineConfig{}, tc.dryRun, newTestLogger())
+			e, err := NewEngine(&EngineConfig{
+				DryRun: tc.dryRun,
+			}, newTestLogger())
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}

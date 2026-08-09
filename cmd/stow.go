@@ -54,15 +54,16 @@ var stowCmd = &cobra.Command{
 			Source:      cfg.Source,
 			Destination: cfg.Destination,
 			ConfigHome:  config.AppConfigHome(),
+			DryRun:      dryRun,
 		}
-		eng, err := engine.NewEngine(&engineCfg, dryRun, appLogger)
+		eng, err := engine.NewEngine(&engineCfg, appLogger)
 		if err != nil {
 			return err
 		}
 		cmdCfg := engine.CommandConfig{
-			Kind:             engine.CommandStow,
-			Args:             args,
-			ConflictStrategy: strategy,
+			Kind:            engine.CommandStow,
+			Args:            args,
+			ResolveStrategy: strategy,
 		}
 		summary, err := eng.Execute(cmd.Context(), &cmdCfg)
 

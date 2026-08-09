@@ -30,8 +30,9 @@ var unstowCmd = &cobra.Command{
 			Source:      cfg.Source,
 			Destination: cfg.Destination,
 			ConfigHome:  config.AppConfigHome(),
+			DryRun:      dryRun,
 		}
-		eng, err := engine.NewEngine(&engineCfg, dryRun, appLogger)
+		eng, err := engine.NewEngine(&engineCfg, appLogger)
 		if err != nil {
 			return err
 		}
