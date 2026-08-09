@@ -46,7 +46,7 @@ func newRootCmd(app *App) *cobra.Command {
 			return setupLogging(cmd, app)
 		},
 	}
-	initRootCommand(cmd, app)
+	initRootCommand(cmd)
 	cmd.AddCommand(newStowCmd(app))
 	cmd.AddCommand(newUnstowCmd(app))
 	cmd.AddCommand(newStatusCmd(app))
@@ -84,7 +84,7 @@ func exitCodeFor(out *output.Output, err error) int {
 	return 0
 }
 
-func initRootCommand(cmd *cobra.Command, app *App) {
+func initRootCommand(cmd *cobra.Command) {
 	// Disable showing `completion` in the available commands list while keeping the command available
 	cmd.CompletionOptions.HiddenDefaultCmd = true
 	// Hide the `help` subcommand from the subcommand list (only allow `-h/--help` flags)

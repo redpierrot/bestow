@@ -17,14 +17,14 @@ func newUnstowCmd(app *App) *cobra.Command {
 		Long:    unstowLong,
 		Example: unstowExamples,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeUnstow(viper.GetViper(), cmd, args, app)
+			return executeUnstow(cmd, viper.GetViper(), app, args)
 		},
 	}
 	addOperationFlags(cmd.Flags())
 	return cmd
 }
 
-func executeUnstow(v *viper.Viper, cmd *cobra.Command, args []string, app *App) error {
+func executeUnstow(cmd *cobra.Command, v *viper.Viper, app *App, args []string) error {
 	dryRun, err := boolFlag(cmd.Flags(), flagDryRun)
 	if err != nil {
 		return err
