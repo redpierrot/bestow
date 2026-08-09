@@ -21,29 +21,28 @@ const (
 	flagInitForce       = "force"
 )
 
-var initCmd = &cobra.Command{
-	Use:     "init",
-	Short:   initShort,
-	Long:    initLong,
-	Example: initExamples,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return executeInit(cmd)
-	},
-}
+func newInitCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "init",
+		Short:   initShort,
+		Long:    initLong,
+		Example: initExamples,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeInit(cmd)
+		},
+	}
+	cmd.Flags().StringP(flagInitSource, "s", "", "source directory of the files for symlinks; written to 'config.yaml'")
+	_ = cmd.MarkFlagRequired(flagInitSource)
+	cmd.Flags().StringP(flagInitDestination, "d", "", "destination for the symlinks; written to 'config.yaml'. (defaults to user home directory)")
+	cmd.Flags().StringSlice(flagInitIgnoreList, config.DefaultIgnoreList, "list of file/directory names bestow should ignore. This is the global set of values. For repo or package specific ignore lists, use specific .bestowignore files")
+	cmd.Flags().BoolP(flagInitForce, "f", false, "forcefully overwrite any existing config files for bestow")
 
-func init() {
-	rootCmd.AddCommand(initCmd)
-	initCmd.Flags().StringP(flagInitSource, "s", "", "source directory of the files for symlinks; written to 'config.yaml'")
-	_ = initCmd.MarkFlagRequired(flagInitSource)
-	initCmd.Flags().StringP(flagInitDestination, "d", "", "destination for the symlinks; written to 'config.yaml'. (defaults to user home directory)")
-	initCmd.Flags().StringSlice(flagInitIgnoreList, config.DefaultIgnoreList, "list of file/directory names bestow should ignore. This is the global set of values. For repo or package specific ignore lists, use specific .bestowignore files")
-	initCmd.Flags().BoolP(flagInitForce, "f", false, "forcefully overwrite any existing config files for bestow")
-
-	initCmd.Flags().SortFlags = false
-	initCmd.PersistentFlags().SortFlags = false
+	cmd.Flags().SortFlags = false
+	cmd.PersistentFlags().SortFlags = false
 
 	// To avoid showing the long default ignore list on help text
-	initCmd.Flags().Lookup(flagInitIgnoreList).DefValue = "common dotfile ignore patterns"
+	cmd.Flags().Lookup(flagInitIgnoreList).DefValue = "common dotfile ignore patterns"
+	return cmd
 }
 
 func executeInit(cmd *cobra.Command) error {

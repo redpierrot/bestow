@@ -10,19 +10,18 @@ import (
 	"github.com/spf13/viper"
 )
 
-var unstowCmd = &cobra.Command{
-	Use:     "unstow [packages...]",
-	Short:   unstowShort,
-	Long:    unstowLong,
-	Example: unstowExamples,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return executeUnstow(viper.GetViper(), cmd, args)
-	},
-}
-
-func init() {
-	addOperationFlags(unstowCmd.Flags())
-	rootCmd.AddCommand(unstowCmd)
+func newUnstowCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "unstow [packages...]",
+		Short:   unstowShort,
+		Long:    unstowLong,
+		Example: unstowExamples,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeUnstow(viper.GetViper(), cmd, args)
+		},
+	}
+	addOperationFlags(cmd.Flags())
+	return cmd
 }
 
 func executeUnstow(v *viper.Viper, cmd *cobra.Command, args []string) error {

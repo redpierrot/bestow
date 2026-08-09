@@ -34,21 +34,30 @@ var (
 	appOutput   *output.Output
 )
 
-// TODO: Add `config` subcommand (to override the init command)
-var rootCmd = &cobra.Command{
-	Use:           "bestow",
-	Short:         rootCmdShort,
-	Long:          rootCmdLong,
-	Example:       rootCmdExamples,
-	Version:       version,
-	SilenceErrors: true,
-	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-		return setupLogging(cmd)
-	},
+func newRootCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:           "bestow",
+		Short:         rootCmdShort,
+		Long:          rootCmdLong,
+		Example:       rootCmdExamples,
+		Version:       version,
+		SilenceErrors: true,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			return setupLogging(cmd)
+		},
+	}
+	initRootCommand(cmd)
+	cmd.AddCommand(newStowCmd())
+	cmd.AddCommand(newUnstowCmd())
+	cmd.AddCommand(newStatusCmd())
+	cmd.AddCommand(newInitCmd())
+
+	return cmd
 }
 
 func Execute(ctx context.Context) {
-	if err := rootCmd.ExecuteContext(ctx); err != nil {
+	cmd := newRootCmd()
+	if err := cmd.ExecuteContext(ctx); err != nil {
 		os.Exit(exitCodeFor(appOutput, err))
 	}
 }
@@ -74,7 +83,7 @@ func exitCodeFor(out *output.Output, err error) int {
 	return 0
 }
 
-func init() {
+func initRootCommand(cmd *cobra.Command) {
 	// Setting logger in the init method to avoid falling back to default logger.
 	opts := charmlog.Options{
 		Level:           charmlog.InfoLevel,
@@ -87,17 +96,17 @@ func init() {
 
 	cobra.OnInitialize(initConfig)
 	// Disable showing `completion` in the available commands list while keeping the command available
-	rootCmd.CompletionOptions.HiddenDefaultCmd = true
+	cmd.CompletionOptions.HiddenDefaultCmd = true
 	// Hide the `help` subcommand from the subcommand list (only allow `-h/--help` flags)
-	rootCmd.SetHelpCommand(&cobra.Command{Hidden: true})
+	cmd.SetHelpCommand(&cobra.Command{Hidden: true})
 
-	rootCmd.PersistentFlags().BoolP(flagDryRun, "n", false, "run the command without actually making the file system changes")
-	rootCmd.PersistentFlags().BoolP(flagVerbose, "v", false, "print verbose logs")
-	rootCmd.PersistentFlags().BoolP(flagQuiet, "q", false, "quiet logs; only print the summary")
-	rootCmd.PersistentFlags().StringVar(&configFile, flagConfigFile, "", "provide custom config file")
-	rootCmd.PersistentFlags().String(flagProfile, "default", "profile to run the command")
+	cmd.PersistentFlags().BoolP(flagDryRun, "n", false, "run the command without actually making the file system changes")
+	cmd.PersistentFlags().BoolP(flagVerbose, "v", false, "print verbose logs")
+	cmd.PersistentFlags().BoolP(flagQuiet, "q", false, "quiet logs; only print the summary")
+	cmd.PersistentFlags().StringVar(&configFile, flagConfigFile, "", "provide custom config file")
+	cmd.PersistentFlags().String(flagProfile, "default", "profile to run the command")
 
-	rootCmd.MarkFlagsMutuallyExclusive(flagQuiet, flagVerbose)
+	cmd.MarkFlagsMutuallyExclusive(flagQuiet, flagVerbose)
 	cobra.EnableTraverseRunHooks = true
 }
 

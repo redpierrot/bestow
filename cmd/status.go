@@ -9,19 +9,18 @@ import (
 	"github.com/spf13/viper"
 )
 
-var statusCmd = &cobra.Command{
-	Use:     "status [packages...]",
-	Short:   statusShort,
-	Long:    statusLong,
-	Example: statusExamples,
-	RunE: func(cmd *cobra.Command, args []string) error {
-		return executeStatus(viper.GetViper(), cmd, args)
-	},
-}
-
-func init() {
-	addOperationFlags(statusCmd.Flags())
-	rootCmd.AddCommand(statusCmd)
+func newStatusCmd() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:     "status [packages...]",
+		Short:   statusShort,
+		Long:    statusLong,
+		Example: statusExamples,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			return executeStatus(viper.GetViper(), cmd, args)
+		},
+	}
+	addOperationFlags(cmd.Flags())
+	return cmd
 }
 
 func executeStatus(v *viper.Viper, cmd *cobra.Command, args []string) error {
