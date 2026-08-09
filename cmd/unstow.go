@@ -17,39 +17,43 @@ var unstowCmd = &cobra.Command{
 	Long:    unstowLong,
 	Example: unstowExamples,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := loadConfig(*viper.GetViper(), cmd)
-		if err != nil {
-			return err
-		}
-		appLogger.Debug("running unstow command", "args", args)
-		dryRun, err := boolFlag(cmd.Flags(), flagDryRun)
-		if err != nil {
-			return err
-		}
-		engineCfg := engine.EngineConfig{
-			Source:      cfg.Source,
-			Destination: cfg.Destination,
-			ConfigHome:  config.AppConfigHome(),
-			DryRun:      dryRun,
-		}
-		eng, err := engine.NewEngine(&engineCfg, appLogger)
-		if err != nil {
-			return err
-		}
-		cmdCfg := engine.CommandConfig{
-			Kind: engine.CommandUnstow,
-			Args: args,
-		}
-		summary, err := eng.Execute(cmd.Context(), &cmdCfg)
-		appOutput.PrintResult(summary)
-		if err != nil {
-			return err
-		}
-		return nil
+		return executeUnstow(viper.GetViper(), cmd, args)
 	},
 }
 
 func init() {
 	addOperationFlags(unstowCmd.Flags())
 	rootCmd.AddCommand(unstowCmd)
+}
+
+func executeUnstow(v *viper.Viper, cmd *cobra.Command, args []string) error {
+	cfg, err := loadConfig(v, cmd)
+	if err != nil {
+		return err
+	}
+	appLogger.Debug("running unstow command", "args", args)
+	dryRun, err := boolFlag(cmd.Flags(), flagDryRun)
+	if err != nil {
+		return err
+	}
+	engineCfg := engine.EngineConfig{
+		Source:      cfg.Source,
+		Destination: cfg.Destination,
+		DryRun:      dryRun,
+		ConfigHome:  config.AppConfigHome(),
+	}
+	eng, err := engine.NewEngine(&engineCfg, appLogger)
+	if err != nil {
+		return err
+	}
+	cmdCfg := engine.CommandConfig{
+		Kind: engine.CommandUnstow,
+		Args: args,
+	}
+	summary, err := eng.Execute(cmd.Context(), &cmdCfg)
+	appOutput.PrintResult(summary)
+	if err != nil {
+		return err
+	}
+	return nil
 }

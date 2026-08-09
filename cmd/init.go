@@ -27,54 +27,7 @@ var initCmd = &cobra.Command{
 	Long:    initLong,
 	Example: initExamples,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		source, err := stringFlag(cmd.Flags(), flagInitSource)
-		if err != nil {
-			return err
-		}
-		if source == "" {
-			appLogger.Warn("no source provided, using current directory")
-			source, err = os.Getwd()
-			if err != nil {
-				return err
-			}
-		}
-		destination, err := stringFlag(cmd.Flags(), flagInitDestination)
-		if err != nil {
-			return err
-		}
-		force, err := boolFlag(cmd.Flags(), flagInitForce)
-		if err != nil {
-			return err
-		}
-		dryRun, err := boolFlag(cmd.Flags(), flagDryRun)
-		if err != nil {
-			return err
-		}
-		engineCfg := engine.EngineConfig{
-			Source:      source,
-			Destination: destination,
-			ConfigHome:  config.AppConfigHome(),
-			DryRun:      dryRun,
-		}
-		eng, err := engine.NewEngine(&engineCfg, appLogger)
-		if err != nil {
-			return err
-		}
-		ignoreList, err := cmd.Flags().GetStringSlice(flagInitIgnoreList)
-		if err != nil {
-			return fmt.Errorf("parse flag %s: %w", flagInitIgnoreList, err)
-		}
-		cfg := engine.InitConfig{
-			Force:      force,
-			IgnoreList: ignoreList,
-			ConfigFile: configFileName,
-		}
-		summary, err := eng.Init(&cfg)
-		if err != nil {
-			return err
-		}
-		appOutput.PrintResult(summary)
-		return nil
+		return executeInit(cmd)
 	},
 }
 
@@ -91,4 +44,56 @@ func init() {
 
 	// To avoid showing the long default ignore list on help text
 	initCmd.Flags().Lookup(flagInitIgnoreList).DefValue = "common dotfile ignore patterns"
+}
+
+func executeInit(cmd *cobra.Command) error {
+	source, err := stringFlag(cmd.Flags(), flagInitSource)
+	if err != nil {
+		return err
+	}
+	if source == "" {
+		appLogger.Warn("no source provided, using current directory")
+		source, err = os.Getwd()
+		if err != nil {
+			return err
+		}
+	}
+	destination, err := stringFlag(cmd.Flags(), flagInitDestination)
+	if err != nil {
+		return err
+	}
+	force, err := boolFlag(cmd.Flags(), flagInitForce)
+	if err != nil {
+		return err
+	}
+	dryRun, err := boolFlag(cmd.Flags(), flagDryRun)
+	if err != nil {
+		return err
+	}
+	engineCfg := engine.EngineConfig{
+		Source:      source,
+		Destination: destination,
+		ConfigHome:  config.AppConfigHome(),
+		DryRun:      dryRun,
+	}
+	eng, err := engine.NewEngine(&engineCfg, appLogger)
+	if err != nil {
+		return err
+	}
+	ignoreList, err := cmd.Flags().GetStringSlice(flagInitIgnoreList)
+	if err != nil {
+		return fmt.Errorf("parse flag %s: %w", flagInitIgnoreList, err)
+	}
+	cfg := engine.InitConfig{
+		Force:      force,
+		IgnoreList: ignoreList,
+		ConfigFile: configFileName,
+	}
+	summary, err := eng.Init(&cfg)
+	if err != nil {
+		return err
+	}
+	appOutput.PrintResult(summary)
+	return nil
+
 }
