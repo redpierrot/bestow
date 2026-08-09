@@ -24,9 +24,9 @@ const (
 
 // CommandConfig stores the configurations for a given command execution
 type CommandConfig struct {
-	Kind             CommandKind
-	Args             []string
-	ConflictStrategy ResolveStrategy
+	Kind            CommandKind
+	Args            []string
+	ResolveStrategy ResolveStrategy
 }
 
 // Engine is the brain of Bestow. It keeps the state of a given execution and handles all the file system calls
@@ -76,7 +76,7 @@ func (e *Engine) Execute(ctx context.Context, cfg *CommandConfig) (*ExecuteResul
 	if err != nil {
 		return nil, err
 	}
-	actions, err := e.buildFileActions(candidates, cfg.ConflictStrategy, cfg.Kind)
+	actions, err := e.buildFileActions(candidates, cfg.ResolveStrategy, cfg.Kind)
 	if err != nil {
 		return nil, err
 	}
