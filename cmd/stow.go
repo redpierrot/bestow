@@ -23,7 +23,7 @@ func newStowCmd(app *App) *cobra.Command {
 		Long:    stowLong,
 		Example: stowExamples,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeStow(app, viper.GetViper(), cmd, args)
+			return executeStow(cmd, viper.GetViper(), app, args)
 		},
 	}
 	addOperationFlags(cmd.Flags())
@@ -31,7 +31,7 @@ func newStowCmd(app *App) *cobra.Command {
 	return cmd
 }
 
-func executeStow(app *App, v *viper.Viper, cmd *cobra.Command, args []string) error {
+func executeStow(cmd *cobra.Command, v *viper.Viper, app *App, args []string) error {
 	params, err := parseStowParams(cmd, args)
 	if err != nil {
 		return err

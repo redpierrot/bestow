@@ -36,10 +36,8 @@ func newInitCmd(app *App) *cobra.Command {
 	cmd.Flags().StringP(flagInitDestination, "d", "", "destination for the symlinks; written to 'config.yaml'. (defaults to user home directory)")
 	cmd.Flags().StringSlice(flagInitIgnoreList, config.DefaultIgnoreList, "list of file/directory names bestow should ignore. This is the global set of values. For repo or package specific ignore lists, use specific .bestowignore files")
 	cmd.Flags().BoolP(flagInitForce, "f", false, "forcefully overwrite any existing config files for bestow")
-
 	cmd.Flags().SortFlags = false
 	cmd.PersistentFlags().SortFlags = false
-
 	// To avoid showing the long default ignore list on help text
 	cmd.Flags().Lookup(flagInitIgnoreList).DefValue = "common dotfile ignore patterns"
 	return cmd
@@ -94,5 +92,4 @@ func executeInit(cmd *cobra.Command, app *App) error {
 	}
 	app.out.PrintResult(summary)
 	return nil
-
 }
