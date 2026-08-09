@@ -11,74 +11,101 @@ import (
 	"github.com/spf13/viper"
 )
 
+type stowParams struct {
+	source      string
+	destination string
+	dryRun      bool
+	strategy    engine.ResolveStrategy
+	packages    []string
+}
+
 var stowCmd = &cobra.Command{
 	Use:     "stow [packages...]",
 	Short:   stowShort,
 	Long:    stowLong,
 	Example: stowExamples,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := loadConfig(*viper.GetViper(), cmd)
-		if err != nil {
-			return err
-		}
-		appLogger.Debug("running stow command", "args", args)
-		var force, adopt, backup bool
-		force, err = boolFlag(cmd.Flags(), flagForce)
-		if err != nil {
-			return err
-		}
-		adopt, err = boolFlag(cmd.Flags(), flagAdopt)
-		if err != nil {
-			return err
-		}
-		backup, err = boolFlag(cmd.Flags(), flagBackup)
-		if err != nil {
-			return err
-		}
-		var strategy = engine.ResolveSkip
-		if force {
-			strategy = engine.ResolveForce
-		}
-		if adopt {
-			strategy = engine.ResolveAdopt
-		}
-		if backup {
-			strategy = engine.ResolveBackup
-		}
-
-		dryRun, err := boolFlag(cmd.Flags(), flagDryRun)
-		if err != nil {
-			return err
-		}
-		engineCfg := engine.EngineConfig{
-			Source:      cfg.Source,
-			Destination: cfg.Destination,
-			ConfigHome:  config.AppConfigHome(),
-			DryRun:      dryRun,
-		}
-		eng, err := engine.NewEngine(&engineCfg, appLogger)
-		if err != nil {
-			return err
-		}
-		cmdCfg := engine.CommandConfig{
-			Kind:            engine.CommandStow,
-			Args:            args,
-			ResolveStrategy: strategy,
-		}
-		summary, err := eng.Execute(cmd.Context(), &cmdCfg)
-
-		// TODO: Decide on "What to Print" when error occurrs
-		appOutput.PrintResult(summary)
-		if err != nil {
-			return err
-		}
-		return nil
+		return executeStow(viper.GetViper(), cmd, args)
 	},
 }
 
 func init() {
 	addOperationFlags(stowCmd.Flags())
 	addConflictResolutionFlags(stowCmd)
-
 	rootCmd.AddCommand(stowCmd)
+}
+
+func executeStow(v *viper.Viper, cmd *cobra.Command, args []string) error {
+	cfg, err := loadConfig(v, cmd)
+	if err != nil {
+		return err
+	}
+	appLogger.Debug("running stow command", "args", args)
+	params, err := parseStowParams(cfg, cmd, args)
+	if err != nil {
+		return err
+	}
+	engineCfg := engine.EngineConfig{
+		Source:      params.source,
+		Destination: params.destination,
+		DryRun:      params.dryRun,
+		ConfigHome:  config.AppConfigHome(),
+	}
+	eng, err := engine.NewEngine(&engineCfg, appLogger)
+	if err != nil {
+		return err
+	}
+	cmdCfg := engine.CommandConfig{
+		Kind:            engine.CommandStow,
+		Args:            params.packages,
+		ResolveStrategy: params.strategy,
+	}
+	summary, err := eng.Execute(cmd.Context(), &cmdCfg)
+
+	appOutput.PrintResult(summary)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func parseStowParams(cfg *config.Config, cmd *cobra.Command, args []string) (*stowParams, error) {
+	var force, adopt, backup bool
+	force, err := boolFlag(cmd.Flags(), flagForce)
+	if err != nil {
+		return nil, err
+	}
+	adopt, err = boolFlag(cmd.Flags(), flagAdopt)
+	if err != nil {
+		return nil, err
+	}
+	backup, err = boolFlag(cmd.Flags(), flagBackup)
+	if err != nil {
+		return nil, err
+	}
+	var strategy = resolveStrategy(force, adopt, backup)
+	dryRun, err := boolFlag(cmd.Flags(), flagDryRun)
+	if err != nil {
+		return nil, err
+	}
+	return &stowParams{
+		source:      cfg.Source,
+		destination: cfg.Destination,
+		dryRun:      dryRun,
+		strategy:    strategy,
+		packages:    args,
+	}, nil
+}
+
+func resolveStrategy(force, adopt, backup bool) engine.ResolveStrategy {
+	switch {
+	case force:
+		return engine.ResolveForce
+	case adopt:
+		return engine.ResolveAdopt
+	case backup:
+		return engine.ResolveBackup
+	default:
+		return engine.ResolveSkip
+	}
 }

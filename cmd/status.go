@@ -17,32 +17,35 @@ var statusCmd = &cobra.Command{
 	Long:    statusLong,
 	Example: statusExamples,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		cfg, err := loadConfig(*viper.GetViper(), cmd)
-		if err != nil {
-			return err
-		}
-		appLogger.Debug("running status command", "args", args)
-
-		engineCfg := engine.EngineConfig{
-			Source:      cfg.Source,
-			Destination: cfg.Destination,
-			ConfigHome:  config.AppConfigHome(),
-		}
-		eng, err := engine.NewEngine(&engineCfg, appLogger)
-		if err != nil {
-			return err
-		}
-		status, err := eng.Status(args)
-		if err != nil {
-			return err
-		}
-		appOutput.PrintStatus(status)
-		return nil
+		return executeStatus(viper.GetViper(), cmd, args)
 	},
 }
 
 func init() {
 	addOperationFlags(statusCmd.Flags())
-
 	rootCmd.AddCommand(statusCmd)
+}
+
+func executeStatus(v *viper.Viper, cmd *cobra.Command, args []string) error {
+	cfg, err := loadConfig(v, cmd)
+	if err != nil {
+		return err
+	}
+	appLogger.Debug("running status command", "args", args)
+
+	engineCfg := engine.EngineConfig{
+		Source:      cfg.Source,
+		Destination: cfg.Destination,
+		ConfigHome:  config.AppConfigHome(),
+	}
+	eng, err := engine.NewEngine(&engineCfg, appLogger)
+	if err != nil {
+		return err
+	}
+	status, err := eng.Status(args)
+	if err != nil {
+		return err
+	}
+	appOutput.PrintStatus(status)
+	return nil
 }

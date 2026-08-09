@@ -32,7 +32,7 @@ func setupLogging(cmd *cobra.Command) error {
 	return nil
 }
 
-func loadConfig(v viper.Viper, cmd *cobra.Command) (*config.Config, error) {
+func loadConfig(v *viper.Viper, cmd *cobra.Command) (*config.Config, error) {
 	if err := v.ReadInConfig(); err != nil {
 		return nil, &engine.HintedError{
 			Op:   "read config",
@@ -44,7 +44,7 @@ func loadConfig(v viper.Viper, cmd *cobra.Command) (*config.Config, error) {
 	if f := cmd.Flags().Lookup(flagProfile); f != nil {
 		_ = v.BindPFlag(flagProfile, f)
 	}
-	cfg, err := config.NewConfig(&v, appLogger)
+	cfg, err := config.NewConfig(v, appLogger)
 	if err != nil {
 		return nil, err
 	}
