@@ -48,24 +48,30 @@ var rootCmd = &cobra.Command{
 }
 
 func Execute(ctx context.Context) {
-	err := rootCmd.ExecuteContext(ctx)
+	if err := rootCmd.ExecuteContext(ctx); err != nil {
+		os.Exit(exitCodeFor(appOutput, err))
+	}
+}
+
+func exitCodeFor(out *output.Output, err error) int {
 	if err != nil {
 		var hintedError *engine.HintedError
 		var conflictError *engine.ConflictError
 		var aggregatedError *engine.AggregatedError
 		if errors.As(err, &hintedError) && hintedError.Hint != "" {
-			appOutput.PrintCommandError(hintedError)
-			appOutput.PrintHint(hintedError.Hint)
+			out.PrintCommandError(hintedError)
+			out.PrintHint(hintedError.Hint)
 		} else if errors.As(err, &conflictError) {
-			appOutput.PrintCommandError(conflictError)
-			appOutput.PrintConflict(conflictError.Conflicts)
+			out.PrintCommandError(conflictError)
+			out.PrintConflict(conflictError.Conflicts)
 		} else if errors.As(err, &aggregatedError) {
-			appOutput.PrintAggregatedError(aggregatedError)
+			out.PrintAggregatedError(aggregatedError)
 		} else {
-			appOutput.PrintCommandError(err)
+			out.PrintCommandError(err)
 		}
-		os.Exit(1)
+		return 1
 	}
+	return 0
 }
 
 func init() {
