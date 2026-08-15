@@ -47,12 +47,6 @@ func (so *StowOperation) FileAction(candidate operationCandidate) (fileAction, e
 		return newFileActionUpToDate(candidate.source, candidate.destination, "file already stowed", so.l), nil
 	}
 
-	if so.strategy == ResolveAdopt {
-		if existing != file.ExistingRegularFile {
-			return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("adopt %s: %s", candidate.destination, existing), so.l), nil
-		}
-		return newFileActionAdopt(candidate.source, candidate.destination, so.l), nil
-	}
 	switch so.strategy {
 	case ResolveForce:
 		so.l.Debug("existing destination will be replaced", "destination", candidate.destination, "strategy", so.strategy)
@@ -65,6 +59,11 @@ func (so *StowOperation) FileAction(candidate operationCandidate) (fileAction, e
 		backupID := time.Now().Format(timestampFormat)
 		backupPath := fmt.Sprintf("%s.%s.%s", candidate.destination, backupID, backupExtension)
 		return newFileActionBackup(candidate.source, candidate.destination, backupPath, so.l), nil
+	case ResolveAdopt:
+		if existing != file.ExistingRegularFile {
+			return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("adopt %s: %s", candidate.destination, existing), so.l), nil
+		}
+		return newFileActionAdopt(candidate.source, candidate.destination, so.l), nil
 	default:
 		so.l.Warn("unsupported resolution strategy", "strategy", so.strategy, "destination", candidate.destination)
 		return nil, fmt.Errorf("unsupported strategy %v: %w", so.strategy, errUnsupportedAction)
