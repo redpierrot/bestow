@@ -73,11 +73,15 @@ func NewEngine(cfg *EngineConfig, l *slog.Logger) (*Engine, error) {
 
 // Execute executes the given operation with the provided configs
 func (e *Engine) Execute(ctx context.Context, cfg *CommandConfig) (*ExecuteResult, error) {
+	operation, err := getOperation(cfg.Kind, e.fileSystem, e.logger, cfg.ResolveStrategy)
+	if err != nil {
+		return nil, err
+	}
 	candidates, err := e.findCandidates(cfg.Args)
 	if err != nil {
 		return nil, err
 	}
-	actions, err := e.buildFileActions(candidates, cfg.ResolveStrategy, cfg.Kind)
+	actions, err := e.buildFileActions(candidates, operation)
 	if err != nil {
 		return nil, err
 	}

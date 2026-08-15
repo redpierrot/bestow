@@ -227,12 +227,13 @@ func TestOperations_buildOperationCandidates(t *testing.T) {
 }
 
 func TestOperations_buildFileActions(t *testing.T) {
+	l := newTestLogger()
 	tests := []struct {
 		name       string
-		setup      func() *Engine
+		setup      func(t *testing.T, mf *mockFileSystem) *Engine
+		mf         *mockFileSystem
 		candidates []operationCandidate
-		strategy   ResolveStrategy
-		cmdAction  CommandKind
+		operation  func(mf *mockFileSystem) Operation
 		want       []fileAction
 		wantErr    bool
 		wantErrIs  error
@@ -240,59 +241,62 @@ func TestOperations_buildFileActions(t *testing.T) {
 	}{
 		{
 			name: "stow all",
-			setup: func() *Engine {
-				mf := &mockFileSystem{
-					existsFn: func(path string) (bool, error) {
-						return false, nil
-					},
-				}
+			mf: &mockFileSystem{
+				existsFn: func(path string) (bool, error) {
+					return false, nil
+				},
+			},
+			setup: func(t *testing.T, mf *mockFileSystem) *Engine {
 				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
-			strategy:   ResolveSkip,
-			cmdAction:  CommandStow,
+			operation: func(mf *mockFileSystem) Operation {
+				return newStowOperation(mf, l, ResolveSkip)
+			},
 			want: []fileAction{
-				newFileActionLink("file1", "file1", newTestLogger()),
-				newFileActionLink("file2", "file2", newTestLogger()),
-				newFileActionLink("file3", "file3", newTestLogger()),
+				newFileActionLink("file1", "file1", l),
+				newFileActionLink("file2", "file2", l),
+				newFileActionLink("file3", "file3", l),
 			},
 		},
 		{
 			name: "unstow all",
-			setup: func() *Engine {
-				mf := &mockFileSystem{
-					existsFn: func(path string) (bool, error) {
-						return true, nil
-					},
-					existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
-						return file.ExistingManagedSymlink, nil
-					},
-				}
+			mf: &mockFileSystem{
+				existsFn: func(path string) (bool, error) {
+					return true, nil
+				},
+				existingFileTypeFn: func(src, dest string) (file.ExistingType, error) {
+					return file.ExistingManagedSymlink, nil
+				},
+			},
+			setup: func(t *testing.T, mf *mockFileSystem) *Engine {
 				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
-			strategy:   ResolveSkip,
-			cmdAction:  CommandUnstow,
+			operation: func(mf *mockFileSystem) Operation {
+				return newUnstowOperation(mf, l)
+			},
 			want: []fileAction{
-				newFileActionRemove("file1", "file1", newTestLogger()),
-				newFileActionRemove("file2", "file2", newTestLogger()),
-				newFileActionRemove("file3", "file3", newTestLogger()),
+				newFileActionRemove("file1", "file1", l),
+				newFileActionRemove("file2", "file2", l),
+				newFileActionRemove("file3", "file3", l),
 			},
 		},
 		{
 			name: "collect errors",
-			setup: func() *Engine {
-				mf := &mockFileSystem{
-					existsFn: func(path string) (bool, error) {
-						return false, os.ErrPermission
-					},
-				}
+			mf: &mockFileSystem{
+				existsFn: func(path string) (bool, error) {
+					return false, os.ErrPermission
+				},
+			},
+			setup: func(t *testing.T, mf *mockFileSystem) *Engine {
 				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
-			strategy:   ResolveSkip,
-			cmdAction:  CommandStow,
-			wantErr:    true,
+			operation: func(mf *mockFileSystem) Operation {
+				return newStowOperation(mf, l, ResolveSkip)
+			},
+			wantErr: true,
 			wantErrAs: func(t *testing.T, err error) {
 				var aggregatedErr *AggregatedError
 				if !errors.As(err, &aggregatedErr) {
@@ -303,8 +307,9 @@ func TestOperations_buildFileActions(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			e := tc.setup()
-			fileActions, err := e.buildFileActions(tc.candidates, tc.strategy, tc.cmdAction)
+			e := tc.setup(t, tc.mf)
+			op := tc.operation(tc.mf)
+			fileActions, err := e.buildFileActions(tc.candidates, op)
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				if tc.wantErrAs != nil {
 					tc.wantErrAs(t, err)
