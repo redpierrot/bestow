@@ -56,13 +56,29 @@ func TestEngine_Execute(t *testing.T) {
 		wantErrIs   error
 	}{
 		{
-			name: "no errors",
+			name: "stow",
 			setup: func(t *testing.T) Engine {
 				mf := &mockFileSystem{}
 				return *newTestEngine(mf, newTestIgnoreList(mf, newTestLogger(), nil))
 			},
 			cfg: &CommandConfig{
-				Kind: CommandStow,
+				Command: &StowCommand{
+					Strategy: ResolveSkip,
+				},
+			},
+			wantEvents:  []ActionEvent{},
+			wantSummary: &Summary{},
+		},
+		{
+			name: "unstow",
+			setup: func(t *testing.T) Engine {
+				mf := &mockFileSystem{}
+				return *newTestEngine(mf, newTestIgnoreList(mf, newTestLogger(), nil))
+			},
+			cfg: &CommandConfig{
+				Command: &UnstowCommand{
+					KeepEmptyParents: false,
+				},
 			},
 			wantEvents:  []ActionEvent{},
 			wantSummary: &Summary{},
@@ -608,14 +624,14 @@ func TestEngine_updateSummary(t *testing.T) {
 			name:    "remove",
 			summary: Summary{},
 			want:    Summary{counts: [numActionKinds]int{ActionRemove: 1}},
-			action:  newFileActionRemove("", "", newTestLogger()),
+			action:  newFileActionRemove("", "", false, newTestLogger()),
 		},
 		{
 			name:    "undo",
 			summary: Summary{},
 			isUndo:  true,
 			want:    Summary{reverted: 1},
-			action:  newFileActionRemove("", "", newTestLogger()),
+			action:  newFileActionRemove("", "", false, newTestLogger()),
 		},
 		{
 			name:    "undo skip",

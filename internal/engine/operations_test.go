@@ -233,7 +233,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 		setup      func(t *testing.T, mf *mockFileSystem) *Engine
 		mf         *mockFileSystem
 		candidates []operationCandidate
-		operation  func(mf *mockFileSystem) Operation
+		command    Command
 		want       []fileAction
 		wantErr    bool
 		wantErrIs  error
@@ -250,9 +250,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
-			operation: func(mf *mockFileSystem) Operation {
-				return newStowOperation(mf, l, ResolveSkip)
-			},
+			command:    &StowCommand{},
 			want: []fileAction{
 				newFileActionLink("file1", "file1", l),
 				newFileActionLink("file2", "file2", l),
@@ -273,13 +271,11 @@ func TestOperations_buildFileActions(t *testing.T) {
 				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
-			operation: func(mf *mockFileSystem) Operation {
-				return newUnstowOperation(mf, l)
-			},
+			command:    &UnstowCommand{},
 			want: []fileAction{
-				newFileActionRemove("file1", "file1", l),
-				newFileActionRemove("file2", "file2", l),
-				newFileActionRemove("file3", "file3", l),
+				newFileActionRemove("file1", "file1", false, l),
+				newFileActionRemove("file2", "file2", false, l),
+				newFileActionRemove("file3", "file3", false, l),
 			},
 		},
 		{
@@ -293,10 +289,8 @@ func TestOperations_buildFileActions(t *testing.T) {
 				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
-			operation: func(mf *mockFileSystem) Operation {
-				return newStowOperation(mf, l, ResolveSkip)
-			},
-			wantErr: true,
+			command:    &StowCommand{},
+			wantErr:    true,
 			wantErrAs: func(t *testing.T, err error) {
 				var aggregatedErr *AggregatedError
 				if !errors.As(err, &aggregatedErr) {
@@ -308,8 +302,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			e := tc.setup(t, tc.mf)
-			op := tc.operation(tc.mf)
-			fileActions, err := e.buildFileActions(tc.candidates, op)
+			fileActions, err := e.buildFileActions(tc.candidates, tc.command)
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				if tc.wantErrAs != nil {
 					tc.wantErrAs(t, err)
@@ -331,7 +324,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 func TestOperations_stowOperation(t *testing.T) {
 	type strategyCase struct {
 		name      string
-		strategy  ResolveStrategy
+		command   Command
 		want      ActionKind
 		wantErr   bool
 		wantErrIs error
@@ -351,7 +344,7 @@ func TestOperations_stowOperation(t *testing.T) {
 				}
 			},
 			cases: []strategyCase{
-				{name: "skip", strategy: ResolveSkip, want: ActionLink},
+				{name: "skip", command: &StowCommand{Strategy: ResolveSkip}, want: ActionLink},
 			},
 		},
 		{
@@ -367,7 +360,7 @@ func TestOperations_stowOperation(t *testing.T) {
 				}
 			},
 			cases: []strategyCase{
-				{name: "skip", strategy: ResolveSkip, wantErr: true, wantErrIs: os.ErrPermission},
+				{name: "skip", command: &StowCommand{Strategy: ResolveSkip}, wantErr: true, wantErrIs: os.ErrPermission},
 			},
 		},
 		{
@@ -383,10 +376,10 @@ func TestOperations_stowOperation(t *testing.T) {
 				}
 			},
 			cases: []strategyCase{
-				{name: "skip", strategy: ResolveSkip, wantErr: true, wantErrIs: errDestIsDir},
-				{name: "force", strategy: ResolveForce, wantErr: true, wantErrIs: errDestIsDir},
-				{name: "adopt", strategy: ResolveAdopt, wantErr: true, wantErrIs: errDestIsDir},
-				{name: "backup", strategy: ResolveBackup, wantErr: true, wantErrIs: errDestIsDir},
+				{name: "skip", command: &StowCommand{Strategy: ResolveSkip}, wantErr: true, wantErrIs: errDestIsDir},
+				{name: "force", command: &StowCommand{Strategy: ResolveForce}, wantErr: true, wantErrIs: errDestIsDir},
+				{name: "adopt", command: &StowCommand{Strategy: ResolveAdopt}, wantErr: true, wantErrIs: errDestIsDir},
+				{name: "backup", command: &StowCommand{Strategy: ResolveBackup}, wantErr: true, wantErrIs: errDestIsDir},
 			},
 		},
 		{
@@ -402,10 +395,10 @@ func TestOperations_stowOperation(t *testing.T) {
 				}
 			},
 			cases: []strategyCase{
-				{name: "skip", strategy: ResolveSkip, want: ActionUpToDate},
-				{name: "force", strategy: ResolveForce, want: ActionUpToDate},
-				{name: "adopt", strategy: ResolveAdopt, want: ActionUpToDate},
-				{name: "backup", strategy: ResolveBackup, want: ActionUpToDate},
+				{name: "skip", command: &StowCommand{Strategy: ResolveSkip}, want: ActionUpToDate},
+				{name: "force", command: &StowCommand{Strategy: ResolveForce}, want: ActionUpToDate},
+				{name: "adopt", command: &StowCommand{Strategy: ResolveAdopt}, want: ActionUpToDate},
+				{name: "backup", command: &StowCommand{Strategy: ResolveBackup}, want: ActionUpToDate},
 			},
 		},
 		{
@@ -424,10 +417,10 @@ func TestOperations_stowOperation(t *testing.T) {
 				}
 			},
 			cases: []strategyCase{
-				{name: "skip", strategy: ResolveSkip, want: ActionSkip},
-				{name: "force", strategy: ResolveForce, want: ActionReplace},
-				{name: "adopt", strategy: ResolveAdopt, want: ActionSkip},
-				{name: "backup", strategy: ResolveBackup, want: ActionBackup},
+				{name: "skip", command: &StowCommand{Strategy: ResolveSkip}, want: ActionSkip},
+				{name: "force", command: &StowCommand{Strategy: ResolveForce}, want: ActionReplace},
+				{name: "adopt", command: &StowCommand{Strategy: ResolveAdopt}, want: ActionSkip},
+				{name: "backup", command: &StowCommand{Strategy: ResolveBackup}, want: ActionBackup},
 			},
 		},
 		{
@@ -446,10 +439,10 @@ func TestOperations_stowOperation(t *testing.T) {
 				}
 			},
 			cases: []strategyCase{
-				{name: "skip", strategy: ResolveSkip, want: ActionSkip},
-				{name: "force", strategy: ResolveForce, want: ActionReplace},
-				{name: "adopt", strategy: ResolveAdopt, want: ActionAdopt},
-				{name: "backup", strategy: ResolveBackup, want: ActionBackup},
+				{name: "skip", command: &StowCommand{Strategy: ResolveSkip}, want: ActionSkip},
+				{name: "force", command: &StowCommand{Strategy: ResolveForce}, want: ActionReplace},
+				{name: "adopt", command: &StowCommand{Strategy: ResolveAdopt}, want: ActionAdopt},
+				{name: "backup", command: &StowCommand{Strategy: ResolveBackup}, want: ActionBackup},
 			},
 		},
 		{
@@ -465,7 +458,7 @@ func TestOperations_stowOperation(t *testing.T) {
 				}
 			},
 			cases: []strategyCase{
-				{name: "skip", strategy: 100, wantErr: true, wantErrIs: errUnsupportedAction},
+				{name: "skip", command: &StowCommand{Strategy: 100}, wantErr: true, wantErrIs: errUnsupportedAction},
 			},
 		},
 	}
@@ -475,8 +468,7 @@ func TestOperations_stowOperation(t *testing.T) {
 				t.Run(st.name, func(t *testing.T) {
 					mf := tc.fs()
 					cand := candidate("", "") // Dummy candidate since we don't care about paths here.
-					operation := newStowOperation(mf, newTestLogger(), st.strategy)
-					fa, err := operation.FileAction(cand)
+					fa, err := st.command.resolve(cand, mf, newTestLogger())
 					if validateErrScenario(t, st.wantErr, err, st.wantErrIs) {
 						return
 					}
@@ -493,6 +485,7 @@ func TestOperations_unstowOperation(t *testing.T) {
 	tests := []struct {
 		name      string
 		mf        func() *mockFileSystem
+		command   Command
 		candidate operationCandidate
 		want      ActionKind
 		wantErr   bool
@@ -510,6 +503,7 @@ func TestOperations_unstowOperation(t *testing.T) {
 					},
 				}
 			},
+			command:   &UnstowCommand{},
 			candidate: candidate("src_file", "dest_file"),
 			want:      ActionRemove,
 		},
@@ -525,6 +519,7 @@ func TestOperations_unstowOperation(t *testing.T) {
 					},
 				}
 			},
+			command:   &UnstowCommand{},
 			candidate: candidate("src_file", "dest_file"),
 			want:      ActionSkip,
 		},
@@ -540,6 +535,7 @@ func TestOperations_unstowOperation(t *testing.T) {
 					},
 				}
 			},
+			command:   &UnstowCommand{},
 			candidate: candidate("src_file", "dest_file"),
 			want:      ActionSkip,
 		},
@@ -555,6 +551,7 @@ func TestOperations_unstowOperation(t *testing.T) {
 					},
 				}
 			},
+			command:   &UnstowCommand{},
 			candidate: candidate("src_file", "dest_file"),
 			wantErr:   true,
 			wantErrIs: errDestIsDir,
@@ -571,6 +568,7 @@ func TestOperations_unstowOperation(t *testing.T) {
 					},
 				}
 			},
+			command:   &UnstowCommand{},
 			candidate: candidate("src_file", "dest_file"),
 			want:      ActionUpToDate,
 		},
@@ -586,6 +584,7 @@ func TestOperations_unstowOperation(t *testing.T) {
 					},
 				}
 			},
+			command:   &UnstowCommand{},
 			candidate: candidate("src_file", "dest_file"),
 			want:      ActionSkip,
 		},
@@ -598,6 +597,7 @@ func TestOperations_unstowOperation(t *testing.T) {
 					},
 				}
 			},
+			command:   &UnstowCommand{},
 			candidate: candidate("src_file", "dest_file"),
 			want:      ActionUpToDate,
 		},
@@ -610,6 +610,7 @@ func TestOperations_unstowOperation(t *testing.T) {
 					},
 				}
 			},
+			command:   &UnstowCommand{},
 			candidate: candidate("src_file", "dest_file"),
 			wantErr:   true,
 			wantErrIs: os.ErrPermission,
@@ -626,6 +627,7 @@ func TestOperations_unstowOperation(t *testing.T) {
 					},
 				}
 			},
+			command:   &UnstowCommand{},
 			candidate: candidate("src_file", "dest_file"),
 			wantErr:   true,
 			wantErrIs: os.ErrPermission,
@@ -634,49 +636,12 @@ func TestOperations_unstowOperation(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			mf := tc.mf()
-			operation := newUnstowOperation(mf, newTestLogger())
-			fa, err := operation.FileAction(tc.candidate)
+			fa, err := tc.command.resolve(tc.candidate, mf, newTestLogger())
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}
 			if fa.kind() != tc.want {
 				t.Fatalf("got %v, want %v", fa.kind(), tc.want)
-			}
-		})
-	}
-}
-
-func TestOperations_getOperation(t *testing.T) {
-	tests := []struct {
-		name      string
-		kind      CommandKind
-		wantErr   bool
-		wantErrIs error
-	}{
-		{
-			name: "stow",
-			kind: CommandStow,
-		},
-		{
-			name: "unstow",
-			kind: CommandUnstow,
-		},
-		{
-			name:      "undefined",
-			kind:      100,
-			wantErr:   true,
-			wantErrIs: errUnsupportedAction,
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			operation, err := getOperation(tc.kind, &mockFileSystem{}, newTestLogger(), ResolveSkip)
-			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
-				return
-			}
-			if operation == nil {
-				t.Fatalf("got nil, want Operation")
 			}
 		})
 	}

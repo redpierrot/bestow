@@ -40,10 +40,12 @@ func executeStow(cmd *cobra.Command, v *viper.Viper, app *App, args []string) er
 	if err != nil {
 		return err
 	}
+	stowCmd := &engine.StowCommand{
+		Strategy: params.strategy,
+	}
 	cmdCfg := engine.CommandConfig{
-		Kind:            engine.CommandStow,
-		Args:            params.packages,
-		ResolveStrategy: params.strategy,
+		Command: stowCmd,
+		Args:    params.packages,
 	}
 	summary, err := e.Execute(cmd.Context(), &cmdCfg)
 

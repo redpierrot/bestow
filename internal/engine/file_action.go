@@ -7,6 +7,7 @@ package engine
 import (
 	"fmt"
 	"log/slog"
+	"path/filepath"
 )
 
 const (
@@ -393,29 +394,53 @@ func (f *fileActionAdopt) kind() ActionKind {
 
 type fileActionRemove struct {
 	fileActionPaths
+	keepEmptyParent bool
 }
 
-func newFileActionRemove(source, destination string, l *slog.Logger) *fileActionRemove {
+func newFileActionRemove(source, destination string, keepEmptyParent bool, l *slog.Logger) *fileActionRemove {
 	return &fileActionRemove{
 		fileActionPaths: fileActionPaths{
 			source:      source,
 			destination: destination,
 			logger:      l,
 		},
+		keepEmptyParent: keepEmptyParent,
 	}
 }
 
 func (f *fileActionRemove) execute(fs FileSystem) ([]ActionEvent, error) {
+	events := make([]ActionEvent, 0)
 	if err := fs.Remove(f.destination); err != nil {
 		return nil, err
 	}
-	return []ActionEvent{
-		{
-			Action:    fileOpRemove,
-			Msg:       f.destination,
-			EventType: EventSuccess,
-		},
-	}, nil
+	removeEvent := ActionEvent{
+		Action:    fileOpRemove,
+		Msg:       f.destination,
+		EventType: EventSuccess,
+	}
+	events = append(events, removeEvent)
+	if f.keepEmptyParent {
+		return events, nil
+	}
+	parent := filepath.Dir(f.destination)
+	isEmpty, err := fs.IsEmpty(parent)
+	if err != nil {
+		return events, err
+	}
+	if !isEmpty {
+		f.logger.Debug("parent is not empty", "file", f.destination, "parent", parent)
+		return events, nil
+	}
+	if err := fs.Remove(parent); err != nil {
+		return events, err
+	}
+	removeParentEvent := ActionEvent{
+		Action:    fileOpRemove,
+		Msg:       parent,
+		EventType: EventStep,
+	}
+	events = append(events, removeParentEvent)
+	return events, nil
 }
 
 func (f *fileActionRemove) undo(fs FileSystem) ([]ActionEvent, error) {

@@ -24,9 +24,13 @@ const (
 
 // CommandConfig stores the configurations for a given command execution
 type CommandConfig struct {
-	Kind            CommandKind
-	Args            []string
-	ResolveStrategy ResolveStrategy
+	Command Command
+	Args    []string
+}
+
+// Command represents a bestow command
+type Command interface {
+	resolve(candidate operationCandidate, fs FileSystem, l *slog.Logger) (fileAction, error)
 }
 
 // Engine is the brain of Bestow. It keeps the state of a given execution and handles all the file system calls
@@ -73,15 +77,11 @@ func NewEngine(cfg *EngineConfig, l *slog.Logger) (*Engine, error) {
 
 // Execute executes the given operation with the provided configs
 func (e *Engine) Execute(ctx context.Context, cfg *CommandConfig) (*ExecuteResult, error) {
-	operation, err := getOperation(cfg.Kind, e.fileSystem, e.logger, cfg.ResolveStrategy)
-	if err != nil {
-		return nil, err
-	}
 	candidates, err := e.findCandidates(cfg.Args)
 	if err != nil {
 		return nil, err
 	}
-	actions, err := e.buildFileActions(candidates, operation)
+	actions, err := e.buildFileActions(candidates, cfg.Command)
 	if err != nil {
 		return nil, err
 	}

@@ -7,6 +7,7 @@ package engine
 import (
 	"log/slog"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -317,9 +318,9 @@ func TestFileAction_execute(t *testing.T) {
 			},
 		},
 		{
-			name: "remove",
+			name: "remove - keep parents",
 			action: func(l *slog.Logger) fileAction {
-				return newFileActionRemove("src", "dest", l)
+				return newFileActionRemove("src", "dest", true, l)
 			},
 			cases: []subTest{
 				{
@@ -342,6 +343,35 @@ func TestFileAction_execute(t *testing.T) {
 					},
 					wantErr:   true,
 					wantErrIs: os.ErrPermission,
+				},
+			},
+		},
+		{
+			name: "remove - remove empty parents",
+			action: func(l *slog.Logger) fileAction {
+				destPath := filepath.Join("parent", "dest")
+				return newFileActionRemove("src", destPath, false, l)
+			},
+			cases: []subTest{
+				{
+					name: "no errors",
+					fs: &mockFileSystem{
+						isEmptyFn: func(path string) (bool, error) {
+							return true, nil
+						},
+					},
+					want: []ActionEvent{
+						{
+							Action:    fileOpRemove,
+							Msg:       filepath.Join("parent", "dest"),
+							EventType: EventSuccess,
+						},
+						{
+							Action:    fileOpRemove,
+							Msg:       "parent",
+							EventType: EventStep,
+						},
+					},
 				},
 			},
 		},
@@ -542,7 +572,7 @@ func TestFileAction_undo(t *testing.T) {
 		{
 			name: "remove",
 			action: func(l *slog.Logger) fileAction {
-				return newFileActionRemove("src", "dest", l)
+				return newFileActionRemove("src", "dest", false, l)
 			},
 			cases: []subTest{
 				{

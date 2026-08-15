@@ -294,6 +294,77 @@ func TestReadHandler_ReadLines(t *testing.T) {
 	}
 }
 
+func TestReadHandler_IsEmpty(t *testing.T) {
+	tests := []struct {
+		name      string
+		setup     func(t *testing.T, parent string) string
+		handler   *Handler
+		want      bool
+		wantErr   bool
+		wantErrIs error
+	}{
+		{
+			name: "empty dir",
+			setup: func(t *testing.T, parent string) string {
+				return parent
+			},
+			handler: NewHandler(newTestLogger()),
+			want:    true,
+		},
+		{
+			name: "non-empty dir",
+			setup: func(t *testing.T, parent string) string {
+				testFile := filepath.Join(parent, "test_file")
+				if err := os.WriteFile(testFile, []byte("test file content"), permFileWrite); err != nil {
+					t.Fatal(err)
+				}
+				testDir := filepath.Join(parent, "test")
+				if err := os.Mkdir(testDir, permDirWrite); err != nil {
+					t.Fatal(err)
+				}
+				return parent
+			},
+			handler: NewHandler(newTestLogger()),
+			want:    false,
+		},
+		{
+			name: "invalid path",
+			setup: func(t *testing.T, parent string) string {
+				return "invalid"
+			},
+			handler:   NewHandler(newTestLogger()),
+			wantErr:   true,
+			wantErrIs: ErrNotDir,
+		},
+		{
+			name: "unreadable path",
+			setup: func(t *testing.T, parent string) string {
+				path := filepath.Join(parent, "test")
+				if err := os.Mkdir(path, permNone); err != nil {
+					t.Fatal(err)
+				}
+				return path
+			},
+			handler:   NewHandler(newTestLogger()),
+			wantErr:   true,
+			wantErrIs: os.ErrPermission,
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			testRoot := t.TempDir()
+			path := tc.setup(t, testRoot)
+			isEmpty, err := tc.handler.IsEmpty(path)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			if isEmpty != tc.want {
+				t.Fatalf("got %v, want %v", isEmpty, tc.want)
+			}
+		})
+	}
+}
+
 func TestReadHandler_ExistingFileType(t *testing.T) {
 	tests := []struct {
 		name      string
