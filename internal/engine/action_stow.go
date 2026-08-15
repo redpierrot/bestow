@@ -12,31 +12,21 @@ import (
 	"github.com/redpierrot/bestow/internal/file"
 )
 
-type StowOperation struct {
-	fs       FileSystem
-	l        *slog.Logger
-	strategy ResolveStrategy
-}
-
-func newStowOperation(fs FileSystem, l *slog.Logger, strategy ResolveStrategy) *StowOperation {
-	return &StowOperation{
-		fs:       fs,
-		l:        l,
-		strategy: strategy,
-	}
-}
-
 const timestampFormat = "20060102150405"
 
-func (so *StowOperation) FileAction(candidate operationCandidate) (fileAction, error) {
-	destExists, err := so.fs.Exists(candidate.destination)
+type StowCommand struct {
+	Strategy ResolveStrategy
+}
+
+func (c *StowCommand) resolve(candidate operationCandidate, fs FileSystem, l *slog.Logger) (fileAction, error) {
+	destExists, err := fs.Exists(candidate.destination)
 	if err != nil {
 		return nil, err
 	}
 	if !destExists {
-		return newFileActionLink(candidate.source, candidate.destination, so.l), nil
+		return newFileActionLink(candidate.source, candidate.destination, l), nil
 	}
-	existing, err := so.fs.ExistingFileType(candidate.source, candidate.destination)
+	existing, err := fs.ExistingFileType(candidate.source, candidate.destination)
 	if err != nil {
 		return nil, err
 	}
@@ -44,28 +34,29 @@ func (so *StowOperation) FileAction(candidate operationCandidate) (fileAction, e
 		return nil, fmt.Errorf("stow %s: %w", candidate.destination, errDestIsDir)
 	}
 	if existing == file.ExistingManagedSymlink {
-		return newFileActionUpToDate(candidate.source, candidate.destination, "file already stowed", so.l), nil
+		return newFileActionUpToDate(candidate.source, candidate.destination, "file already stowed", l), nil
 	}
 
-	switch so.strategy {
+	switch c.Strategy {
 	case ResolveForce:
-		so.l.Debug("existing destination will be replaced", "destination", candidate.destination, "strategy", so.strategy)
-		return newFileActionReplace(candidate.source, candidate.destination, so.l), nil
+		l.Debug("existing destination will be replaced", "destination", candidate.destination, "strategy", c.Strategy)
+		return newFileActionReplace(candidate.source, candidate.destination, l), nil
 	case ResolveSkip:
-		so.l.Debug("skipping the existing file at the destination", "destination", candidate.destination, "strategy", so.strategy)
-		return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("%s: %s", existing, "skip"), so.l), nil
+		l.Debug("skipping the existing file at the destination", "destination", candidate.destination, "strategy", c.Strategy)
+		return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("%s: %s", existing, "skip"), l), nil
 	case ResolveBackup:
-		so.l.Debug("existing file at the destination will be backed up and replaced", "destination", candidate.destination, "strategy", so.strategy)
+		l.Debug("existing file at the destination will be backed up and replaced", "destination", candidate.destination, "strategy", c.Strategy)
 		backupID := time.Now().Format(timestampFormat)
 		backupPath := fmt.Sprintf("%s.%s.%s", candidate.destination, backupID, backupExtension)
-		return newFileActionBackup(candidate.source, candidate.destination, backupPath, so.l), nil
+		return newFileActionBackup(candidate.source, candidate.destination, backupPath, l), nil
 	case ResolveAdopt:
 		if existing != file.ExistingRegularFile {
-			return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("adopt %s: %s", candidate.destination, existing), so.l), nil
+			return newFileActionSkip(candidate.source, candidate.destination, fmt.Sprintf("adopt %s: %s", candidate.destination, existing), l), nil
 		}
-		return newFileActionAdopt(candidate.source, candidate.destination, so.l), nil
+		return newFileActionAdopt(candidate.source, candidate.destination, l), nil
 	default:
-		so.l.Warn("unsupported resolution strategy", "strategy", so.strategy, "destination", candidate.destination)
-		return nil, fmt.Errorf("unsupported strategy %v: %w", so.strategy, errUnsupportedAction)
+		l.Warn("unsupported resolution strategy", "strategy", c.Strategy, "destination", candidate.destination)
+		return nil, fmt.Errorf("unsupported strategy %v: %w", c.Strategy, errUnsupportedAction)
 	}
+
 }

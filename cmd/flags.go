@@ -17,14 +17,15 @@ const (
 )
 
 const (
-	flagVerbose    = "verbose"
-	flagQuiet      = "quiet"
-	flagDryRun     = "dry-run"
-	flagConfigFile = "config-file"
-	flagProfile    = "profile"
-	flagForce      = "force"
-	flagAdopt      = "adopt"
-	flagBackup     = "backup"
+	flagVerbose       = "verbose"
+	flagQuiet         = "quiet"
+	flagDryRun        = "dry-run"
+	flagConfigFile    = "config-file"
+	flagProfile       = "profile"
+	flagForce         = "force"
+	flagAdopt         = "adopt"
+	flagBackup        = "backup"
+	flagKeepEmptyDirs = "keep-empty-dirs"
 )
 
 func addOperationFlags(fs *pflag.FlagSet) {

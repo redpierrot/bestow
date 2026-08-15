@@ -21,6 +21,7 @@ func newUnstowCmd(app *App) *cobra.Command {
 		},
 	}
 	addOperationFlags(cmd.Flags())
+	cmd.Flags().BoolP(flagKeepEmptyDirs, "k", false, "keep empty parent directories when unstow")
 	return cmd
 }
 
@@ -33,9 +34,16 @@ func executeUnstow(cmd *cobra.Command, v *viper.Viper, app *App, args []string) 
 	if err != nil {
 		return err
 	}
+	keepEmptyParents, err := boolFlag(cmd.Flags(), flagKeepEmptyDirs)
+	if err != nil {
+		return err
+	}
+	unstowCmd := &engine.UnstowCommand{
+		KeepEmptyParents: keepEmptyParents,
+	}
 	cmdCfg := engine.CommandConfig{
-		Kind: engine.CommandUnstow,
-		Args: args,
+		Command: unstowCmd,
+		Args:    args,
 	}
 	summary, err := e.Execute(cmd.Context(), &cmdCfg)
 	app.out.PrintResult(summary)

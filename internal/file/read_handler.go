@@ -87,6 +87,23 @@ func (h *readHandler) IsDir(path string) (bool, error) {
 	return stat.IsDir(), nil
 }
 
+// IsEmpty returns true if the provided path is an empty directory, false if the path is a non-empty directory.
+// Errors if the path is invalid or not a directory.
+func (h *readHandler) IsEmpty(path string) (bool, error) {
+	isDir, err := h.IsDir(path)
+	if err != nil {
+		return false, err
+	}
+	if !isDir {
+		return false, ErrNotDir
+	}
+	files, err := os.ReadDir(path)
+	if err != nil {
+		return false, err
+	}
+	return len(files) == 0, nil
+}
+
 // Exists returns true if the provided path exists.
 func (h *readHandler) Exists(path string) (bool, error) {
 	h.logger.Debug("checking path exists", "path", path)

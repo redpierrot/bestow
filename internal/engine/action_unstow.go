@@ -11,27 +11,19 @@ import (
 	"github.com/redpierrot/bestow/internal/file"
 )
 
-type UnstowOperation struct {
-	fs FileSystem
-	l  *slog.Logger
+type UnstowCommand struct {
+	KeepEmptyParents bool
 }
 
-func newUnstowOperation(fs FileSystem, l *slog.Logger) *UnstowOperation {
-	return &UnstowOperation{
-		fs: fs,
-		l:  l,
-	}
-}
-
-func (uo *UnstowOperation) FileAction(candidate operationCandidate) (fileAction, error) {
-	destExists, err := uo.fs.Exists(candidate.destination)
+func (c *UnstowCommand) resolve(candidate operationCandidate, fs FileSystem, l *slog.Logger) (fileAction, error) {
+	destExists, err := fs.Exists(candidate.destination)
 	if err != nil {
 		return nil, err
 	}
 	if !destExists {
-		return newFileActionUpToDate(candidate.source, candidate.destination, "destination does not exist", uo.l), nil
+		return newFileActionUpToDate(candidate.source, candidate.destination, "destination does not exist", l), nil
 	}
-	existing, err := uo.fs.ExistingFileType(candidate.source, candidate.destination)
+	existing, err := fs.ExistingFileType(candidate.source, candidate.destination)
 	if err != nil {
 		return nil, err
 	}
@@ -39,12 +31,12 @@ func (uo *UnstowOperation) FileAction(candidate operationCandidate) (fileAction,
 	case file.ExistingDir:
 		return nil, fmt.Errorf("unstow %s: %w", candidate.destination, errDestIsDir)
 	case file.ExistingRegularFile:
-		return newFileActionSkip(candidate.source, candidate.destination, "regular file", uo.l), nil
+		return newFileActionSkip(candidate.source, candidate.destination, "regular file", l), nil
 	case file.ExistingManagedSymlink:
-		return newFileActionRemove(candidate.source, candidate.destination, uo.l), nil
+		return newFileActionRemove(candidate.source, candidate.destination, c.KeepEmptyParents, l), nil
 	case file.ExistingForeignSymlink:
-		return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink", uo.l), nil
+		return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink", l), nil
 	}
-	uo.l.Warn("destination is not managed by bestow", "destination", candidate.destination, "file_type", existing)
-	return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink", uo.l), nil
+	l.Warn("destination is not managed by bestow", "destination", candidate.destination, "file_type", existing)
+	return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink", l), nil
 }

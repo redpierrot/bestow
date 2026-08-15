@@ -60,6 +60,10 @@ type FileSystem interface {
 	// IsDir checks whether the provided path is a directory.
 	IsDir(path string) (bool, error)
 
+	// IsEmpty returns true if the provided path is an empty directory. Returns false if the path is a non-empty directory.
+	// Errors if the path is invalid or not a directory.
+	IsEmpty(path string) (bool, error)
+
 	// Exists returns true if the provided path exists.
 	Exists(path string) (bool, error)
 

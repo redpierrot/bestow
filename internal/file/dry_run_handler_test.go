@@ -64,14 +64,16 @@ func TestDryRunHandler_CreateDir(t *testing.T) {
 		setup              func(t *testing.T, dir string)
 		dirFn              func(dir string) string
 		skipPostValidation bool
-		handler            *DryRunHandler
+		handler            func(dir string) *DryRunHandler
 		wantErr            bool
 		wantErrIs          error
 	}{
 		{
-			name:    "non existing",
-			setup:   func(t *testing.T, dir string) {},
-			handler: NewDryRunHandler(newTestLogger()),
+			name:  "non existing",
+			setup: func(t *testing.T, dir string) {},
+			handler: func(dir string) *DryRunHandler {
+				return NewDryRunHandler(newTestLogger())
+			},
 		},
 		{
 			name: "existing dir",
@@ -81,7 +83,20 @@ func TestDryRunHandler_CreateDir(t *testing.T) {
 				}
 			},
 			skipPostValidation: true,
-			handler:            NewDryRunHandler(newTestLogger()),
+			handler: func(dir string) *DryRunHandler {
+				return NewDryRunHandler(newTestLogger())
+			},
+		},
+		{
+			name:  "create sub dirs on same path",
+			setup: func(t *testing.T, path string) {},
+			handler: func(dir string) *DryRunHandler {
+				handler := NewDryRunHandler(newTestLogger())
+				dirs := make(map[string]bool)
+				dirs[dir] = true
+				handler.createdDirs = dirs
+				return handler
+			},
 		},
 		{
 			name: "non writable dir",
@@ -93,7 +108,9 @@ func TestDryRunHandler_CreateDir(t *testing.T) {
 			dirFn: func(dir string) string {
 				return filepath.Join(dir, "subdir")
 			},
-			handler:   NewDryRunHandler(newTestLogger()),
+			handler: func(dir string) *DryRunHandler {
+				return NewDryRunHandler(newTestLogger())
+			},
 			wantErr:   true,
 			wantErrIs: os.ErrPermission,
 		},
@@ -106,7 +123,7 @@ func TestDryRunHandler_CreateDir(t *testing.T) {
 			if tc.dirFn != nil {
 				dir = tc.dirFn(dir)
 			}
-			err := tc.handler.CreateDir(dir)
+			err := tc.handler(dir).CreateDir(dir)
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}
