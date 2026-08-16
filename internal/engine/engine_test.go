@@ -624,14 +624,14 @@ func TestEngine_updateSummary(t *testing.T) {
 			name:    "remove",
 			summary: Summary{},
 			want:    Summary{counts: [numActionKinds]int{ActionRemove: 1}},
-			action:  newFileActionRemove("", "", false, newTestLogger()),
+			action:  newFileActionRemove("", "", newTestLogger()),
 		},
 		{
 			name:    "undo",
 			summary: Summary{},
 			isUndo:  true,
 			want:    Summary{reverted: 1},
-			action:  newFileActionRemove("", "", false, newTestLogger()),
+			action:  newFileActionRemove("", "", newTestLogger()),
 		},
 		{
 			name:    "undo skip",

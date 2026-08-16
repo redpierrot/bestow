@@ -7,6 +7,10 @@ package engine
 import (
 	"fmt"
 	"log/slog"
+	"maps"
+	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/redpierrot/bestow/internal/file"
 )
@@ -33,10 +37,47 @@ func (c *UnstowCommand) resolve(candidate operationCandidate, fs FileSystem, l *
 	case file.ExistingRegularFile:
 		return newFileActionSkip(candidate.source, candidate.destination, "regular file", l), nil
 	case file.ExistingManagedSymlink:
-		return newFileActionRemove(candidate.source, candidate.destination, c.KeepEmptyParents, l), nil
+		return newFileActionRemove(candidate.source, candidate.destination, l), nil
 	case file.ExistingForeignSymlink:
 		return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink", l), nil
 	}
 	l.Warn("destination is not managed by bestow", "destination", candidate.destination, "file_type", existing)
 	return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink", l), nil
+}
+
+func (c *UnstowCommand) cleanup(candidates []operationCandidate, fs FileSystem, l *slog.Logger, root string) []fileAction {
+	if c.KeepEmptyParents {
+		return nil
+	}
+	dirs := getDirs(candidates, root)
+	actions := make([]fileAction, 0)
+	for _, dir := range dirs {
+		actions = append(actions, newFileActionRemoveDir("", dir, l))
+		l.Debug("remove parent dirs", "directory", dir)
+	}
+	return actions
+}
+
+func getDirs(candidates []operationCandidate, root string) []string {
+	dirMap := make(map[string]bool)
+	root = filepath.Clean(root)
+	for _, candidate := range candidates {
+		dir := filepath.Clean(filepath.Dir(candidate.destination))
+		for dir != root {
+			rel, err := filepath.Rel(root, dir)
+			if err != nil {
+				fmt.Println(err)
+				break
+			}
+			if strings.HasPrefix(rel, "..") || rel == "." {
+				break
+			}
+			dirMap[dir] = true
+			dir = filepath.Dir(dir)
+		}
+	}
+	dirs := slices.Collect(maps.Keys(dirMap))
+	slices.Sort(dirs)
+	slices.Reverse(dirs) // Reverse the array so the child directories removed first
+	return dirs
 }
