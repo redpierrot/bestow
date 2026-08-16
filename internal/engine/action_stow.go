@@ -58,5 +58,4 @@ func (c *StowCommand) resolve(candidate operationCandidate, fs FileSystem, l *sl
 		l.Warn("unsupported resolution strategy", "strategy", c.Strategy, "destination", candidate.destination)
 		return nil, fmt.Errorf("unsupported strategy %v: %w", c.Strategy, errUnsupportedAction)
 	}
-
 }

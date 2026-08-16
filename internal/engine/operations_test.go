@@ -273,9 +273,9 @@ func TestOperations_buildFileActions(t *testing.T) {
 			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
 			command:    &UnstowCommand{},
 			want: []fileAction{
-				newFileActionRemove("file1", "file1", false, l),
-				newFileActionRemove("file2", "file2", false, l),
-				newFileActionRemove("file3", "file3", false, l),
+				newFileActionRemove("file1", "file1", l),
+				newFileActionRemove("file2", "file2", l),
+				newFileActionRemove("file3", "file3", l),
 			},
 		},
 		{

@@ -7,7 +7,6 @@ package engine
 import (
 	"log/slog"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
@@ -318,9 +317,9 @@ func TestFileAction_execute(t *testing.T) {
 			},
 		},
 		{
-			name: "remove - keep parents",
+			name: "remove",
 			action: func(l *slog.Logger) fileAction {
-				return newFileActionRemove("src", "dest", true, l)
+				return newFileActionRemove("src", "dest", l)
 			},
 			cases: []subTest{
 				{
@@ -347,10 +346,9 @@ func TestFileAction_execute(t *testing.T) {
 			},
 		},
 		{
-			name: "remove - remove empty parents",
+			name: "remove directories",
 			action: func(l *slog.Logger) fileAction {
-				destPath := filepath.Join("parent", "dest")
-				return newFileActionRemove("src", destPath, false, l)
+				return newFileActionRemoveDir("src", "dest", l)
 			},
 			cases: []subTest{
 				{
@@ -359,19 +357,45 @@ func TestFileAction_execute(t *testing.T) {
 						isEmptyFn: func(path string) (bool, error) {
 							return true, nil
 						},
+						removeFn: func(path string) error {
+							return nil
+						},
 					},
 					want: []ActionEvent{
-						{
-							Action:    fileOpRemove,
-							Msg:       filepath.Join("parent", "dest"),
-							EventType: EventSuccess,
-						},
-						{
-							Action:    fileOpRemove,
-							Msg:       "parent",
-							EventType: EventStep,
+						{Action: fileOpRemove, Msg: "dest", EventType: EventStep},
+					},
+				},
+				{
+					name: "non empty dir",
+					fs: &mockFileSystem{
+						isEmptyFn: func(path string) (bool, error) {
+							return false, nil
 						},
 					},
+					want: []ActionEvent{},
+				},
+				{
+					name: "remove fail",
+					fs: &mockFileSystem{
+						isEmptyFn: func(path string) (bool, error) {
+							return true, nil
+						},
+						removeFn: func(path string) error {
+							return os.ErrPermission
+						},
+					},
+					wantErr:   true,
+					wantErrIs: os.ErrPermission,
+				},
+				{
+					name: "remove - isEmpty fail",
+					fs: &mockFileSystem{
+						isEmptyFn: func(path string) (bool, error) {
+							return false, os.ErrPermission
+						},
+					},
+					wantErr:   true,
+					wantErrIs: os.ErrPermission,
 				},
 			},
 		},
@@ -397,36 +421,12 @@ func TestFileAction_execute(t *testing.T) {
 func TestFileAction_undo(t *testing.T) {
 	tests := []struct {
 		name   string
-		action func(l *slog.Logger) fileAction
+		action func(l *slog.Logger) undoableAction
 		cases  []subTest
 	}{
 		{
-			name: "up-to-date",
-			action: func(l *slog.Logger) fileAction {
-				return newFileActionUpToDate("src", "dest", "reason", l)
-			},
-			cases: []subTest{
-				{
-					name: "run",
-					fs:   &mockFileSystem{},
-				},
-			},
-		},
-		{
-			name: "skip",
-			action: func(l *slog.Logger) fileAction {
-				return newFileActionSkip("src", "dest", "reason", l)
-			},
-			cases: []subTest{
-				{
-					name: "run",
-					fs:   &mockFileSystem{},
-				},
-			},
-		},
-		{
 			name: "link",
-			action: func(l *slog.Logger) fileAction {
+			action: func(l *slog.Logger) undoableAction {
 				return newFileActionLink("src", "dest", l)
 			},
 			cases: []subTest{
@@ -459,7 +459,7 @@ func TestFileAction_undo(t *testing.T) {
 		},
 		{
 			name: "replace",
-			action: func(l *slog.Logger) fileAction {
+			action: func(l *slog.Logger) undoableAction {
 				return newFileActionReplace("src", "dest", l)
 			},
 			cases: []subTest{
@@ -489,7 +489,7 @@ func TestFileAction_undo(t *testing.T) {
 		},
 		{
 			name: "backup",
-			action: func(l *slog.Logger) fileAction {
+			action: func(l *slog.Logger) undoableAction {
 				return newFileActionBackup("src", "dest", "dest.bestow.backup", l)
 			},
 			cases: []subTest{
@@ -519,7 +519,7 @@ func TestFileAction_undo(t *testing.T) {
 		},
 		{
 			name: "adopt",
-			action: func(l *slog.Logger) fileAction {
+			action: func(l *slog.Logger) undoableAction {
 				return newFileActionAdopt("src", "dest", l)
 			},
 			cases: []subTest{
@@ -571,8 +571,8 @@ func TestFileAction_undo(t *testing.T) {
 		},
 		{
 			name: "remove",
-			action: func(l *slog.Logger) fileAction {
-				return newFileActionRemove("src", "dest", false, l)
+			action: func(l *slog.Logger) undoableAction {
+				return newFileActionRemove("src", "dest", l)
 			},
 			cases: []subTest{
 				{

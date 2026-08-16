@@ -7,7 +7,6 @@ package engine
 import (
 	"fmt"
 	"log/slog"
-	"path/filepath"
 )
 
 const (
@@ -55,6 +54,8 @@ const (
 	ActionAdopt
 	// ActionRemove when the action is to remove the file
 	ActionRemove
+	// ActionRemoveDir removes the given directory path, if the directory is empty
+	ActionRemoveDir
 	// NOTE: Keep to count the number of actions. Should always the last element
 	numActionKinds
 )
@@ -73,8 +74,11 @@ const tmpExtension = "bestow.tmp"
 
 type fileAction interface {
 	execute(fs FileSystem) ([]ActionEvent, error)
-	undo(fs FileSystem) ([]ActionEvent, error)
 	kind() ActionKind
+}
+
+type undoableAction interface {
+	undo(fs FileSystem) ([]ActionEvent, error)
 }
 
 type fileActionPaths struct {
@@ -101,10 +105,6 @@ func newFileActionUpToDate(source, destination, reason string, l *slog.Logger) *
 
 func (f *fileActionUpToDate) execute(_ FileSystem) ([]ActionEvent, error) {
 	f.logger.Debug(f.reason, "source", f.source, "destination", f.destination)
-	return nil, nil
-}
-
-func (f *fileActionUpToDate) undo(_ FileSystem) ([]ActionEvent, error) {
 	return nil, nil
 }
 
@@ -136,10 +136,6 @@ func (f *fileActionSkip) execute(_ FileSystem) ([]ActionEvent, error) {
 			EventType: EventSkip,
 		},
 	}, nil
-}
-
-func (f *fileActionSkip) undo(_ FileSystem) ([]ActionEvent, error) {
-	return nil, nil
 }
 
 func (f *fileActionSkip) kind() ActionKind {
@@ -343,6 +339,7 @@ func (f *fileActionAdopt) execute(fs FileSystem) ([]ActionEvent, error) {
 	if err := fs.Move(f.destination, f.source); err != nil {
 		return nil, err
 	}
+	f.logger.Debug("destination moved to source", "destination", f.destination, "source", f.source)
 	var events []ActionEvent
 	moveStep := ActionEvent{
 		Action:    fileOpAdopt,
@@ -394,53 +391,25 @@ func (f *fileActionAdopt) kind() ActionKind {
 
 type fileActionRemove struct {
 	fileActionPaths
-	keepEmptyParent bool
 }
 
-func newFileActionRemove(source, destination string, keepEmptyParent bool, l *slog.Logger) *fileActionRemove {
+func newFileActionRemove(source, destination string, l *slog.Logger) *fileActionRemove {
 	return &fileActionRemove{
 		fileActionPaths: fileActionPaths{
 			source:      source,
 			destination: destination,
 			logger:      l,
 		},
-		keepEmptyParent: keepEmptyParent,
 	}
 }
 
 func (f *fileActionRemove) execute(fs FileSystem) ([]ActionEvent, error) {
-	events := make([]ActionEvent, 0)
 	if err := fs.Remove(f.destination); err != nil {
 		return nil, err
 	}
-	removeEvent := ActionEvent{
-		Action:    fileOpRemove,
-		Msg:       f.destination,
-		EventType: EventSuccess,
-	}
-	events = append(events, removeEvent)
-	if f.keepEmptyParent {
-		return events, nil
-	}
-	parent := filepath.Dir(f.destination)
-	isEmpty, err := fs.IsEmpty(parent)
-	if err != nil {
-		return events, err
-	}
-	if !isEmpty {
-		f.logger.Debug("parent is not empty", "file", f.destination, "parent", parent)
-		return events, nil
-	}
-	if err := fs.Remove(parent); err != nil {
-		return events, err
-	}
-	removeParentEvent := ActionEvent{
-		Action:    fileOpRemove,
-		Msg:       parent,
-		EventType: EventStep,
-	}
-	events = append(events, removeParentEvent)
-	return events, nil
+	return []ActionEvent{
+		{Action: fileOpRemove, Msg: f.destination, EventType: EventSuccess},
+	}, nil
 }
 
 func (f *fileActionRemove) undo(fs FileSystem) ([]ActionEvent, error) {
@@ -449,14 +418,42 @@ func (f *fileActionRemove) undo(fs FileSystem) ([]ActionEvent, error) {
 		return nil, err
 	}
 	return []ActionEvent{
-		{
-			Action:    fileOpLink,
-			Msg:       fmt.Sprintf("%s -> %s", f.destination, f.source),
-			EventType: EventUndo,
-		},
+		{Action: fileOpLink, Msg: fmt.Sprintf("%s -> %s", f.destination, f.source), EventType: EventUndo},
 	}, nil
 }
 
 func (f *fileActionRemove) kind() ActionKind {
 	return ActionRemove
+}
+
+type fileActionRemoveDir struct {
+	fileActionPaths
+}
+
+func newFileActionRemoveDir(source, destination string, l *slog.Logger) *fileActionRemoveDir {
+	return &fileActionRemoveDir{
+		fileActionPaths: fileActionPaths{
+			source:      source,
+			destination: destination,
+			logger:      l,
+		},
+	}
+}
+
+func (f *fileActionRemoveDir) execute(fs FileSystem) ([]ActionEvent, error) {
+	empty, err := fs.IsEmpty(f.destination)
+	if err != nil {
+		return nil, err
+	}
+	if !empty {
+		return nil, nil
+	}
+	if err := fs.Remove(f.destination); err != nil {
+		return nil, err
+	}
+	return []ActionEvent{{Action: fileOpRemove, Msg: f.destination, EventType: EventStep}}, nil
+}
+
+func (f *fileActionRemoveDir) kind() ActionKind {
+	return ActionRemoveDir
 }

@@ -33,6 +33,11 @@ type Command interface {
 	resolve(candidate operationCandidate, fs FileSystem, l *slog.Logger) (fileAction, error)
 }
 
+// Cleaner represents a command that has clean up steps
+type Cleaner interface {
+	cleanup(candidates []operationCandidate, fs FileSystem, l *slog.Logger, root string) []fileAction
+}
+
 // Engine is the brain of Bestow. It keeps the state of a given execution and handles all the file system calls
 type Engine struct {
 	source      string
@@ -85,6 +90,11 @@ func (e *Engine) Execute(ctx context.Context, cfg *CommandConfig) (*ExecuteResul
 	if err != nil {
 		return nil, err
 	}
+	cleaner, ok := cfg.Command.(Cleaner)
+	if ok {
+		e.logger.Debug("cleaning up")
+		actions = append(actions, cleaner.cleanup(candidates, e.fileSystem, e.logger, e.destination)...)
+	}
 	return e.executeFileActions(ctx, actions)
 }
 
@@ -111,7 +121,7 @@ func (e *Engine) executeFileActions(ctx context.Context, actions []fileAction) (
 			return undoResult, executeErr
 		}
 		e.updateSummary(action, summary, false)
-		if kind := action.kind(); kind != ActionSkip && kind != ActionUpToDate {
+		if _, ok := action.(undoableAction); ok {
 			completedActions = append(completedActions, action)
 		}
 		e.logger.Debug("executed action", "action", action, "summary", summary)
@@ -122,7 +132,11 @@ func (e *Engine) executeFileActions(ctx context.Context, actions []fileAction) (
 func (e *Engine) undoFileActions(actions []fileAction, summary *Summary, events []ActionEvent) (*ExecuteResult, error) {
 	// Undo the completed actions from the last action to the top
 	for _, action := range slices.Backward(actions) {
-		operationEvents, err := action.undo(e.fileSystem)
+		undoAction, ok := action.(undoableAction)
+		if !ok {
+			continue
+		}
+		operationEvents, err := undoAction.undo(e.fileSystem)
 		if err != nil {
 			return &ExecuteResult{events, summary, e.dryRun}, err
 		}
