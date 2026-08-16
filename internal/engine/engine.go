@@ -116,11 +116,7 @@ func (e *Engine) executeFileActions(ctx context.Context, actions []fileAction) (
 		}
 		e.logger.Debug("executed action", "action", action, "summary", summary)
 	}
-	return &ExecuteResult{
-		Events:  events,
-		Summary: summary,
-		DryRun:  e.dryRun,
-	}, nil
+	return &ExecuteResult{events, summary, e.dryRun}, nil
 }
 
 func (e *Engine) undoFileActions(actions []fileAction, summary *Summary, events []ActionEvent) (*ExecuteResult, error) {
@@ -128,20 +124,12 @@ func (e *Engine) undoFileActions(actions []fileAction, summary *Summary, events 
 	for _, action := range slices.Backward(actions) {
 		operationEvents, err := action.undo(e.fileSystem)
 		if err != nil {
-			return &ExecuteResult{
-				Events:  events,
-				Summary: summary,
-				DryRun:  e.dryRun,
-			}, err
+			return &ExecuteResult{events, summary, e.dryRun}, err
 		}
 		e.updateSummary(action, summary, true)
 		events = append(events, operationEvents...)
 	}
-	return &ExecuteResult{
-		Events:  events,
-		Summary: summary,
-		DryRun:  e.dryRun,
-	}, nil
+	return &ExecuteResult{events, summary, e.dryRun}, nil
 }
 
 func (e *Engine) updateSummary(action fileAction, summary *Summary, isUndo bool) {
