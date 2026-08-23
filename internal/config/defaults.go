@@ -19,6 +19,15 @@ var defaultTemplate string
 // DefaultIgnoreList stores the most commonly used ignore patterns
 var DefaultIgnoreList = []string{".git", ".gitignore", "README.md", "LICENSE", "**/.bestowignore", "**/.stow-local-ignore"}
 
+type Config struct {
+	Profiles map[string]Profile `toml:"profiles"`
+}
+
+type Profile struct {
+	Source      string `toml:"source"`
+	Destination string `toml:"destination"`
+}
+
 // FromTemplate populates and returns the default template with the provided source and destination
 func FromTemplate(source, destination string) (string, error) {
 	tmpl, err := template.New("config").Parse(defaultTemplate)
@@ -46,10 +55,10 @@ func FromTemplate(source, destination string) (string, error) {
 	return buf.String(), nil
 }
 
-func setDefaultDestination(cfg *Config, l *slog.Logger) error {
+func setDefaultDestination(profile *Profile, l *slog.Logger) error {
 	l.Debug("checking destination config")
-	if cfg.Destination != "" {
-		l.Debug("destination is set by configs", "destination", cfg.Destination)
+	if profile.Destination != "" {
+		l.Debug("destination is set by configs", "destination", profile.Destination)
 		return nil
 	}
 	l.Debug("no destination provided, setting default destination")
@@ -57,7 +66,7 @@ func setDefaultDestination(cfg *Config, l *slog.Logger) error {
 	if err != nil {
 		return fmt.Errorf("home dir: %w", err)
 	}
-	cfg.Destination = home
-	l.Debug("default value is set for destination", "destination", cfg.Destination)
+	profile.Destination = home
+	l.Debug("default value is set for destination", "destination", profile.Destination)
 	return nil
 }

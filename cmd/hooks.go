@@ -49,7 +49,7 @@ func initConfig(app *App, configFile string) {
 	viper.AutomaticEnv()
 }
 
-func loadConfig(v *viper.Viper, cmd *cobra.Command, app *App) (*config.Config, error) {
+func loadProfile(v *viper.Viper, cmd *cobra.Command, app *App) (*config.Profile, error) {
 	if err := v.ReadInConfig(); err != nil {
 		return nil, &engine.HintedError{
 			Op:   "read config",
@@ -61,27 +61,27 @@ func loadConfig(v *viper.Viper, cmd *cobra.Command, app *App) (*config.Config, e
 	if f := cmd.Flags().Lookup(flagProfile); f != nil {
 		_ = v.BindPFlag(flagProfile, f)
 	}
-	cfg, err := config.NewConfig(v, app.logger)
+	profile, err := config.GetProfile(v, app.logger)
 	if err != nil {
 		return nil, err
 	}
 	if source, _ := stringFlag(cmd.Flags(), flagSource); source != "" {
-		cfg.Source = source
+		profile.Source = source
 	}
 	if destination, _ := stringFlag(cmd.Flags(), flagDestination); destination != "" {
-		cfg.Destination = destination
+		profile.Destination = destination
 	}
-	return cfg, nil
+	return profile, nil
 }
 
 func buildEngine(v *viper.Viper, cmd *cobra.Command, dryRun bool, app *App) (*engine.Engine, error) {
-	cfg, err := loadConfig(v, cmd, app)
+	profile, err := loadProfile(v, cmd, app)
 	if err != nil {
 		return nil, err
 	}
 	engineConfig := &engine.EngineConfig{
-		Source:      cfg.Source,
-		Destination: cfg.Destination,
+		Source:      profile.Source,
+		Destination: profile.Destination,
 		DryRun:      dryRun,
 		ConfigHome:  config.AppConfigHome(),
 	}

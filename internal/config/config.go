@@ -23,16 +23,6 @@ const (
 	defaultProfile   = "default"
 )
 
-// Config stores the configurations for a given profile
-type Config struct {
-	Source      string `mapstructure:"source"`
-	Destination string `mapstructure:"destination"`
-}
-
-type configFile struct {
-	Configs map[string]Config `mapstructure:"profiles"`
-}
-
 // AppConfigHome returns the directory where the bestow configs are stored
 func AppConfigHome() string {
 	return filepath.Join(XDGConfigHome(), appName)
@@ -52,32 +42,29 @@ func XDGConfigHome() string {
 	return filepath.Join(home, configDir)
 }
 
-// NewConfig returns a new Config for a given profile
-func NewConfig(v *viper.Viper, l *slog.Logger) (*Config, error) {
+// GetProfile returns a new Config for a given profile
+func GetProfile(v *viper.Viper, l *slog.Logger) (*Profile, error) {
 	l.Debug("loading configs")
 
-	var raw configFile
-	if err := v.Unmarshal(&raw); err != nil {
+	var configValue Config
+	if err := v.Unmarshal(&configValue); err != nil {
 		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
-	l.Debug("unmarshaled the configs", "raw", raw)
+	l.Debug("unmarshaled the configs", "raw", configValue)
 
 	profileName := v.GetString(profileKey)
 	if profileName == "" {
 		profileName = defaultProfile
 	}
-	// TODO: Check what happens when profile does not exist
-	profile, ok := raw.Configs[profileName]
+	profile, ok := configValue.Profiles[profileName]
 	if !ok {
 		return nil, fmt.Errorf("profile %s: %w", profileName, ErrNotFound)
 	}
 
-	cfg := Config(profile)
-
-	if err := setDefaultDestination(&cfg, l); err != nil {
+	if err := setDefaultDestination(&profile, l); err != nil {
 		return nil, err
 	}
-	l.Debug("config loaded successfully", "cfg", cfg)
+	l.Debug("config loaded successfully", "profile", profileName, "configs", profile)
 
-	return &cfg, nil
+	return &profile, nil
 }
