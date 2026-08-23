@@ -39,12 +39,12 @@ func TestConfig_XDGConfigHome(t *testing.T) {
 	}
 }
 
-func TestConfig_NewConfig(t *testing.T) {
+func TestConfig_GetProfile(t *testing.T) {
 	tests := []struct {
-		name    string
-		yaml    string
-		wantCfg func(t *testing.T) *Config
-		wantErr error
+		name        string
+		yaml        string
+		wantProfile func(t *testing.T) *Profile
+		wantErr     error
 	}{
 		{
 			name: "profile with source and destination",
@@ -54,8 +54,8 @@ profiles:
     source: /home/ru/dotfiles/
     destination: /home/ru/
 `,
-			wantCfg: func(t *testing.T) *Config {
-				return &Config{
+			wantProfile: func(t *testing.T) *Profile {
+				return &Profile{
 					Source:      "/home/ru/dotfiles/",
 					Destination: "/home/ru/",
 				}
@@ -68,12 +68,12 @@ profiles:
   default:
     source: /home/ru/dotfiles/
 `,
-			wantCfg: func(t *testing.T) *Config {
+			wantProfile: func(t *testing.T) *Profile {
 				home, err := os.UserHomeDir()
 				if err != nil {
 					t.Fatal(err)
 				}
-				return &Config{
+				return &Profile{
 					Source:      "/home/ru/dotfiles/",
 					Destination: home,
 				}
@@ -91,8 +91,8 @@ profiles:
     source: /home/thisaru/sandbox/
     destination: /home/thisaru/fakehome/
 `,
-			wantCfg: func(t *testing.T) *Config {
-				return &Config{
+			wantProfile: func(t *testing.T) *Profile {
+				return &Profile{
 					Source:      "/home/thisaru/sandbox/",
 					Destination: "/home/thisaru/fakehome/",
 				}
@@ -121,7 +121,7 @@ profiles:
 			if err := v.ReadConfig(strings.NewReader(tc.yaml)); err != nil {
 				t.Fatal(err)
 			}
-			got, err := NewConfig(v, l)
+			got, err := GetProfile(v, l)
 			if err != nil {
 				if tc.wantErr == nil {
 					t.Fatalf("got %v, want %v", err, tc.wantErr)
@@ -134,7 +134,7 @@ profiles:
 			if tc.wantErr != nil {
 				t.Fatalf("got %v, want %v", got, tc.wantErr)
 			}
-			want := tc.wantCfg(t)
+			want := tc.wantProfile(t)
 			if *got != *want {
 				t.Fatalf("got %v, want %v", got, want)
 			}
