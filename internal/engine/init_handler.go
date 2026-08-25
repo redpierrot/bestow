@@ -16,6 +16,7 @@ const (
 	ignoreFileName = ".bestowignore"
 )
 
+// TODO: Add `Profile` filed to init config, optional with defaulting to "default"
 // InitConfig stores the configuration options for the `init` command
 type InitConfig struct {
 	Force      bool
