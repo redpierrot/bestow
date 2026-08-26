@@ -13,6 +13,7 @@ import (
 
 	charmlog "github.com/charmbracelet/log"
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 
 	"github.com/redpierrot/bestow/internal/engine"
 	"github.com/redpierrot/bestow/internal/output"
@@ -27,6 +28,7 @@ type App struct {
 	logHandler *charmlog.Logger
 	logger     *slog.Logger
 	out        *output.Output
+	v          *viper.Viper
 }
 
 func newRootCmd(app *App) *cobra.Command {
@@ -107,9 +109,11 @@ func getApp() *App {
 	logHandler := charmlog.NewWithOptions(os.Stderr, opts)
 	logger := slog.New(logHandler)
 	out := output.NewOutput(os.Stdout, os.Stderr)
+	v := viper.New()
 	return &App{
 		logHandler: logHandler,
 		logger:     logger,
+		v:          v,
 		out:        out,
 	}
 }

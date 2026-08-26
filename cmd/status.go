@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func newStatusCmd(app *App) *cobra.Command {
@@ -16,15 +15,15 @@ func newStatusCmd(app *App) *cobra.Command {
 		Long:    statusLong,
 		Example: statusExamples,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeStatus(cmd, viper.GetViper(), app, args)
+			return executeStatus(cmd, app, args)
 		},
 	}
 	addOperationFlags(cmd.Flags())
 	return cmd
 }
 
-func executeStatus(cmd *cobra.Command, v *viper.Viper, app *App, args []string) error {
-	e, err := buildEngine(v, cmd, false, app)
+func executeStatus(cmd *cobra.Command, app *App, args []string) error {
+	e, err := buildEngine(cmd, false, app)
 	if err != nil {
 		return err
 	}
