@@ -107,7 +107,8 @@ func TestDefaults_setDefaultDestination(t *testing.T) {
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			setDefaultDestination(tc.profile, slog.New(slog.NewTextHandler(io.Discard, nil)))
+			// Ignore error since there's no point of checking homedir error
+			_ = setDefaultDestination(tc.profile, slog.New(slog.NewTextHandler(io.Discard, nil)))
 			want := tc.want(t)
 			if want != tc.profile.Destination {
 				t.Fatalf("got %s, want %s", tc.profile.Destination, want)
