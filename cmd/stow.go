@@ -13,7 +13,6 @@ import (
 type stowParams struct {
 	dryRun   bool
 	strategy engine.ResolveStrategy
-	packages []string
 }
 
 func newStowCmd(app *App) *cobra.Command {
@@ -40,14 +39,7 @@ func executeStow(cmd *cobra.Command, v *viper.Viper, app *App, args []string) er
 	if err != nil {
 		return err
 	}
-	stowCmd := &engine.StowCommand{
-		Strategy: params.strategy,
-	}
-	cmdCfg := engine.CommandConfig{
-		Command: stowCmd,
-		Args:    params.packages,
-	}
-	summary, err := e.Execute(cmd.Context(), &cmdCfg)
+	summary, err := e.Stow(cmd.Context(), args, params.strategy)
 
 	app.out.PrintResult(summary)
 	if err != nil {
@@ -78,7 +70,6 @@ func parseStowParams(cmd *cobra.Command, args []string) (*stowParams, error) {
 	return &stowParams{
 		dryRun:   dryRun,
 		strategy: strategy,
-		packages: args,
 	}, nil
 }
 

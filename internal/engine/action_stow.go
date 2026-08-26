@@ -14,6 +14,8 @@ import (
 
 const timestampFormat = "20060102150405"
 
+var _ resolveFunc = (*StowCommand)(nil).resolve
+
 type StowCommand struct {
 	Strategy ResolveStrategy
 }

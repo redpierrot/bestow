@@ -39,6 +39,19 @@ func newTestIgnoreList(fs IgnoreReader, logger *slog.Logger, items []string) *Ig
 	}
 }
 
+func equalFileAction(a, b fileAction) bool {
+	if a.kind() != b.kind() {
+		return false
+	}
+	switch av := a.(type) {
+	case *fileActionRemoveDir:
+		bv := b.(*fileActionRemoveDir)
+		return av.destination == bv.destination
+	default:
+		return false
+	}
+}
+
 func validateErrScenario(t *testing.T, wantErr bool, err, wantErrIs error) bool {
 	t.Helper()
 	if (err != nil) != wantErr {

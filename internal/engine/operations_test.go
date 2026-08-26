@@ -233,7 +233,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 		setup      func(t *testing.T, mf *mockFileSystem) *Engine
 		mf         *mockFileSystem
 		candidates []operationCandidate
-		command    Command
+		resolve    func(t *testing.T) resolveFunc
 		want       []fileAction
 		wantErr    bool
 		wantErrIs  error
@@ -250,7 +250,10 @@ func TestOperations_buildFileActions(t *testing.T) {
 				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
-			command:    &StowCommand{},
+			resolve: func(t *testing.T) resolveFunc {
+				stowCmd := &StowCommand{}
+				return stowCmd.resolve
+			},
 			want: []fileAction{
 				newFileActionLink("file1", "file1", l),
 				newFileActionLink("file2", "file2", l),
@@ -271,7 +274,10 @@ func TestOperations_buildFileActions(t *testing.T) {
 				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
-			command:    &UnstowCommand{},
+			resolve: func(t *testing.T) resolveFunc {
+				unstowCmd := &UnstowCommand{}
+				return unstowCmd.resolve
+			},
 			want: []fileAction{
 				newFileActionRemove("file1", "file1", l),
 				newFileActionRemove("file2", "file2", l),
@@ -289,8 +295,11 @@ func TestOperations_buildFileActions(t *testing.T) {
 				return newTestEngine(mf, nil)
 			},
 			candidates: []operationCandidate{candidate("file1", "file1"), candidate("file2", "file2"), candidate("file3", "file3")},
-			command:    &StowCommand{},
-			wantErr:    true,
+			resolve: func(t *testing.T) resolveFunc {
+				stowCmd := &StowCommand{}
+				return stowCmd.resolve
+			},
+			wantErr: true,
 			wantErrAs: func(t *testing.T, err error) {
 				var aggregatedErr *AggregatedError
 				if !errors.As(err, &aggregatedErr) {
@@ -302,7 +311,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			e := tc.setup(t, tc.mf)
-			fileActions, err := e.buildFileActions(tc.candidates, tc.command)
+			fileActions, err := e.buildFileActions(tc.candidates, tc.resolve(t))
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				if tc.wantErrAs != nil {
 					tc.wantErrAs(t, err)
@@ -324,7 +333,7 @@ func TestOperations_buildFileActions(t *testing.T) {
 func TestOperations_stowOperation(t *testing.T) {
 	type strategyCase struct {
 		name      string
-		command   Command
+		command   *StowCommand
 		want      ActionKind
 		wantErr   bool
 		wantErrIs error
@@ -485,7 +494,7 @@ func TestOperations_unstowOperation(t *testing.T) {
 	tests := []struct {
 		name      string
 		mf        func() *mockFileSystem
-		command   Command
+		command   *UnstowCommand
 		candidate operationCandidate
 		want      ActionKind
 		wantErr   bool

@@ -15,6 +15,8 @@ import (
 	"github.com/redpierrot/bestow/internal/file"
 )
 
+var _ resolveFunc = (*UnstowCommand)(nil).resolve
+
 type UnstowCommand struct {
 	KeepEmptyParents bool
 }
@@ -45,7 +47,7 @@ func (c *UnstowCommand) resolve(candidate operationCandidate, fs FileSystem, l *
 	return newFileActionSkip(candidate.source, candidate.destination, "unmanaged symlink", l), nil
 }
 
-func (c *UnstowCommand) cleanup(candidates []operationCandidate, fs FileSystem, l *slog.Logger, root string) []fileAction {
+func (c *UnstowCommand) cleanup(candidates []operationCandidate, l *slog.Logger, root string) []fileAction {
 	if c.KeepEmptyParents {
 		return nil
 	}

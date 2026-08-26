@@ -4,7 +4,11 @@ All Rights Reversed (ɔ)
 
 package engine
 
-import "github.com/redpierrot/bestow/internal/file"
+import (
+	"log/slog"
+
+	"github.com/redpierrot/bestow/internal/file"
+)
 
 // Type safety for File System Implementations
 var _ FileSystem = (*file.Handler)(nil)
@@ -19,6 +23,8 @@ type ExecuteResult struct {
 	// DryRun whether the operation is a dry run
 	DryRun bool
 }
+
+type resolveFunc func(candidate operationCandidate, fs FileSystem, l *slog.Logger) (fileAction, error)
 
 // Summary stores a summary of all the operations performed during an execution
 type Summary struct {

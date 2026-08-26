@@ -111,11 +111,11 @@ func (e *Engine) findPackageCandidates(pkg string) ([]operationCandidate, error)
 	return candidates, nil
 }
 
-func (e *Engine) buildFileActions(candidates []operationCandidate, command Command) ([]fileAction, error) {
+func (e *Engine) buildFileActions(candidates []operationCandidate, resolve resolveFunc) ([]fileAction, error) {
 	actions := make([]fileAction, 0, len(candidates))
 	errs := make([]error, 0, len(candidates))
 	for _, candidate := range candidates {
-		action, err := command.resolve(candidate, e.fileSystem, e.logger)
+		action, err := resolve(candidate, e.fileSystem, e.logger)
 		if err != nil {
 			errs = append(errs, err)
 			continue
