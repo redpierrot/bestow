@@ -5,7 +5,6 @@ All Rights Reversed (ɔ)
 package cmd
 
 import (
-	"github.com/redpierrot/bestow/internal/engine"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
@@ -38,14 +37,7 @@ func executeUnstow(cmd *cobra.Command, v *viper.Viper, app *App, args []string) 
 	if err != nil {
 		return err
 	}
-	unstowCmd := &engine.UnstowCommand{
-		KeepEmptyParents: keepEmptyParents,
-	}
-	cmdCfg := engine.CommandConfig{
-		Command: unstowCmd,
-		Args:    args,
-	}
-	summary, err := e.Execute(cmd.Context(), &cmdCfg)
+	summary, err := e.Unstow(cmd.Context(), args, keepEmptyParents)
 	app.out.PrintResult(summary)
 	if err != nil {
 		return err

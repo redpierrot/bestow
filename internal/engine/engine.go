@@ -14,30 +14,6 @@ import (
 	"github.com/redpierrot/bestow/internal/file"
 )
 
-// CommandKind defines the different actions in Bestow
-type CommandKind int
-
-const (
-	CommandStow CommandKind = iota
-	CommandUnstow
-)
-
-// CommandConfig stores the configurations for a given command execution
-type CommandConfig struct {
-	Command Command
-	Args    []string
-}
-
-// Command represents a bestow command
-type Command interface {
-	resolve(candidate operationCandidate, fs FileSystem, l *slog.Logger) (fileAction, error)
-}
-
-// Cleaner represents a command that has clean up steps
-type Cleaner interface {
-	cleanup(candidates []operationCandidate, fs FileSystem, l *slog.Logger, root string) []fileAction
-}
-
 // Engine is the brain of Bestow. It keeps the state of a given execution and handles all the file system calls
 type Engine struct {
 	source      string
@@ -80,21 +56,37 @@ func NewEngine(cfg *EngineConfig, l *slog.Logger) (*Engine, error) {
 	}, nil
 }
 
-// Execute executes the given operation with the provided configs
-func (e *Engine) Execute(ctx context.Context, cfg *CommandConfig) (*ExecuteResult, error) {
-	candidates, err := e.findCandidates(cfg.Args)
+// Stow executes the stow operation
+func (e *Engine) Stow(ctx context.Context, args []string, strategy ResolveStrategy) (*ExecuteResult, error) {
+	candidates, err := e.findCandidates(args)
 	if err != nil {
 		return nil, err
 	}
-	actions, err := e.buildFileActions(candidates, cfg.Command)
+	stowCmd := &StowCommand{
+		Strategy: strategy,
+	}
+	actions, err := e.buildFileActions(candidates, stowCmd.resolve)
 	if err != nil {
 		return nil, err
 	}
-	cleaner, ok := cfg.Command.(Cleaner)
-	if ok {
-		e.logger.Debug("cleaning up")
-		actions = append(actions, cleaner.cleanup(candidates, e.fileSystem, e.logger, e.destination)...)
+	return e.executeFileActions(ctx, actions)
+}
+
+// Unstow executes the unstow operation
+func (e *Engine) Unstow(ctx context.Context, args []string, keepEmptyParents bool) (*ExecuteResult, error) {
+	candidates, err := e.findCandidates(args)
+	if err != nil {
+		return nil, err
 	}
+	unstowCmd := &UnstowCommand{
+		KeepEmptyParents: keepEmptyParents,
+	}
+	actions, err := e.buildFileActions(candidates, unstowCmd.resolve)
+	if err != nil {
+		return nil, err
+	}
+	cleanupActions := unstowCmd.cleanup(candidates, e.logger, e.destination)
+	actions = append(actions, cleanupActions...)
 	return e.executeFileActions(ctx, actions)
 }
 

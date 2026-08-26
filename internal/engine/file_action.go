@@ -430,6 +430,7 @@ type fileActionRemoveDir struct {
 	fileActionPaths
 }
 
+// TODO: Check the logger usage and maybe remove it?
 func newFileActionRemoveDir(source, destination string, l *slog.Logger) *fileActionRemoveDir {
 	return &fileActionRemoveDir{
 		fileActionPaths: fileActionPaths{

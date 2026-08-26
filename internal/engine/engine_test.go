@@ -45,11 +45,11 @@ func TestEngine_NewEngine(t *testing.T) {
 	}
 }
 
-func TestEngine_Execute(t *testing.T) {
+func TestEngine_Stow(t *testing.T) {
 	tests := []struct {
 		name        string
 		setup       func(t *testing.T) Engine
-		cfg         *CommandConfig
+		strategy    ResolveStrategy
 		wantEvents  []ActionEvent
 		wantSummary *Summary
 		wantErr     bool
@@ -61,25 +61,7 @@ func TestEngine_Execute(t *testing.T) {
 				mf := &mockFileSystem{}
 				return *newTestEngine(mf, newTestIgnoreList(mf, newTestLogger(), nil))
 			},
-			cfg: &CommandConfig{
-				Command: &StowCommand{
-					Strategy: ResolveSkip,
-				},
-			},
-			wantEvents:  []ActionEvent{},
-			wantSummary: &Summary{},
-		},
-		{
-			name: "unstow",
-			setup: func(t *testing.T) Engine {
-				mf := &mockFileSystem{}
-				return *newTestEngine(mf, newTestIgnoreList(mf, newTestLogger(), nil))
-			},
-			cfg: &CommandConfig{
-				Command: &UnstowCommand{
-					KeepEmptyParents: false,
-				},
-			},
+			strategy:    ResolveSkip,
 			wantEvents:  []ActionEvent{},
 			wantSummary: &Summary{},
 		},
@@ -87,7 +69,7 @@ func TestEngine_Execute(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			e := tc.setup(t)
-			executeResult, err := e.Execute(t.Context(), tc.cfg)
+			executeResult, err := e.Stow(t.Context(), nil, tc.strategy)
 			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
 				return
 			}
