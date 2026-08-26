@@ -40,6 +40,9 @@ func FromTemplate(src, dest string) (string, error) {
 		return "", err
 	}
 	profile, err := getProfile(src, dest)
+	if err != nil {
+		return "", err
+	}
 	var buf bytes.Buffer
 	if err := tmpl.Execute(&buf, profile); err != nil {
 		return "", err
