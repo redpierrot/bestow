@@ -43,11 +43,13 @@ func TestConfig_GetProfile(t *testing.T) {
 	tests := []struct {
 		name        string
 		yaml        string
+		profileName string
 		wantProfile func(t *testing.T) *Profile
 		wantErr     error
 	}{
 		{
-			name: "profile with source and destination",
+			name:        "default profile",
+			profileName: "default",
 			yaml: `
 profiles:
   default:
@@ -62,7 +64,8 @@ profiles:
 			},
 		},
 		{
-			name: "profile without setting destination",
+			name:        "profile without setting destination",
+			profileName: "default",
 			yaml: `
 profiles:
   default:
@@ -80,9 +83,9 @@ profiles:
 			},
 		},
 		{
-			name: "pick from multiple profiles",
+			name:        "pick named profile from multiple profiles",
+			profileName: "sandbox",
 			yaml: `
-profile: sandbox
 profiles:
   default:
     source: /home/ru/dotfiles/
@@ -99,9 +102,9 @@ profiles:
 			},
 		},
 		{
-			name: "profile not found",
+			name:        "non-existing profile",
+			profileName: "noProfile",
 			yaml: `
-profile: noProfile
 profiles:
   default:
     source: /home/ru/dotfiles/
@@ -115,13 +118,12 @@ profiles:
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			l := slog.New(slog.NewTextHandler(io.Discard, nil))
 			v := viper.New()
 			v.SetConfigType("yaml")
 			if err := v.ReadConfig(strings.NewReader(tc.yaml)); err != nil {
 				t.Fatal(err)
 			}
-			got, err := GetProfile(v, l)
+			profileConfig, err := ProfileConfig(v, tc.profileName)
 			if err != nil {
 				if tc.wantErr == nil {
 					t.Fatalf("got %v, want %v", err, tc.wantErr)
@@ -132,11 +134,15 @@ profiles:
 				return
 			}
 			if tc.wantErr != nil {
-				t.Fatalf("got %v, want %v", got, tc.wantErr)
+				t.Fatalf("got %v, want %v", profileConfig, tc.wantErr)
 			}
 			want := tc.wantProfile(t)
-			if *got != *want {
-				t.Fatalf("got %v, want %v", got, want)
+			gotProfile, err := GetProfile(tc.profileName, profileConfig, slog.New(slog.NewTextHandler(io.Discard, nil)))
+			if err != nil {
+				t.Fatal(err)
+			}
+			if *gotProfile != *want {
+				t.Fatalf("got %v, want %v", gotProfile, want)
 			}
 		})
 	}

@@ -24,13 +24,13 @@ const tildePrefix = "~/"
 var DefaultIgnoreList = []string{".git", ".gitignore", "README.md", "LICENSE", "**/.bestowignore", "**/.stow-local-ignore"}
 
 type Config struct {
-	Version  string             `toml:"version"`
-	Profiles map[string]Profile `toml:"profiles"`
+	Version  string             `mapstructure:"version"`
+	Profiles map[string]Profile `mapstructure:"profiles"`
 }
 
 type Profile struct {
-	Source      string `toml:"source"`
-	Destination string `toml:"destination"`
+	Source      string `mapstructure:"source"`
+	Destination string `mapstructure:"destination"`
 }
 
 // FromTemplate populates and returns the default template with the provided source and destination

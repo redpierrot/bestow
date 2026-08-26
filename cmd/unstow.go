@@ -6,7 +6,6 @@ package cmd
 
 import (
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 func newUnstowCmd(app *App) *cobra.Command {
@@ -16,7 +15,7 @@ func newUnstowCmd(app *App) *cobra.Command {
 		Long:    unstowLong,
 		Example: unstowExamples,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeUnstow(cmd, viper.GetViper(), app, args)
+			return executeUnstow(cmd, app, args)
 		},
 	}
 	addOperationFlags(cmd.Flags())
@@ -24,12 +23,12 @@ func newUnstowCmd(app *App) *cobra.Command {
 	return cmd
 }
 
-func executeUnstow(cmd *cobra.Command, v *viper.Viper, app *App, args []string) error {
+func executeUnstow(cmd *cobra.Command, app *App, args []string) error {
 	dryRun, err := boolFlag(cmd.Flags(), flagDryRun)
 	if err != nil {
 		return err
 	}
-	e, err := buildEngine(v, cmd, dryRun, app)
+	e, err := buildEngine(cmd, dryRun, app)
 	if err != nil {
 		return err
 	}

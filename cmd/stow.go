@@ -7,7 +7,6 @@ package cmd
 import (
 	"github.com/redpierrot/bestow/internal/engine"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 type stowParams struct {
@@ -22,7 +21,7 @@ func newStowCmd(app *App) *cobra.Command {
 		Long:    stowLong,
 		Example: stowExamples,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return executeStow(cmd, viper.GetViper(), app, args)
+			return executeStow(cmd, app, args)
 		},
 	}
 	addOperationFlags(cmd.Flags())
@@ -30,12 +29,12 @@ func newStowCmd(app *App) *cobra.Command {
 	return cmd
 }
 
-func executeStow(cmd *cobra.Command, v *viper.Viper, app *App, args []string) error {
+func executeStow(cmd *cobra.Command, app *App, args []string) error {
 	params, err := parseStowParams(cmd, args)
 	if err != nil {
 		return err
 	}
-	e, err := buildEngine(v, cmd, params.dryRun, app)
+	e, err := buildEngine(cmd, params.dryRun, app)
 	if err != nil {
 		return err
 	}

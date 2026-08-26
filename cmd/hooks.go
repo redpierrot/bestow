@@ -13,7 +13,11 @@ import (
 	"github.com/redpierrot/bestow/internal/engine"
 	"github.com/redpierrot/bestow/internal/output"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
+)
+
+const (
+	envSource      = "BESTOW_SOURCE"
+	envDestination = "BESTOW_DESTINATION"
 )
 
 func setupLogging(cmd *cobra.Command, app *App) error {
@@ -39,18 +43,18 @@ func initConfig(app *App, configFile string) {
 	app.logger.Debug("initializing config")
 	if configFile != "" {
 		app.logger.Debug("custom config file provided", "path", configFile)
-		viper.SetConfigFile(configFile)
+		app.v.SetConfigFile(configFile)
 	} else {
 		configFilePath := filepath.Join(config.AppConfigHome(), configFileName)
 		app.logger.Debug("no custom config file provided; using default", "path", configFilePath)
-		viper.SetConfigFile(configFilePath)
+		app.v.SetConfigFile(configFilePath)
 	}
-	viper.SetEnvPrefix(strings.ToUpper(rootCmdName))
-	viper.AutomaticEnv()
+	app.v.SetEnvPrefix(strings.ToUpper(rootCmdName))
+	app.v.AutomaticEnv()
 }
 
-func loadProfile(v *viper.Viper, cmd *cobra.Command, app *App) (*config.Profile, error) {
-	if err := v.ReadInConfig(); err != nil {
+func loadProfile(cmd *cobra.Command, app *App) (*config.Profile, error) {
+	if err := app.v.ReadInConfig(); err != nil {
 		return nil, &engine.HintedError{
 			Op:   "read config",
 			Err:  err,
@@ -59,23 +63,26 @@ func loadProfile(v *viper.Viper, cmd *cobra.Command, app *App) (*config.Profile,
 	}
 	// Profile flag is bound before the config is loaded so the viper configs does not pollute with provided profile keys
 	if f := cmd.Flags().Lookup(flagProfile); f != nil {
-		_ = v.BindPFlag(flagProfile, f)
+		_ = app.v.BindPFlag(flagProfile, f)
 	}
-	profile, err := config.GetProfile(v, app.logger)
+	profileName := app.v.GetString(config.ProfileKey)
+	if profileName == "" {
+		profileName = config.DefaultProfile
+	}
+	profileConfig, err := config.ProfileConfig(app.v, profileName)
 	if err != nil {
 		return nil, err
 	}
-	if source, _ := stringFlag(cmd.Flags(), flagSource); source != "" {
-		profile.Source = source
-	}
-	if destination, _ := stringFlag(cmd.Flags(), flagDestination); destination != "" {
-		profile.Destination = destination
-	}
-	return profile, nil
+	_ = profileConfig.BindPFlag(flagSource, cmd.Flags().Lookup(flagSource))
+	_ = profileConfig.BindPFlag(flagDestination, cmd.Flags().Lookup(flagDestination))
+	_ = profileConfig.BindEnv(flagSource, envSource)
+	_ = profileConfig.BindEnv(flagDestination, envDestination)
+
+	return config.GetProfile(profileName, profileConfig, app.logger)
 }
 
-func buildEngine(v *viper.Viper, cmd *cobra.Command, dryRun bool, app *App) (*engine.Engine, error) {
-	profile, err := loadProfile(v, cmd, app)
+func buildEngine(cmd *cobra.Command, dryRun bool, app *App) (*engine.Engine, error) {
+	profile, err := loadProfile(cmd, app)
 	if err != nil {
 		return nil, err
 	}
