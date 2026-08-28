@@ -88,14 +88,14 @@ bestow stow --adopt                 # move conflicting files into the source
 bestow stow --dry-run               # preview without making changes
 ```
 
-| Flag                | Description                                                      |
-| ------------------- | ---------------------------------------------------------------- |
-| `-s, --source`      | Override the source directory                                    |
-| `-d, --destination` | Override the destination directory                               |
-| `-f, --force`       | Remove existing files and create symlinks                        |
-| `-a, --adopt`       | Move existing files into the source, then link                   |
-| `-b, --backup`      | Rename existing files to `<file>.N.bestow.backup` before linking |
-| `-n, --dry-run`     | Preview operations without touching the filesystem               |
+| Flag                | Description                                                                     |
+| ------------------- | ------------------------------------------------------------------------------- |
+| `-s, --source`      | Override the source directory                                                   |
+| `-d, --destination` | Override the destination directory                                              |
+| `-f, --force`       | Remove existing files and create symlinks                                       |
+| `-a, --adopt`       | Move existing files into the source, then link                                  |
+| `-b, --backup`      | Rename existing files to `<file>.<yyyymmddHHMMSS>.bestow.backup` before linking |
+| `-n, --dry-run`     | Preview operations without touching the filesystem                              |
 
 ### `bestow unstow`
 
@@ -181,17 +181,19 @@ LICENSE
 
 When a file already exists at the destination, bestow applies a conflict resolution strategy. The default is **skip**.
 
-| Strategy | Flag        | Behavior                                                  |
-| -------- | ----------- | --------------------------------------------------------- |
-| Skip     | _(default)_ | Leave the existing file alone                             |
-| Force    | `--force`   | Delete the existing file and create the symlink           |
-| Backup   | `--backup`  | Rename to `<file>.0.bestow.backup` and create the symlink |
-| Adopt    | `--adopt`   | Move the existing file into the source, then link back    |
+| Strategy | Flag        | Behavior                                                                 |
+| -------- | ----------- | ------------------------------------------------------------------------ |
+| Skip     | _(default)_ | Leave the existing file alone                                            |
+| Force    | `--force`   | Delete the existing file and create the symlink                          |
+| Backup   | `--backup`  | Rename to `<file>.<yyyymmddHHMMSS>.bestow.backup` and create the symlink |
+| Adopt    | `--adopt`   | Move the existing file into the source, then link back                   |
 
 > **Note:** Bestow never applies a conflict strategy to files it already manages. A destination that already points to the correct source is reported as _up-to-date_ and left untouched.
 
 > **Important**: Bestow welcomes contributions, but do not approve contributions that _seems_ AI-generated garbage. If you don't understand your code, do not submit it to somewhere else.
 
 ## License
+
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
 Author - Thisaru Guruge - All Rights Reversed (ɔ)
