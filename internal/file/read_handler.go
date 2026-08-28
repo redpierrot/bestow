@@ -166,8 +166,7 @@ func (h *readHandler) ExistingFileType(src, dest string) (ExistingType, error) {
 	}
 	destInfo, err := os.Stat(dest)
 	if err != nil {
-		var pathErr *os.PathError
-		if errors.As(err, &pathErr) {
+		if errors.Is(err, os.ErrNotExist) {
 			return ExistingForeignSymlink, nil
 		}
 		return ExistingUnknown, err
