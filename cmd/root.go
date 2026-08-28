@@ -40,6 +40,8 @@ func newRootCmd(app *App) *cobra.Command {
 		Version:       version,
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			// Silence usage output after flag parsing. All the errors beyond this are runtime errors.
+			cmd.SilenceUsage = true
 			configFile, err := stringFlag(cmd.Flags(), flagConfigFile)
 			if err != nil {
 				return err
