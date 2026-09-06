@@ -354,6 +354,9 @@ func TestFileAction_execute(t *testing.T) {
 				{
 					name: "no errors",
 					fs: &mockFileSystem{
+						existsFn: func(path string) (bool, error) {
+							return true, nil
+						},
 						isEmptyFn: func(path string) (bool, error) {
 							return true, nil
 						},
@@ -368,8 +371,8 @@ func TestFileAction_execute(t *testing.T) {
 				{
 					name: "non empty dir",
 					fs: &mockFileSystem{
-						isEmptyFn: func(path string) (bool, error) {
-							return false, nil
+						existsFn: func(path string) (bool, error) {
+							return true, nil
 						},
 					},
 					want: []ActionEvent{},
@@ -377,6 +380,9 @@ func TestFileAction_execute(t *testing.T) {
 				{
 					name: "remove fail",
 					fs: &mockFileSystem{
+						existsFn: func(path string) (bool, error) {
+							return true, nil
+						},
 						isEmptyFn: func(path string) (bool, error) {
 							return true, nil
 						},
@@ -390,6 +396,9 @@ func TestFileAction_execute(t *testing.T) {
 				{
 					name: "remove - isEmpty fail",
 					fs: &mockFileSystem{
+						existsFn: func(path string) (bool, error) {
+							return true, nil
+						},
 						isEmptyFn: func(path string) (bool, error) {
 							return false, os.ErrPermission
 						},

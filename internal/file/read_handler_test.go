@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"syscall"
 	"testing"
 )
 
@@ -56,7 +57,7 @@ func TestReadHandler_ListDirs(t *testing.T) {
 			},
 			handler:   NewHandler(newTestLogger()),
 			wantErr:   true,
-			wantErrIs: ErrNotDir,
+			wantErrIs: syscall.ENOTDIR,
 		},
 		{
 			name: "parent with files and directories",
@@ -103,7 +104,7 @@ func TestReadHandler_ListDirs(t *testing.T) {
 			setup:     func(t *testing.T, parent string) {},
 			handler:   NewHandler(newTestLogger()),
 			wantErr:   true,
-			wantErrIs: ErrNotDir,
+			wantErrIs: os.ErrNotExist,
 		},
 	}
 
@@ -334,7 +335,7 @@ func TestReadHandler_IsEmpty(t *testing.T) {
 			},
 			handler:   NewHandler(newTestLogger()),
 			wantErr:   true,
-			wantErrIs: ErrNotDir,
+			wantErrIs: os.ErrNotExist,
 		},
 		{
 			name: "unreadable path",

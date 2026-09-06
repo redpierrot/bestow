@@ -23,21 +23,14 @@ type readHandler struct {
 // The list contains the full path of the subdirectories found.
 func (h *readHandler) ListDirs(parent string) ([]string, error) {
 	h.logger.Debug("listing all the directories", "source", parent)
-	isDir, err := h.IsDir(parent)
+	entries, err := os.ReadDir(parent)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("ListDirs %s: %w", parent, err)
 	}
-	if !isDir {
-		return nil, fmt.Errorf("listDirs %s: %w", parent, ErrNotDir)
-	}
-	files, err := os.ReadDir(parent)
-	if err != nil {
-		return nil, err
-	}
-	result := make([]string, 0, len(files))
-	for _, file := range files {
-		if file.IsDir() {
-			result = append(result, filepath.Join(parent, file.Name()))
+	result := make([]string, 0, len(entries))
+	for _, entry := range entries {
+		if entry.IsDir() {
+			result = append(result, filepath.Join(parent, entry.Name()))
 		}
 	}
 	h.logger.Debug("finished searching directories", "dirs", result)
@@ -90,16 +83,9 @@ func (h *readHandler) IsDir(path string) (bool, error) {
 // IsEmpty returns true if the provided path is an empty directory, false if the path is a non-empty directory.
 // Errors if the path is invalid or not a directory.
 func (h *readHandler) IsEmpty(path string) (bool, error) {
-	isDir, err := h.IsDir(path)
-	if err != nil {
-		return false, err
-	}
-	if !isDir {
-		return false, ErrNotDir
-	}
 	files, err := os.ReadDir(path)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("IsEmpty %s: %w", path, err)
 	}
 	return len(files) == 0, nil
 }
