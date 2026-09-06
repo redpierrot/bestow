@@ -442,6 +442,13 @@ func newFileActionRemoveDir(source, destination string, l *slog.Logger) *fileAct
 }
 
 func (f *fileActionRemoveDir) execute(fs FileSystem) ([]ActionEvent, error) {
+	exists, err := fs.Exists(f.destination)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, nil
+	}
 	empty, err := fs.IsEmpty(f.destination)
 	if err != nil {
 		return nil, err
