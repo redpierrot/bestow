@@ -83,6 +83,44 @@ func TestEngine_Stow(t *testing.T) {
 	}
 }
 
+func TestEngine_Unstow(t *testing.T) {
+	tests := []struct {
+		name             string
+		setup            func(t *testing.T) Engine
+		keepEmptyParents bool
+		wantEvents       []ActionEvent
+		wantSummary      *Summary
+		wantErr          bool
+		wantErrIs        error
+	}{
+		{
+			name: "unstow",
+			setup: func(t *testing.T) Engine {
+				mf := &mockFileSystem{}
+				return *newTestEngine(mf, nil)
+			},
+			keepEmptyParents: false,
+			wantEvents:       []ActionEvent{},
+			wantSummary:      &Summary{},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			e := tc.setup(t)
+			executeResult, err := e.Unstow(t.Context(), nil, tc.keepEmptyParents)
+			if validateErrScenario(t, tc.wantErr, err, tc.wantErrIs) {
+				return
+			}
+			if *executeResult.Summary != *tc.wantSummary {
+				t.Fatalf("got %v, want %v", executeResult.Summary, tc.wantSummary)
+			}
+			if !slices.Equal(executeResult.Events, tc.wantEvents) {
+				t.Fatalf("got %v, want %v", executeResult.Events, tc.wantEvents)
+			}
+		})
+	}
+}
+
 func TestEngine_executeFileActions(t *testing.T) {
 	// to simulate SIGTERM
 	var cancel context.CancelFunc
