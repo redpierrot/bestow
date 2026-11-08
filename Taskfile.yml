@@ -10,6 +10,7 @@ vars:
   DATE:
     sh: date -u +%Y-%m-%dT%H:%M:%SZ
   LDFLAGS: >-
+    -s -w
     -X {{.MODULE}}/cmd.version={{.VERSION}}
     -X {{.MODULE}}/cmd.commit={{.COMMIT}}
     -X {{.MODULE}}/cmd.buildDate={{.DATE}}
@@ -67,3 +68,8 @@ tasks:
         silent: true
       - cmd: 'awk ''NR>1{tot+=$2; if($3>0) cov+=$2} END{printf "Total Coverage:  %.2f%%\n", 100*cov/tot}'' coverage.out'
         silent: true
+
+  release:test:
+    desc: Test GoReleaser build and packaging locally without publishing
+    cmds:
+      - goreleaser release --snapshot --clean

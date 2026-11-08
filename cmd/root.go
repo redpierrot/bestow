@@ -8,6 +8,7 @@ package cmd
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"os"
 
@@ -22,8 +23,6 @@ import (
 const rootCmdName = "bestow"
 const configFileName = "config.yaml"
 
-var version = "dev"
-
 type App struct {
 	logHandler *charmlog.Logger
 	logger     *slog.Logger
@@ -37,7 +36,7 @@ func newRootCmd(app *App) *cobra.Command {
 		Short:         rootCmdShort,
 		Long:          rootCmdLong,
 		Example:       rootCmdExamples,
-		Version:       version,
+		Version:       fmt.Sprintf("Bestow %s (%s) | Released %s ", Version, Commit, Date),
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Silence usage output after flag parsing. All the errors beyond this are runtime errors.
