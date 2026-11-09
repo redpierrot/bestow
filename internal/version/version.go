@@ -2,7 +2,8 @@
 All Rights Reversed (ɔ)
 */
 
-package cmd
+// Package version is the internal package that manages the versions
+package version
 
 var (
 	Version = "dev"

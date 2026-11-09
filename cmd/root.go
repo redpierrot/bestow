@@ -18,6 +18,7 @@ import (
 
 	"github.com/redpierrot/bestow/internal/engine"
 	"github.com/redpierrot/bestow/internal/output"
+	"github.com/redpierrot/bestow/internal/version"
 )
 
 const rootCmdName = "bestow"
@@ -36,7 +37,7 @@ func newRootCmd(app *App) *cobra.Command {
 		Short:         rootCmdShort,
 		Long:          rootCmdLong,
 		Example:       rootCmdExamples,
-		Version:       fmt.Sprintf("Bestow %s (%s) | Released %s ", Version, Commit, Date),
+		Version:       fmt.Sprintf("version %s (%s) | built %s", version.Version, version.Commit, version.Date),
 		SilenceErrors: true,
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			// Silence usage output after flag parsing. All the errors beyond this are runtime errors.
@@ -61,6 +62,7 @@ func newRootCmd(app *App) *cobra.Command {
 func Execute(ctx context.Context) {
 	app := getApp()
 	cmd := newRootCmd(app)
+	cmd.SetVersionTemplate("{{.Name}} {{.Version}}")
 	if err := cmd.ExecuteContext(ctx); err != nil {
 		os.Exit(exitCodeFor(app.out, err))
 	}
