@@ -22,7 +22,7 @@ builds:
     ldflags:
       - -s -w
       - -X github.com/redpierrot/bestow/internal/version.Version={{ .Version }}
-      - -X github.com/redpierrot/bestow/internal/version.Commit={{ .Commit }}
+      - -X github.com/redpierrot/bestow/internal/version.Commit={{ .ShortCommit }}
       - -X github.com/redpierrot/bestow/internal/version.Date={{ .Date }}
 
 archives:
@@ -44,6 +44,7 @@ changelog:
       - "^chore:"
 
 release:
+  prerelease: auto
   footer: >-
 
     ---
